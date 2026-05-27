@@ -1,0 +1,35 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/
+.clang_complete
+.gcc-flags.json
+build/
+firmware/.pio/
+firmware/.vscode/
+
+# VSCode / IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artefacts
+*.bin
+*.elf
+*.hex
+*.map
+
+# 3D
+case/exports/*.gcode
+case/exports/*.3mf
+case/exports/*.stl.bak
+
+# Secrets
+firmware/src/secrets.h
+*.local
