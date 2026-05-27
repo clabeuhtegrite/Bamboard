@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bamboard hero render. White FDM-printed front shell, 4" ILI9488 showing the
+  live dashboard, 3 button caps below the screen, status LED in the top-right
+  corner, USB-C cable trailing off the right side. Pure SVG, no raster assets.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img">
+  <title>Bamboard device assembled in its white 3D-printed case</title>
+  <desc>Studio render of the Bamboard front face — white FDM enclosure, 4 inch display showing the live dashboard, three button caps below the screen, status LED glowing teal in the top-right corner, USB-C cable trailing off the right side.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#1c2530"/>
+      <stop offset="60%"  stop-color="#10161f"/>
+      <stop offset="100%" stop-color="#070a0e"/>
+    </linearGradient>
+    <radialGradient id="spot" cx="68%" cy="18%" r="70%">
+      <stop offset="0%"   stop-color="#3a566c" stop-opacity="0.55"/>
+      <stop offset="70%"  stop-color="#10161f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pla" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#fbfbfc"/>
+      <stop offset="45%"  stop-color="#eeeff1"/>
+      <stop offset="100%" stop-color="#c8cccf"/>
+    </linearGradient>
+    <pattern id="fdm" x="0" y="0" width="140" height="5" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="2.5" x2="140" y2="2.5" stroke="#000" stroke-opacity="0.05" stroke-width="0.7"/>
+    </pattern>
+    <linearGradient id="scr" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#101418"/>
+      <stop offset="100%" stop-color="#1b2027"/>
+    </linearGradient>
+    <linearGradient id="arc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#00b7c3"/>
+      <stop offset="100%" stop-color="#39d98a"/>
+    </linearGradient>
+    <radialGradient id="btn" cx="35%" cy="30%" r="75%">
+      <stop offset="0%"   stop-color="#ffffff"/>
+      <stop offset="55%"  stop-color="#eaebec"/>
+      <stop offset="100%" stop-color="#b3b5b7"/>
+    </radialGradient>
+    <radialGradient id="ledHalo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#7cffe9" stop-opacity="0.8"/>
+      <stop offset="50%"  stop-color="#00b7c3" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#00b7c3" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="800" fill="url(#bg)"/>
+  <rect width="1200" height="800" fill="url(#spot)"/>
+
+  <ellipse cx="600" cy="755" rx="430" ry="22" fill="#000" opacity="0.55"/>
+  <circle cx="974" cy="158" r="160" fill="url(#ledHalo)"/>
+
+  <g transform="translate(160,90)">
+    <rect x="0" y="0" width="880" height="660" rx="42" fill="url(#pla)"/>
+    <rect x="0" y="0" width="880" height="660" rx="42" fill="url(#fdm)"/>
+    <path d="M 0 42 Q 0 0, 42 0 L 838 0 Q 880 0, 880 42"
+          fill="none" stroke="#ffffff" stroke-opacity="0.78" stroke-width="2"/>
+    <path d="M 0 618 Q 0 660, 42 660 L 838 660 Q 880 660, 880 618"
+          fill="none" stroke="#000" stroke-opacity="0.18" stroke-width="2"/>
+
+    <rect x="51" y="103" width="654" height="444" rx="12" fill="#1a1f26"/>
+    <rect x="61" y="113" width="634" height="424" rx="6"  fill="#0a0d11"/>
+
+    <g transform="translate(61,113) scale(1.321,1.325)">
+      <rect width="480" height="320" fill="url(#scr)"/>
+      <rect x="0" y="0" width="480" height="36" fill="#1b2027"/>
+      <text x="14"  y="24" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#00b7c3">Bamboard</text>
+      <text x="240" y="24" font-family="system-ui, sans-serif" font-size="15" fill="#e9eef3" text-anchor="middle">Workshop X1C</text>
+      <text x="466" y="24" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#39d98a" text-anchor="end">● online 36ms</text>
+      <g transform="translate(108,128)">
+        <circle r="64" fill="none" stroke="#232a33" stroke-width="12"/>
+        <circle r="64" fill="none" stroke="url(#arc)" stroke-width="12" stroke-linecap="round" stroke-dasharray="249.3 402.12" transform="rotate(-90)"/>
+        <text font-family="system-ui, sans-serif" font-size="38" font-weight="700" fill="#e9eef3" text-anchor="middle" dominant-baseline="central">62%</text>
+      </g>
+      <g font-family="system-ui, sans-serif">
+        <text x="210" y="78"  font-size="26" font-weight="700" fill="#00b7c3">PRINTING</text>
+        <text x="210" y="102" font-size="13" fill="#8a95a4">benchy_v2_pla.3mf</text>
+        <text x="210" y="142" font-size="22" font-weight="600" fill="#e9eef3">ETA 1h12</text>
+        <text x="210" y="166" font-size="13" fill="#8a95a4">layer 164 / 267</text>
+      </g>
+      <g transform="translate(16,220)" font-family="system-ui, sans-serif">
+        <rect width="144" height="74" rx="10" fill="#1b2027"/>
+        <text x="14" y="24" font-size="11" font-weight="600" letter-spacing="1" fill="#8a95a4">NOZZLE</text>
+        <text x="14" y="58" font-size="24" font-weight="700" fill="#e9eef3">220°C</text>
+      </g>
+      <g transform="translate(172,220)" font-family="system-ui, sans-serif">
+        <rect width="144" height="74" rx="10" fill="#1b2027"/>
+        <text x="14" y="24" font-size="11" font-weight="600" letter-spacing="1" fill="#8a95a4">BED</text>
+        <text x="14" y="58" font-size="24" font-weight="700" fill="#e9eef3">60°C</text>
+      </g>
+      <g transform="translate(328,220)" font-family="system-ui, sans-serif">
+        <rect width="144" height="74" rx="10" fill="#1b2027"/>
+        <text x="14" y="24" font-size="11" font-weight="600" letter-spacing="1" fill="#8a95a4">CHAMBER</text>
+        <text x="14" y="58" font-size="24" font-weight="700" fill="#e9eef3">35°C</text>
+      </g>
+      <g transform="translate(240,310)">
+        <circle cx="-21" cy="0" r="5" fill="#00b7c3"/>
+        <circle cx="-7"  cy="0" r="3" fill="#8a95a4"/>
+        <circle cx="7"   cy="0" r="3" fill="#8a95a4"/>
+        <circle cx="21"  cy="0" r="3" fill="#8a95a4"/>
+      </g>
+      <polygon points="0,0 220,0 90,320 0,320" fill="#ffffff" opacity="0.03"/>
+    </g>
+
+    <circle cx="814" cy="68" r="16" fill="#ffffff" stroke="#c5c7c9" stroke-width="1.2"/>
+    <circle cx="814" cy="68" r="7.5" fill="#7cffe9"/>
+    <circle cx="814" cy="68" r="3.2" fill="#ffffff"/>
+
+    <g>
+      <circle cx="298" cy="608" r="26" fill="url(#btn)" stroke="#a4a6a8" stroke-width="0.8"/>
+      <circle cx="440" cy="608" r="26" fill="url(#btn)" stroke="#a4a6a8" stroke-width="0.8"/>
+      <circle cx="582" cy="608" r="26" fill="url(#btn)" stroke="#a4a6a8" stroke-width="0.8"/>
+      <text x="298" y="615" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="#5a5c5e" text-anchor="middle">‹</text>
+      <text x="440" y="615" font-family="system-ui, sans-serif" font-size="16" font-weight="700" fill="#5a5c5e" text-anchor="middle">OK</text>
+      <text x="582" y="615" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="#5a5c5e" text-anchor="middle">›</text>
+    </g>
+  </g>
+
+  <rect x="900" y="730" width="38" height="19" rx="5" fill="#23272d" stroke="#0e1115" stroke-width="0.8"/>
+  <path d="M 938 740 Q 1000 770, 1060 776 T 1190 786" stroke="#161a1f" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M 938 740 Q 1000 770, 1060 776 T 1190 786" stroke="#2a3038" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.7"/>
+</svg>
