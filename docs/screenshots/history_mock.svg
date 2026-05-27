@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bamboard History screen, 1:1 (480x320).
+  Top KPI bar + scrolling list of recent archives.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" width="480" height="320">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101418"/>
+      <stop offset="1" stop-color="#1B2027"/>
+    </linearGradient>
+    <style>
+      .t   { font-family: 'Inter', system-ui, sans-serif; fill: #E9EEF3; }
+      .dim { font-family: 'Inter', system-ui, sans-serif; fill: #8A95A4; }
+      .ac  { fill: #00B7C3; }
+      .ok  { fill: #39D98A; }
+      .wn  { fill: #F5A524; }
+      .er  { fill: #E5484D; }
+    </style>
+  </defs>
+
+  <rect width="480" height="320" fill="url(#bg)"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="480" height="36" fill="#1B2027"/>
+  <text class="t ac" x="14" y="24" font-size="18" font-weight="700">Bamboard</text>
+  <text class="t"    x="240" y="24" font-size="15" text-anchor="middle">History</text>
+  <text class="ok"   x="466" y="24" font-size="13" text-anchor="end" font-weight="600">● online 41ms</text>
+
+  <!-- KPI bar -->
+  <g transform="translate(16,46)">
+    <rect width="448" height="58" rx="10" fill="#1B2027"/>
+    <!-- PRINTS -->
+    <text class="dim" x="14" y="20" font-size="11" font-weight="600" letter-spacing="1">PRINTS</text>
+    <text class="t"   x="14" y="46" font-size="22" font-weight="700">1234</text>
+    <!-- SUCCESS -->
+    <text class="dim" x="124" y="20" font-size="11" font-weight="600" letter-spacing="1">SUCCESS</text>
+    <text class="ok"  x="124" y="46" font-size="22" font-weight="700">89.1%</text>
+    <!-- FILAMENT -->
+    <text class="dim" x="244" y="20" font-size="11" font-weight="600" letter-spacing="1">FILAMENT</text>
+    <text class="t"   x="244" y="46" font-size="22" font-weight="700">15.0 kg</text>
+    <!-- TIME -->
+    <text class="dim" x="364" y="20" font-size="11" font-weight="600" letter-spacing="1">TIME</text>
+    <text class="t"   x="364" y="46" font-size="22" font-weight="700">100 h</text>
+  </g>
+
+  <!-- Recent archive list — 5 rows -->
+  <g transform="translate(16,114)" font-family="system-ui, sans-serif">
+    <!-- Row 1 -->
+    <g>
+      <rect width="448" height="34" rx="8" fill="#1B2027"/>
+      <circle cx="18" cy="17" r="5" fill="#39D98A"/>
+      <text class="t"   x="36"  y="22" font-size="14" font-weight="600">benchy_v2_pla.3mf</text>
+      <text class="dim" x="440" y="22" font-size="13" text-anchor="end">135 m · 45 g</text>
+    </g>
+    <g transform="translate(0,40)">
+      <rect width="448" height="34" rx="8" fill="#1B2027"/>
+      <circle cx="18" cy="17" r="5" fill="#39D98A"/>
+      <text class="t"   x="36"  y="22" font-size="14" font-weight="600">voron_z_idler.3mf</text>
+      <text class="dim" x="440" y="22" font-size="13" text-anchor="end">42 m · 18 g</text>
+    </g>
+    <g transform="translate(0,80)">
+      <rect width="448" height="34" rx="8" fill="#1B2027"/>
+      <circle cx="18" cy="17" r="5" fill="#E5484D"/>
+      <text class="t"   x="36"  y="22" font-size="14" font-weight="600">phone_stand_v3.3mf</text>
+      <text class="dim" x="440" y="22" font-size="13" text-anchor="end">7 m · 3 g</text>
+    </g>
+    <g transform="translate(0,120)">
+      <rect width="448" height="34" rx="8" fill="#1B2027"/>
+      <circle cx="18" cy="17" r="5" fill="#39D98A"/>
+      <text class="t"   x="36"  y="22" font-size="14" font-weight="600">cable_clip_x12.3mf</text>
+      <text class="dim" x="440" y="22" font-size="13" text-anchor="end">88 m · 26 g</text>
+    </g>
+    <g transform="translate(0,160)">
+      <rect width="448" height="34" rx="8" fill="#1B2027"/>
+      <circle cx="18" cy="17" r="5" fill="#F5A524"/>
+      <text class="t"   x="36"  y="22" font-size="14" font-weight="600">gridfinity_bin_2x1.3mf</text>
+      <text class="dim" x="440" y="22" font-size="13" text-anchor="end">21 m · 9 g</text>
+    </g>
+  </g>
+
+  <!-- Bottom nav dots (History is active = index 2) -->
+  <g transform="translate(240,310)">
+    <circle cx="-21" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-7"  cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="7"   cy="0" r="5" fill="#00B7C3"/>
+    <circle cx="21"  cy="0" r="3" fill="#8A95A4"/>
+  </g>
+</svg>

@@ -11,7 +11,9 @@ over its REST API — your printers never see a third-party cloud.
 Total BOM is around **30 €** (display included). The enclosure is FDM-printable
 on any Bambu (or other) printer with 0.4 mm nozzle.
 
-![placeholder](docs/screenshots/dashboard_mock.svg)
+| Live | Printers | History | Settings |
+|------|----------|---------|----------|
+| ![Live](docs/screenshots/dashboard_mock.svg) | ![Printers](docs/screenshots/printers_mock.svg) | ![History](docs/screenshots/history_mock.svg) | ![Settings](docs/screenshots/settings_mock.svg) |
 
 ## Features
 
