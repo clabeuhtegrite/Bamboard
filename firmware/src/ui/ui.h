@@ -43,8 +43,6 @@ class Manager {
     // Periodic UI refresh (pull latest snapshots into widgets).
     void refresh();
 
-    // What screen are we on?
-    Screen current() const { return current_; }
     int selected_printer_id() const { return selected_printer_id_; }
 
    private:
@@ -54,7 +52,6 @@ class Manager {
     Screen current_ = Screen::Dashboard;
     int    selected_printer_id_ = -1;
     int    selected_index_      = 0;
-    lv_obj_t* nav_indicator_ = nullptr;
 };
 
 extern Manager g_ui;

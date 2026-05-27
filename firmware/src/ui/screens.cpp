@@ -106,7 +106,6 @@ void header_set_printer_name(const char* name) {
 
 static lv_obj_t* s_toast       = nullptr;
 static lv_obj_t* s_toast_label = nullptr;
-static lv_anim_t s_toast_anim;
 static uint32_t  s_toast_hide_at = 0;
 
 lv_obj_t* build_toast(lv_obj_t* parent) {

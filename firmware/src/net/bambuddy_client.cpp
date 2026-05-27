@@ -9,13 +9,6 @@ namespace bambuddy {
 
 Client g_client;
 
-// --- helpers ----------------------------------------------------------------
-
-static String url_encode_path(const String& path) {
-    // Bambuddy paths are simple ASCII; we keep this trivial.
-    return path;
-}
-
 PrinterState Client::parse_state(const char* s) {
     if (!s || !*s) return PrinterState::Unknown;
     // Lower-case match without pulling in <strings.h>
@@ -148,7 +141,6 @@ bool Client::fetch_printers() {
         p.id         = obj["id"]            | -1;
         p.name       = (const char*)(obj["name"]   | "Printer");
         p.model      = (const char*)(obj["model"]  | "");
-        p.serial     = (const char*)(obj["serial_number"] | "");
         p.state      = parse_state(obj["status"]   | "");
     }
     xSemaphoreGive(mtx_);
@@ -174,7 +166,6 @@ bool Client::fetch_printer_status(int printer_id) {
         p.temps.chamber  = doc["temperatures"]["chamber"] | 0.0f;
         p.hms            = (const char*)(doc["hms_status"] | "ok");
         p.filename       = (const char*)(doc["filename"]   | "");
-        p.last_status_ms = millis();
         break;
     }
     xSemaphoreGive(mtx_);
@@ -211,13 +202,10 @@ bool Client::fetch_recent_archives(uint8_t limit) {
     for (JsonObject obj : arr) {
         if (recent_count_ >= MAX_RECENT_ARCHIVES) break;
         Archive& a    = recent_[recent_count_++];
-        a.id          = obj["id"]            | -1;
         a.name        = (const char*)(obj["name"]         | "");
-        a.printer_name= (const char*)(obj["printer_name"] | "");
         a.status      = (const char*)(obj["status"]       | "");
         a.duration_s  = obj["duration"]      | 0;
         a.filament_g  = obj["filament_used"] | 0.0f;
-        a.created_at  = (const char*)(obj["created_at"]   | "");
     }
     xSemaphoreGive(mtx_);
     return true;

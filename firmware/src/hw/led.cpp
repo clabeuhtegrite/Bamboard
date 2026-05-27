@@ -25,19 +25,8 @@ void StatusLed::begin() {
     FastLED.show();
 }
 
-void StatusLed::flash(uint32_t rgb, uint32_t duration_ms) {
-    flash_rgb_   = rgb;
-    flash_until_ = millis() + duration_ms;
-}
-
 void StatusLed::tick(::bambuddy::PrinterState state, bool has_hms_error) {
     using PS = ::bambuddy::PrinterState;
-
-    if (millis() < flash_until_) {
-        s_leds[0] = CRGB(flash_rgb_);
-        FastLED.show();
-        return;
-    }
 
     CRGB c = CRGB::Black;
     if (has_hms_error) {

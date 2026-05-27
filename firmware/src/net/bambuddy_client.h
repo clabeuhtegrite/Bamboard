@@ -50,7 +50,6 @@ struct Printer {
     int      id            = -1;
     String   name;
     String   model;
-    String   serial;
     PrinterState state     = PrinterState::Unknown;
 
     // populated by /status:
@@ -61,7 +60,6 @@ struct Printer {
     Temperatures temps;
     String   hms;                   // "ok" or short description
     String   filename;
-    uint32_t last_status_ms = 0;
 };
 
 struct Stats {
@@ -75,13 +73,10 @@ struct Stats {
 };
 
 struct Archive {
-    int     id            = -1;
     String  name;
-    String  printer_name;
     String  status;            // "success" | "failed" | "stopped"
     uint32_t duration_s   = 0;
     float    filament_g   = 0.0f;
-    String   created_at;       // ISO-8601 string
 };
 
 // ---------- Client --------------------------------------------------------
