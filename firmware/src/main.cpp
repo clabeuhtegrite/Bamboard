@@ -61,8 +61,6 @@ static void clear_all_prefs() {
 // ---------------------------------------------------------------------------
 
 static WiFiManager s_wm;
-static char  s_wm_url[128] = "";
-static char  s_wm_key[80]  = "";
 
 static void start_provisioning() {
     // Show a friendly screen while we run the captive portal.
