@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bamboard Printers screen, 1:1 (480x320).
+  Three printer rows in a vertical list; the selected one has the accent border.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" width="480" height="320">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101418"/>
+      <stop offset="1" stop-color="#1B2027"/>
+    </linearGradient>
+    <style>
+      .t   { font-family: 'Inter', system-ui, sans-serif; fill: #E9EEF3; }
+      .dim { font-family: 'Inter', system-ui, sans-serif; fill: #8A95A4; }
+      .ac  { fill: #00B7C3; }
+      .ok  { fill: #39D98A; }
+      .wn  { fill: #F5A524; }
+      .er  { fill: #E5484D; }
+    </style>
+  </defs>
+
+  <rect width="480" height="320" fill="url(#bg)"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="480" height="36" fill="#1B2027"/>
+  <text class="t ac" x="14" y="24" font-size="18" font-weight="700">Bamboard</text>
+  <text class="t"    x="240" y="24" font-size="15" text-anchor="middle">Printers</text>
+  <text class="ok"   x="466" y="24" font-size="13" text-anchor="end" font-weight="600">● online 41ms</text>
+
+  <!-- Row 1: Workshop X1C — selected, printing -->
+  <g transform="translate(16,48)">
+    <rect width="448" height="56" rx="10" fill="#1B2027" stroke="#00B7C3" stroke-width="2"/>
+    <circle cx="22" cy="28" r="6" fill="#00B7C3"/>
+    <text class="t"   x="40" y="24" font-size="20" font-weight="600">Workshop X1C</text>
+    <text class="dim" x="40" y="44" font-size="12">X1 Carbon  ·  PRINTING</text>
+    <text class="ac"  x="436" y="38" font-size="26" font-weight="700" text-anchor="end">62%</text>
+  </g>
+
+  <!-- Row 2: Bedroom A1 mini — idle -->
+  <g transform="translate(16,114)">
+    <rect width="448" height="56" rx="10" fill="#1B2027"/>
+    <circle cx="22" cy="28" r="6" fill="#8A95A4"/>
+    <text class="t"   x="40" y="24" font-size="20" font-weight="600">Bedroom A1 mini</text>
+    <text class="dim" x="40" y="44" font-size="12">A1 mini  ·  IDLE</text>
+  </g>
+
+  <!-- Row 3: Lab P1S — paused -->
+  <g transform="translate(16,180)">
+    <rect width="448" height="56" rx="10" fill="#1B2027"/>
+    <circle cx="22" cy="28" r="6" fill="#F5A524"/>
+    <text class="t"   x="40" y="24" font-size="20" font-weight="600">Lab P1S</text>
+    <text class="dim" x="40" y="44" font-size="12">P1S  ·  PAUSED</text>
+    <text class="wn"  x="436" y="38" font-size="26" font-weight="700" text-anchor="end">17%</text>
+  </g>
+
+  <!-- Row 4: Garage X1E — offline -->
+  <g transform="translate(16,246)">
+    <rect width="448" height="56" rx="10" fill="#1B2027"/>
+    <circle cx="22" cy="28" r="6" fill="#5C6470"/>
+    <text class="t"   x="40" y="24" font-size="20" font-weight="600" fill="#A6ADB7">Garage X1E</text>
+    <text class="dim" x="40" y="44" font-size="12">X1 Carbon  ·  OFFLINE</text>
+  </g>
+
+  <!-- Bottom nav dots (Printers is active = index 1) -->
+  <g transform="translate(240,310)">
+    <circle cx="-21" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-7"  cy="0" r="5" fill="#00B7C3"/>
+    <circle cx="7"   cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="21"  cy="0" r="3" fill="#8A95A4"/>
+  </g>
+</svg>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bamboard Settings screen, 1:1 (480x320).
+  Read-only diagnostics + a hint block at the bottom.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" width="480" height="320">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101418"/>
+      <stop offset="1" stop-color="#1B2027"/>
+    </linearGradient>
+    <style>
+      .t   { font-family: 'Inter', system-ui, sans-serif; fill: #E9EEF3; }
+      .dim { font-family: 'Inter', system-ui, sans-serif; fill: #8A95A4; }
+      .ac  { fill: #00B7C3; }
+      .ok  { fill: #39D98A; }
+    </style>
+  </defs>
+
+  <rect width="480" height="320" fill="url(#bg)"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="480" height="36" fill="#1B2027"/>
+  <text class="t ac" x="14" y="24" font-size="18" font-weight="700">Bamboard</text>
+  <text class="t"    x="240" y="24" font-size="15" text-anchor="middle">Settings</text>
+  <text class="ok"   x="466" y="24" font-size="13" text-anchor="end" font-weight="600">● online 41ms</text>
+
+  <!-- Key/value rows -->
+  <g font-family="system-ui, sans-serif">
+    <text class="dim" x="32"  y="76"  font-size="13">Bambuddy</text>
+    <text class="t"   x="180" y="76"  font-size="16" font-weight="500">http://192.168.1.42:8000</text>
+
+    <text class="dim" x="32"  y="110" font-size="13">Local IP</text>
+    <text class="t"   x="180" y="110" font-size="16" font-weight="500">192.168.1.27</text>
+
+    <text class="dim" x="32"  y="144" font-size="13">Wi-Fi RSSI</text>
+    <text class="t"   x="180" y="144" font-size="16" font-weight="500">-58 dBm</text>
+
+    <text class="dim" x="32"  y="178" font-size="13">Uptime</text>
+    <text class="t"   x="180" y="178" font-size="16" font-weight="500">2h 14m 09s</text>
+
+    <text class="dim" x="32"  y="212" font-size="13">Firmware</text>
+    <text class="t"   x="180" y="212" font-size="16" font-weight="500">bamboard 0.1.0  ·  build 18cfd33</text>
+  </g>
+
+  <!-- Hint block -->
+  <g transform="translate(16,236)">
+    <rect width="448" height="62" rx="10" fill="#1B2027"/>
+    <text class="ac"  x="14" y="22" font-size="13" font-weight="600">TIPS</text>
+    <text class="dim" x="14" y="42" font-size="12">Long-press OK on Live to cycle the print speed preset.</text>
+    <text class="dim" x="14" y="56" font-size="12">Hold PREV at boot to wipe settings and re-open the captive portal.</text>
+  </g>
+
+  <!-- Bottom nav dots (Settings is active = index 3) -->
+  <g transform="translate(240,310)">
+    <circle cx="-21" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-7"  cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="7"   cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="21"  cy="0" r="5" fill="#00B7C3"/>
+  </g>
+</svg>
