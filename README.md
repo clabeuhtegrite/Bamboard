@@ -13,15 +13,16 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 
 ![Bamboard assembled](docs/screenshots/device_render.svg)
 
-| Live | Printers | History | Settings |
-|------|----------|---------|----------|
-| ![Live](docs/screenshots/dashboard_mock.svg) | ![Printers](docs/screenshots/printers_mock.svg) | ![History](docs/screenshots/history_mock.svg) | ![Settings](docs/screenshots/settings_mock.svg) |
+| Live | AMS | Printers | History | Settings |
+|------|-----|----------|---------|----------|
+| ![Live](docs/screenshots/dashboard_mock.svg) | ![AMS](docs/screenshots/ams_mock.svg) | ![Printers](docs/screenshots/printers_mock.svg) | ![History](docs/screenshots/history_mock.svg) | ![Settings](docs/screenshots/settings_mock.svg) |
 
 ## Features
 
 ### Shipped in v0.1
 
 - **Live dashboard** — nozzle / bed / chamber temperature, layer progress, ETA, filename
+- **AMS overview** — per-slot filament colour / type / remaining %, plus AMS humidity, temperature and active drying countdown; long-press OK to cycle through chained AMS / AMS-HT units
 - **Multi-printer** — switch between all printers known to Bambuddy with the buttons
 - **History & stats** — last 10 prints, success rate, total filament, total time
 - **Print speed control** — cycle the speed preset (Silent / Standard / Sport / Ludicrous) by long-pressing OK on the live screen
@@ -32,7 +33,6 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 
 ### Roadmap (claimed earlier but not yet wired)
 
-- **AMS overview** — Bambuddy's `/printers/{id}/status` doesn't expose AMS in its documented schema; needs a probe of the actual instance's OpenAPI and a dedicated screen
 - **HMS clear / clear-plate UI** — the API client methods exist (`Client::clear_hms`, `Client::clear_plate`), they just need a context menu binding (e.g. long-press OK on the Printers screen)
 - **Full-screen HMS flash** — currently only the HMS label turns red; a periodic full-screen warning overlay is TODO
 - **OTA upload** — `pio run -t upload --upload-port bamboard.local` documented but `ArduinoOTA.begin()` not yet called in `setup()`

@@ -10,6 +10,7 @@
 namespace ui::screens {
 
 lv_obj_t* build_dashboard(lv_obj_t* parent);
+lv_obj_t* build_ams      (lv_obj_t* parent);
 lv_obj_t* build_printers (lv_obj_t* parent);
 lv_obj_t* build_history  (lv_obj_t* parent);
 lv_obj_t* build_settings (lv_obj_t* parent);
@@ -17,9 +18,14 @@ lv_obj_t* build_settings (lv_obj_t* parent);
 // Each screen exposes an update() that copies fresh data from the
 // Bambuddy client snapshot into its widgets. Called from the UI manager.
 void update_dashboard(int printer_id);
+void update_ams(int printer_id);
 void update_printers(int selected_index);
 void update_history();
 void update_settings();
+
+// Cycle visible AMS unit when the selected printer has more than one. Called
+// by the UI manager on long-press OK while the AMS screen is active.
+void ams_cycle_unit(int dir);
 
 // Toast / message overlay used by the manager.
 lv_obj_t* build_toast(lv_obj_t* parent);

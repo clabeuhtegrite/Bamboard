@@ -44,6 +44,7 @@ static lv_obj_t* s_nav_dots[(uint8_t)Screen::_Count] = {};
 
 static const char* screen_titles[(uint8_t)Screen::_Count] = {
     "Live",
+    "AMS",
     "Printers",
     "History",
     "Settings",
@@ -77,6 +78,7 @@ void Manager::begin() {
 
     // Build screens
     s_screens[(uint8_t)Screen::Dashboard] = screens::build_dashboard(s_root);
+    s_screens[(uint8_t)Screen::Ams]       = screens::build_ams(s_root);
     s_screens[(uint8_t)Screen::Printers]  = screens::build_printers(s_root);
     s_screens[(uint8_t)Screen::History]   = screens::build_history(s_root);
     s_screens[(uint8_t)Screen::Settings]  = screens::build_settings(s_root);
@@ -120,6 +122,7 @@ void Manager::refresh() {
     }
     switch (current_) {
         case Screen::Dashboard: screens::update_dashboard(selected_printer_id_); break;
+        case Screen::Ams:       screens::update_ams(selected_printer_id_);       break;
         case Screen::Printers:  screens::update_printers(selected_index_);       break;
         case Screen::History:   screens::update_history();                       break;
         case Screen::Settings:  screens::update_settings();                      break;
@@ -172,24 +175,29 @@ void Manager::handle_input() {
                 }
             }
         } else if (e.btn == Btn::Prev && (e.ev == BtnEvent::LongPress || e.ev == BtnEvent::Repeat)) {
-            if (current_ == Screen::Dashboard) {
-                cycle_printer(-1, selected_index_, selected_printer_id_);
-            } else if (current_ == Screen::Printers) {
+            if (current_ == Screen::Dashboard ||
+                current_ == Screen::Ams       ||
+                current_ == Screen::Printers) {
                 cycle_printer(-1, selected_index_, selected_printer_id_);
             }
         } else if (e.btn == Btn::Next && (e.ev == BtnEvent::LongPress || e.ev == BtnEvent::Repeat)) {
-            if (current_ == Screen::Dashboard || current_ == Screen::Printers) {
+            if (current_ == Screen::Dashboard ||
+                current_ == Screen::Ams       ||
+                current_ == Screen::Printers) {
                 cycle_printer(+1, selected_index_, selected_printer_id_);
             }
         } else if (e.btn == Btn::Ok && e.ev == BtnEvent::LongPress) {
-            // OK long press on dashboard → cycle print speed mode.
             if (current_ == Screen::Dashboard && selected_printer_id_ >= 0) {
+                // Cycle print speed mode.
                 static uint8_t mode = 2;
                 mode = (uint8_t)((mode % 4) + 1);
                 ::bambuddy::g_client.set_print_speed(selected_printer_id_, mode);
                 const char* names[] = {"Silent", "Standard", "Sport", "Ludicrous"};
                 String msg = String("Speed: ") + names[mode - 1];
                 show_toast(msg.c_str(), lv_color_hex(::ui::C_OK));
+            } else if (current_ == Screen::Ams) {
+                // Cycle to the next AMS unit on multi-AMS setups.
+                screens::ams_cycle_unit(+1);
             }
         }
     }

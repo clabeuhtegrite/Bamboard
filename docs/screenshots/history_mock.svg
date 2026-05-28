@@ -79,11 +79,12 @@
     </g>
   </g>
 
-  <!-- Bottom nav dots (History is active = index 2) -->
+  <!-- Bottom nav dots (5 screens, History is active = index 3) -->
   <g transform="translate(240,310)">
-    <circle cx="-21" cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="-7"  cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="7"   cy="0" r="5" fill="#00B7C3"/>
-    <circle cx="21"  cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-28" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-14" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="0"   cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="14"  cy="0" r="5" fill="#00B7C3"/>
+    <circle cx="28"  cy="0" r="3" fill="#8A95A4"/>
   </g>
 </svg>

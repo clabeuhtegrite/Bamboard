@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bamboard AMS screen mockup, 1:1 scale (480x320).
+  Layout grid:
+    Header          : y =   0..36
+    Status strip    : y =  44..76   (unit label · humidity · temp · drying)
+    Slot cards row  : y =  86..276  (four 104×190 cards, 8-px gutters)
+    Nav dots        : y = 304..316  (5 screens — AMS is index 1, active)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" width="480" height="320">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101418"/>
+      <stop offset="1" stop-color="#1B2027"/>
+    </linearGradient>
+    <style>
+      .t   { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; fill: #E9EEF3; }
+      .dim { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; fill: #8A95A4; }
+      .ac  { fill: #00B7C3; }
+      .ok  { fill: #39D98A; }
+      .wn  { fill: #F5A524; }
+      .er  { fill: #E5484D; }
+    </style>
+  </defs>
+
+  <rect width="480" height="320" fill="url(#bg)"/>
+
+  <!-- ============ Header (y 0..36) ============ -->
+  <rect x="0" y="0" width="480" height="36" fill="#1B2027"/>
+  <text class="t ac" x="14" y="24" font-size="18" font-weight="700">Bamboard</text>
+  <text class="t"    x="240" y="24" font-size="15" text-anchor="middle">Workshop X1C</text>
+  <text class="ok"   x="466" y="24" font-size="13" text-anchor="end" font-weight="600">● online 41ms</text>
+
+  <!-- ============ Status strip (y 44..76) ============ -->
+  <text class="t ac" x="20"  y="64" font-size="18" font-weight="700">AMS 1/2</text>
+  <text class="ok"   x="140" y="64" font-size="15">~ 28%</text>
+  <text class="t"    x="260" y="64" font-size="15">29 °C</text>
+  <text class="wn"   x="460" y="64" font-size="15" text-anchor="end">Dry 1h12</text>
+
+  <!-- ============ Slot cards (y 86..276) ============ -->
+  <!-- Card 1 — PLA Basic, blue, 62% -->
+  <g transform="translate(20,86)">
+    <rect width="104" height="190" rx="10" fill="#1B2027"/>
+    <rect width="104" height="60"  rx="10" fill="#00A0E9"/>
+    <rect y="50" width="104" height="10" fill="#00A0E9"/>
+    <text class="t"  x="12" y="92"  font-size="14" font-weight="600">PLA</text>
+    <text class="t"  x="12" y="130" font-size="26" font-weight="700">62%</text>
+    <rect x="10" y="170" width="84" height="8" rx="4" fill="#232A33"/>
+    <rect x="10" y="170" width="52" height="8" rx="4" fill="#00B7C3"/>
+  </g>
+
+  <!-- Card 2 — PETG, green, 88% -->
+  <g transform="translate(132,86)">
+    <rect width="104" height="190" rx="10" fill="#1B2027"/>
+    <rect width="104" height="60"  rx="10" fill="#39D98A"/>
+    <rect y="50" width="104" height="10" fill="#39D98A"/>
+    <text class="t"  x="12" y="92"  font-size="14" font-weight="600">PETG</text>
+    <text class="t"  x="12" y="130" font-size="26" font-weight="700">88%</text>
+    <rect x="10" y="170" width="84" height="8" rx="4" fill="#232A33"/>
+    <rect x="10" y="170" width="74" height="8" rx="4" fill="#39D98A"/>
+  </g>
+
+  <!-- Card 3 — empty -->
+  <g transform="translate(244,86)">
+    <rect width="104" height="190" rx="10" fill="#1B2027"/>
+    <rect width="104" height="60"  rx="10" fill="#232A33"/>
+    <rect y="50" width="104" height="10" fill="#232A33"/>
+    <text class="dim" x="12" y="92"  font-size="14" font-weight="600">EMPTY</text>
+    <text class="dim" x="12" y="130" font-size="26" font-weight="700">—</text>
+    <rect x="10" y="170" width="84" height="8" rx="4" fill="#232A33"/>
+  </g>
+
+  <!-- Card 4 — TPU, yellow, 12% (low → red) -->
+  <g transform="translate(356,86)">
+    <rect width="104" height="190" rx="10" fill="#1B2027"/>
+    <rect width="104" height="60"  rx="10" fill="#F5A524"/>
+    <rect y="50" width="104" height="10" fill="#F5A524"/>
+    <text class="t"  x="12" y="92"  font-size="14" font-weight="600">TPU</text>
+    <text class="er" x="12" y="130" font-size="26" font-weight="700">12%</text>
+    <rect x="10" y="170" width="84" height="8" rx="4" fill="#232A33"/>
+    <rect x="10" y="170" width="10" height="8" rx="4" fill="#E5484D"/>
+  </g>
+
+  <!-- ============ Bottom nav dots (5 screens, AMS = index 1) ============ -->
+  <g transform="translate(240,310)">
+    <circle cx="-28" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-14" cy="0" r="5" fill="#00B7C3"/>
+    <circle cx="0"   cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="14"  cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="28"  cy="0" r="3" fill="#8A95A4"/>
+  </g>
+</svg>
