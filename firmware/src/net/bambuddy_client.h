@@ -34,6 +34,30 @@ struct Temperatures {
     float chamber = 0.0f;
 };
 
+// One filament slot inside an AMS unit. Bambuddy's /status returns the colour
+// as RRGGBBAA hex; we strip alpha at parse time so the UI can pass a 0xRRGGBB
+// value straight into LVGL.
+struct AmsSlot {
+    uint8_t  id        = 0;          // 0..3 within the unit
+    bool     present   = false;      // true when the slot reports any filament data
+    uint32_t color_rgb = 0;          // 0xRRGGBB, 0 = unknown
+    char     type[12]  = {};         // "PLA", "PETG", "" — short tag for the slot
+    uint8_t  remain    = 0;          // 0..100, Bambu's RFID estimate
+};
+
+// One AMS (or AMS-HT) unit. Bambu chains up to 4 units per printer; we cap at
+// MAX_AMS_UNITS and surface ams_count so the UI can show "AMS 1/2".
+struct AmsUnit {
+    int8_t   id          = -1;
+    bool     present     = false;
+    bool     is_ht       = false;    // AMS-HT (1-slot high-temp)
+    int16_t  humidity    = -1;       // -1 = unknown, else 0..100 (%)
+    float    temp        = 0.0f;     // ambient °C, 0 = unknown
+    uint32_t dry_time_min = 0;       // drying countdown in minutes; 0 = idle
+    uint8_t  slot_count  = 0;
+    AmsSlot  slots[4];
+};
+
 enum class PrinterState : uint8_t {
     Unknown,
     Idle,
@@ -60,6 +84,11 @@ struct Printer {
     Temperatures temps;
     String   hms;                   // "ok" or short description
     String   filename;
+
+    // populated by /status (ams subtree):
+    bool     ams_exists = false;
+    uint8_t  ams_count  = 0;
+    AmsUnit  ams[4];                // up to 4 chained units; cap matches Bambu
 };
 
 struct Stats {

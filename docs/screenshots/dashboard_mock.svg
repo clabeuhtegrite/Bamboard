@@ -80,11 +80,12 @@
     <text class="t"   x="14" y="58" font-size="24" font-weight="700">35 °C</text>
   </g>
 
-  <!-- ============ Bottom nav dots ============ -->
+  <!-- ============ Bottom nav dots (5 screens, Live = index 0) ============ -->
   <g transform="translate(240,310)">
-    <circle cx="-21" cy="0" r="5" fill="#00B7C3"/>
-    <circle cx="-7"  cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="7"   cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="21"  cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-28" cy="0" r="5" fill="#00B7C3"/>
+    <circle cx="-14" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="0"   cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="14"  cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="28"  cy="0" r="3" fill="#8A95A4"/>
   </g>
 </svg>

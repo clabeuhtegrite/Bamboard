@@ -51,11 +51,12 @@
     <text class="dim" x="14" y="56" font-size="12">Hold PREV at boot to wipe settings and re-open the captive portal.</text>
   </g>
 
-  <!-- Bottom nav dots (Settings is active = index 3) -->
+  <!-- Bottom nav dots (5 screens, Settings is active = index 4) -->
   <g transform="translate(240,310)">
-    <circle cx="-21" cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="-7"  cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="7"   cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="21"  cy="0" r="5" fill="#00B7C3"/>
+    <circle cx="-28" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-14" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="0"   cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="14"  cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="28"  cy="0" r="5" fill="#00B7C3"/>
   </g>
 </svg>

@@ -27,6 +27,7 @@ namespace ui {
 
 enum class Screen : uint8_t {
     Dashboard = 0,
+    Ams,
     Printers,
     History,
     Settings,

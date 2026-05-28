@@ -343,6 +343,269 @@ void update_dashboard(int printer_id) {
     lv_label_set_text(s_dash_t_cham, buf);
 }
 
+// ---------- AMS ------------------------------------------------------------
+//
+// Layout (480×266 content area):
+//   y  44..  76 : status strip (unit label, humidity, temp, drying badge)
+//   y  86.. 276 : up to 4 slot cards in a single row (104w, 8px gaps)
+// When the printer has more than one AMS the UI manager cycles the visible
+// unit via long-press OK; we cap visible at 4 slots which is the regular AMS
+// capacity (AMS-HT reports a single slot and we centre it).
+
+static lv_obj_t* s_ams_root        = nullptr;
+static lv_obj_t* s_ams_empty       = nullptr;
+static lv_obj_t* s_ams_unit_lbl    = nullptr;
+static lv_obj_t* s_ams_humid_lbl   = nullptr;
+static lv_obj_t* s_ams_temp_lbl    = nullptr;
+static lv_obj_t* s_ams_dry_lbl     = nullptr;
+static lv_obj_t* s_ams_row         = nullptr;
+static lv_obj_t* s_ams_card[4]     = {};
+static lv_obj_t* s_ams_card_swatch[4] = {};
+static lv_obj_t* s_ams_card_type[4]   = {};
+static lv_obj_t* s_ams_card_pct[4]    = {};
+static lv_obj_t* s_ams_card_bar[4]    = {};
+
+static int s_ams_visible_index = 0;   // index into Printer.ams[]
+
+static lv_obj_t* make_slot_card(lv_obj_t* parent,
+                                lv_obj_t** swatch,
+                                lv_obj_t** type_lbl,
+                                lv_obj_t** pct_lbl,
+                                lv_obj_t** bar) {
+    lv_obj_t* card = lv_obj_create(parent);
+    lv_obj_add_style(card, &s_panel, 0);
+    lv_obj_set_size(card, 104, 190);
+    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_all(card, 0, 0);
+
+    *swatch = lv_obj_create(card);
+    lv_obj_remove_style_all(*swatch);
+    lv_obj_set_size(*swatch, 104, 60);
+    lv_obj_align(*swatch, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_radius(*swatch, 10, 0);
+    lv_obj_set_style_bg_opa(*swatch, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(*swatch, lv_color_hex(::ui::C_PANEL_HI), 0);
+
+    *type_lbl = lv_label_create(card);
+    lv_label_set_text(*type_lbl, "—");
+    lv_obj_align(*type_lbl, LV_ALIGN_TOP_LEFT, 10, 72);
+    lv_obj_set_style_text_font(*type_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(*type_lbl, lv_color_hex(::ui::C_TEXT), 0);
+
+    *pct_lbl = lv_label_create(card);
+    lv_label_set_text(*pct_lbl, "--%");
+    lv_obj_align(*pct_lbl, LV_ALIGN_TOP_LEFT, 10, 102);
+    lv_obj_set_style_text_font(*pct_lbl, &lv_font_montserrat_28, 0);
+    lv_obj_set_style_text_color(*pct_lbl, lv_color_hex(::ui::C_TEXT), 0);
+
+    *bar = lv_bar_create(card);
+    lv_obj_set_size(*bar, 84, 8);
+    lv_obj_align(*bar, LV_ALIGN_BOTTOM_LEFT, 10, -12);
+    lv_bar_set_range(*bar, 0, 100);
+    lv_bar_set_value(*bar, 0, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(*bar, lv_color_hex(::ui::C_PANEL_HI), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(*bar, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(*bar, 4, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(*bar, lv_color_hex(::ui::C_ACCENT), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa(*bar, LV_OPA_COVER, LV_PART_INDICATOR);
+    lv_obj_set_style_radius(*bar, 4, LV_PART_INDICATOR);
+
+    return card;
+}
+
+lv_obj_t* build_ams(lv_obj_t* parent) {
+    ensure_styles();
+    s_ams_root = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_ams_root);
+    lv_obj_set_size(s_ams_root, LV_HOR_RES, LV_VER_RES - 36 - 18);
+    lv_obj_align(s_ams_root, LV_ALIGN_TOP_LEFT, 0, 36);
+    lv_obj_clear_flag(s_ams_root, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Status strip
+    s_ams_unit_lbl = lv_label_create(s_ams_root);
+    lv_label_set_text(s_ams_unit_lbl, "AMS");
+    lv_obj_align(s_ams_unit_lbl, LV_ALIGN_TOP_LEFT, 20, 12);
+    lv_obj_set_style_text_font(s_ams_unit_lbl, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(s_ams_unit_lbl, lv_color_hex(::ui::C_ACCENT), 0);
+
+    s_ams_humid_lbl = lv_label_create(s_ams_root);
+    lv_label_set_text(s_ams_humid_lbl, "");
+    lv_obj_align(s_ams_humid_lbl, LV_ALIGN_TOP_LEFT, 140, 16);
+    lv_obj_set_style_text_font(s_ams_humid_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(s_ams_humid_lbl, lv_color_hex(::ui::C_TEXT), 0);
+
+    s_ams_temp_lbl = lv_label_create(s_ams_root);
+    lv_label_set_text(s_ams_temp_lbl, "");
+    lv_obj_align(s_ams_temp_lbl, LV_ALIGN_TOP_LEFT, 260, 16);
+    lv_obj_set_style_text_font(s_ams_temp_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(s_ams_temp_lbl, lv_color_hex(::ui::C_TEXT), 0);
+
+    s_ams_dry_lbl = lv_label_create(s_ams_root);
+    lv_label_set_text(s_ams_dry_lbl, "");
+    lv_obj_align(s_ams_dry_lbl, LV_ALIGN_TOP_RIGHT, -20, 16);
+    lv_obj_set_style_text_font(s_ams_dry_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(s_ams_dry_lbl, lv_color_hex(::ui::C_WARN), 0);
+
+    // Slot row
+    s_ams_row = lv_obj_create(s_ams_root);
+    lv_obj_remove_style_all(s_ams_row);
+    lv_obj_set_size(s_ams_row, LV_HOR_RES - 40, 196);
+    lv_obj_align(s_ams_row, LV_ALIGN_TOP_LEFT, 20, 50);
+    lv_obj_set_flex_flow(s_ams_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(s_ams_row, 8, 0);
+    lv_obj_clear_flag(s_ams_row, LV_OBJ_FLAG_SCROLLABLE);
+
+    for (uint8_t i = 0; i < 4; ++i) {
+        s_ams_card[i] = make_slot_card(s_ams_row,
+                                       &s_ams_card_swatch[i],
+                                       &s_ams_card_type[i],
+                                       &s_ams_card_pct[i],
+                                       &s_ams_card_bar[i]);
+    }
+
+    // Empty state overlay (centered, hidden by default)
+    s_ams_empty = lv_label_create(s_ams_root);
+    lv_label_set_text(s_ams_empty,
+        "No AMS connected.\n"
+        "Connect an AMS or AMS-HT to this printer\n"
+        "in Bambu Studio to see its slots here.");
+    lv_obj_set_style_text_align(s_ams_empty, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_add_style(s_ams_empty, &s_label_dim, 0);
+    lv_obj_align(s_ams_empty, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_flag(s_ams_empty, LV_OBJ_FLAG_HIDDEN);
+
+    return s_ams_root;
+}
+
+static void render_slot(uint8_t slot_idx, const ::bambuddy::AmsSlot* s) {
+    lv_obj_clear_flag(s_ams_card[slot_idx], LV_OBJ_FLAG_HIDDEN);
+
+    if (!s || !s->present) {
+        lv_obj_set_style_bg_color(s_ams_card_swatch[slot_idx],
+                                   lv_color_hex(::ui::C_PANEL_HI), 0);
+        lv_label_set_text(s_ams_card_type[slot_idx], "EMPTY");
+        lv_obj_set_style_text_color(s_ams_card_type[slot_idx],
+                                     lv_color_hex(::ui::C_TEXT_DIM), 0);
+        lv_label_set_text(s_ams_card_pct[slot_idx], "—");
+        lv_obj_set_style_text_color(s_ams_card_pct[slot_idx],
+                                     lv_color_hex(::ui::C_TEXT_DIM), 0);
+        lv_bar_set_value(s_ams_card_bar[slot_idx], 0, LV_ANIM_OFF);
+        return;
+    }
+
+    uint32_t rgb = s->color_rgb ? s->color_rgb : ::ui::C_PANEL_HI;
+    lv_obj_set_style_bg_color(s_ams_card_swatch[slot_idx], lv_color_hex(rgb), 0);
+
+    lv_label_set_text(s_ams_card_type[slot_idx],
+                       s->type[0] ? s->type : "—");
+    lv_obj_set_style_text_color(s_ams_card_type[slot_idx],
+                                 lv_color_hex(::ui::C_TEXT), 0);
+
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%u%%", (unsigned)s->remain);
+    lv_label_set_text(s_ams_card_pct[slot_idx], buf);
+
+    uint32_t pct_col = ::ui::C_TEXT;
+    if (s->remain < 15)      pct_col = ::ui::C_ERR;
+    else if (s->remain < 30) pct_col = ::ui::C_WARN;
+    lv_obj_set_style_text_color(s_ams_card_pct[slot_idx], lv_color_hex(pct_col), 0);
+
+    lv_bar_set_value(s_ams_card_bar[slot_idx], s->remain, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(s_ams_card_bar[slot_idx],
+                               lv_color_hex(pct_col), LV_PART_INDICATOR);
+}
+
+void ams_cycle_unit(int dir) {
+    s_ams_visible_index += dir;
+    if (s_ams_visible_index < 0) s_ams_visible_index = 0;
+}
+
+void update_ams(int printer_id) {
+    maybe_hide_toast();
+    ::bambuddy::Printer ps[8]; uint8_t n = 0;
+    ::bambuddy::g_client.snapshot_printers(ps, n);
+
+    const ::bambuddy::Printer* sel = nullptr;
+    for (uint8_t i = 0; i < n; ++i) if (ps[i].id == printer_id) sel = &ps[i];
+    if (!sel && n > 0) sel = &ps[0];
+
+    bool has_ams = (sel != nullptr) && sel->ams_exists && sel->ams_count > 0;
+
+    if (!has_ams) {
+        lv_obj_clear_flag(s_ams_empty, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_ams_row, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(s_ams_unit_lbl, "AMS");
+        lv_label_set_text(s_ams_humid_lbl, "");
+        lv_label_set_text(s_ams_temp_lbl,  "");
+        lv_label_set_text(s_ams_dry_lbl,   "");
+        return;
+    }
+
+    lv_obj_add_flag(s_ams_empty, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(s_ams_row, LV_OBJ_FLAG_HIDDEN);
+
+    // Clamp visible index — ams_count can drop when a unit is unplugged live.
+    if (s_ams_visible_index >= sel->ams_count) s_ams_visible_index = 0;
+    const ::bambuddy::AmsUnit& u = sel->ams[s_ams_visible_index];
+
+    // Header
+    char hdr[24];
+    if (sel->ams_count > 1)
+        snprintf(hdr, sizeof(hdr), "AMS %d/%u%s",
+                 s_ams_visible_index + 1, (unsigned)sel->ams_count,
+                 u.is_ht ? " HT" : "");
+    else
+        snprintf(hdr, sizeof(hdr), "AMS%s", u.is_ht ? "-HT" : "");
+    lv_label_set_text(s_ams_unit_lbl, hdr);
+
+    if (u.humidity >= 0) {
+        char hbuf[16];
+        snprintf(hbuf, sizeof(hbuf), LV_SYMBOL_TINT " %d%%", (int)u.humidity);
+        lv_label_set_text(s_ams_humid_lbl, hbuf);
+        uint32_t hc = ::ui::C_OK;
+        if (u.humidity > 60)      hc = ::ui::C_ERR;
+        else if (u.humidity > 40) hc = ::ui::C_WARN;
+        lv_obj_set_style_text_color(s_ams_humid_lbl, lv_color_hex(hc), 0);
+    } else {
+        lv_label_set_text(s_ams_humid_lbl, LV_SYMBOL_TINT " --");
+        lv_obj_set_style_text_color(s_ams_humid_lbl,
+                                     lv_color_hex(::ui::C_TEXT_DIM), 0);
+    }
+
+    if (u.temp > 0.5f) {
+        char tbuf[16];
+        snprintf(tbuf, sizeof(tbuf), "%.0f \xC2\xB0""C", u.temp);
+        lv_label_set_text(s_ams_temp_lbl, tbuf);
+    } else {
+        lv_label_set_text(s_ams_temp_lbl, "");
+    }
+
+    if (u.dry_time_min > 0) {
+        char dbuf[20];
+        if (u.dry_time_min >= 60)
+            snprintf(dbuf, sizeof(dbuf), "Dry %luh%02lu",
+                     (unsigned long)(u.dry_time_min / 60),
+                     (unsigned long)(u.dry_time_min % 60));
+        else
+            snprintf(dbuf, sizeof(dbuf), "Dry %lum",
+                     (unsigned long)u.dry_time_min);
+        lv_label_set_text(s_ams_dry_lbl, dbuf);
+    } else {
+        lv_label_set_text(s_ams_dry_lbl, "");
+    }
+
+    // Slots — AMS regular has 4, AMS-HT has 1 (we hide the rest).
+    uint8_t visible = u.slot_count > 0 ? u.slot_count : (u.is_ht ? 1 : 4);
+    if (visible > 4) visible = 4;
+    for (uint8_t i = 0; i < 4; ++i) {
+        if (i < visible) {
+            render_slot(i, i < u.slot_count ? &u.slots[i] : nullptr);
+        } else {
+            lv_obj_add_flag(s_ams_card[i], LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+}
+
 // ---------- printer list ---------------------------------------------------
 
 static lv_obj_t* s_pr_root = nullptr;

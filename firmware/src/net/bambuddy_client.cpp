@@ -9,6 +9,25 @@ namespace bambuddy {
 
 Client g_client;
 
+// Bambuddy returns tray colours as 8-hex RRGGBBAA (e.g. "FF6A00FF"). LVGL only
+// wants RGB, and an empty tray comes back as "" or all-zero — both map to 0.
+static uint32_t parse_tray_color(const char* hex) {
+    if (!hex || strlen(hex) < 6) return 0;
+    char buf[7];
+    memcpy(buf, hex, 6);
+    buf[6] = '\0';
+    return (uint32_t)strtoul(buf, nullptr, 16);
+}
+
+static void copy_short(char* dst, size_t cap, const char* src) {
+    if (!dst || cap == 0) return;
+    if (!src) { dst[0] = '\0'; return; }
+    size_t n = strlen(src);
+    if (n >= cap) n = cap - 1;
+    memcpy(dst, src, n);
+    dst[n] = '\0';
+}
+
 PrinterState Client::parse_state(const char* s) {
     if (!s || !*s) return PrinterState::Unknown;
     // Lower-case match without pulling in <strings.h>
@@ -166,6 +185,41 @@ bool Client::fetch_printer_status(int printer_id) {
         p.temps.chamber  = doc["temperatures"]["chamber"] | 0.0f;
         p.hms            = (const char*)(doc["hms_status"] | "ok");
         p.filename       = (const char*)(doc["filename"]   | "");
+
+        // --- AMS ---
+        p.ams_exists = doc["ams_exists"] | false;
+        p.ams_count  = 0;
+        JsonArray ams_arr = doc["ams"].as<JsonArray>();
+        if (!ams_arr.isNull()) {
+            for (JsonObject ams_obj : ams_arr) {
+                if (p.ams_count >= 4) break;
+                AmsUnit& u = p.ams[p.ams_count++];
+                u = AmsUnit{};   // reset slots from any previous snapshot
+                u.id         = ams_obj["id"]       | -1;
+                u.is_ht      = ams_obj["is_ams_ht"]| false;
+                // humidity can legitimately be 0; treat null/missing as -1.
+                if (ams_obj["humidity"].is<int>()) u.humidity = (int16_t)ams_obj["humidity"].as<int>();
+                else                                u.humidity = -1;
+                u.temp         = ams_obj["temp"]     | 0.0f;
+                u.dry_time_min = ams_obj["dry_time"] | 0u;
+                u.present      = true;
+
+                JsonArray trays = ams_obj["tray"].as<JsonArray>();
+                if (!trays.isNull()) {
+                    for (JsonObject t : trays) {
+                        if (u.slot_count >= 4) break;
+                        AmsSlot& s = u.slots[u.slot_count++];
+                        s.id        = t["id"] | 0;
+                        const char* col = t["tray_color"] | "";
+                        s.color_rgb = parse_tray_color(col);
+                        copy_short(s.type, sizeof(s.type), t["tray_type"] | "");
+                        s.remain    = t["remain"] | 0;
+                        // Bambuddy reports empty slots with no tray_type and remain=0.
+                        s.present   = (s.type[0] != '\0') || (s.color_rgb != 0) || (s.remain > 0);
+                    }
+                }
+            }
+        }
         break;
     }
     xSemaphoreGive(mtx_);

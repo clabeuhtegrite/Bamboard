@@ -61,11 +61,12 @@
     <text class="dim" x="40" y="44" font-size="12">X1 Carbon  ·  OFFLINE</text>
   </g>
 
-  <!-- Bottom nav dots (Printers is active = index 1) -->
+  <!-- Bottom nav dots (5 screens, Printers is active = index 2) -->
   <g transform="translate(240,310)">
-    <circle cx="-21" cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="-7"  cy="0" r="5" fill="#00B7C3"/>
-    <circle cx="7"   cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="21"  cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-28" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="-14" cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="0"   cy="0" r="5" fill="#00B7C3"/>
+    <circle cx="14"  cy="0" r="3" fill="#8A95A4"/>
+    <circle cx="28"  cy="0" r="3" fill="#8A95A4"/>
   </g>
 </svg>
