@@ -17,12 +17,45 @@ pio run                # compiles and downloads all libraries
 The first build pulls in TFT_eSPI, LVGL, ArduinoJson, WiFiManager and
 FastLED, then compiles them. Expect ~5 minutes on a modern laptop.
 
-## Flash
+## Flash (first install over USB)
 
-Plug the ESP32-S3 in via USB-C. On most boards no button dance is needed
-— PlatformIO triggers ROM bootloader via DTR/RTS.
+### One-click flash scripts (recommended)
+
+Plug the ESP32-S3 in via USB-C, then run the launcher for your OS:
+
+| OS      | How to run                              |
+|---------|------------------------------------------|
+| Windows | Double-click `scripts/flash-windows.bat` |
+| macOS   | Double-click `scripts/flash-mac.command` |
+| Linux   | `scripts/flash-linux.sh`                 |
+
+What the script does:
+
+- lists USB serial ports via `pio device list`, scores them by VID:PID
+  (Espressif native USB > CP210x > CH340 > FTDI), and **auto-picks**
+  when only one credible match exists;
+- asks for confirmation before flashing — pass `-y` to skip the prompt
+  when scripting;
+- on Linux, prints the `dialout` group hint when the user lacks
+  serial-port permissions.
+
+Useful flags (forwarded by every launcher):
+
+- `--port COM5` — bypass detection.
+- `-y`, `--yes` — auto-confirm when a single port was detected.
+- `--erase` — full chip erase before flashing (wipes Wi-Fi creds,
+  Bambuddy URL, API key — useful when reusing a board).
+- `--monitor` — open the serial monitor after a successful flash so
+  you can watch the boot log.
+- `--build-only` — compile only, don't upload.
+
+### Manual fallback
+
+If you'd rather not run the wrapper, the underlying PlatformIO commands
+are:
 
 ```bash
+cd firmware/
 pio run -t upload
 pio device monitor    # 115200 baud
 ```
