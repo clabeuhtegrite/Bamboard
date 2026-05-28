@@ -27,7 +27,7 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 - **History & stats** — last 10 prints, success rate, total filament, total time
 - **Print speed control** — cycle the speed preset (Silent / Standard / Sport / Ludicrous) by long-pressing OK on the live screen, or pick it explicitly from the live-screen quick-actions popup
 - **Live quick actions** — double-click OK on the Live screen to open a contextual popup: "Cycle speed" while printing, "Clear plate" when finished, plus "Clear HMS" always. Saves a trip to the Printers screen
-- **HMS surfacing** — the HMS string is shown in red on the dashboard and the status LED breathes red
+- **HMS surfacing** — the HMS string is shown in red on the dashboard, the status LED breathes red, and a full-screen flashing overlay pops on every 30 s while the error persists (dismissable with any button — re-arms on the next cooldown so the alert can't be silenced indefinitely)
 - **Per-printer actions menu** — long-press OK on the Printers screen opens a modal to clear HMS errors or acknowledge a cleared build plate (so the scheduler starts the next queued print)
 - **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames; REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop
 - **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy URL + API key setup, no re-flash needed to change them
@@ -36,7 +36,6 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 
 ### Roadmap (claimed earlier but not yet wired)
 
-- **Full-screen HMS flash** — currently only the HMS label turns red; a periodic full-screen warning overlay is TODO
 - **OTA upload** — `pio run -t upload --upload-port bamboard.local` documented but `ArduinoOTA.begin()` not yet called in `setup()`
 
 ## Repo layout

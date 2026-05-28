@@ -31,6 +31,16 @@ void ams_cycle_unit(int dir);
 lv_obj_t* build_toast(lv_obj_t* parent);
 void      show_toast(const char* msg, lv_color_t bg);
 
+// Full-screen HMS-error flash. Lives above every other UI element so it's
+// visible from across the room even when the user is on the AMS / History
+// pages. The UI manager drives a periodic show/hide cycle while an HMS
+// error is active; consumers should just call show/hide/update.
+lv_obj_t* build_hms_flash(lv_obj_t* parent);
+void      hms_flash_show      (const char* msg);
+void      hms_flash_hide      ();
+void      hms_flash_update_msg(const char* msg);
+bool      hms_flash_is_visible();
+
 // Per-printer actions modal. Items shown are decided by the caller — the
 // Printers screen opens the full {ClearHms, ClearPlate, Cancel} set on
 // long-press OK; the Live screen opens a contextual subset on double-click

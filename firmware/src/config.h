@@ -84,6 +84,12 @@ constexpr uint32_t POLL_HEALTH_MS    = 15000;
 // on every MQTT delta, so REST polling becomes a low-cadence safety net.
 constexpr uint32_t POLL_DASHBOARD_WS_MS = 30000; // WS push is primary
 
+// Full-screen HMS-error flash: how long each pulse is shown, and how long
+// to stay quiet between pulses while the error persists. Tuned to be
+// across-the-room visible without becoming background noise on the desk.
+constexpr uint32_t HMS_FLASH_VISIBLE_MS  = 5000;
+constexpr uint32_t HMS_FLASH_COOLDOWN_MS = 30000;
+
 // Max printers we keep in RAM (more than enough for desk-side monitoring).
 constexpr uint8_t  MAX_PRINTERS = 8;
 

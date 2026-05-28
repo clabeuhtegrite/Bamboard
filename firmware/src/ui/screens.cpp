@@ -144,6 +144,108 @@ static void maybe_hide_toast() {
     }
 }
 
+// ---------- HMS full-screen flash ------------------------------------------
+//
+// Big red overlay that the UI manager pops up periodically while the
+// selected printer's HMS string is anything other than "ok". The bg
+// colour pulses between two shades of red via lv_anim so the panel
+// *visibly* throbs — the whole point of this surface is to be obvious
+// from across the room when a print needs attention.
+
+static lv_obj_t* s_hms_overlay = nullptr;
+static lv_obj_t* s_hms_msg     = nullptr;
+static bool      s_hms_visible = false;
+
+// Animate the overlay's background colour between a deep maroon (0x801F22)
+// and the dashboard's error red (::ui::C_ERR). 0..100 maps to that range.
+static void hms_pulse_cb(void* var, int32_t v) {
+    const uint8_t r0 = 0x80, g0 = 0x1F, b0 = 0x22;
+    const uint8_t r1 = (::ui::C_ERR >> 16) & 0xFF;
+    const uint8_t g1 = (::ui::C_ERR >>  8) & 0xFF;
+    const uint8_t b1 = (::ui::C_ERR      ) & 0xFF;
+    uint8_t r = r0 + (uint8_t)(((int32_t)(r1 - r0) * v) / 100);
+    uint8_t g = g0 + (uint8_t)(((int32_t)(g1 - g0) * v) / 100);
+    uint8_t b = b0 + (uint8_t)(((int32_t)(b1 - b0) * v) / 100);
+    lv_obj_set_style_bg_color((lv_obj_t*)var,
+        lv_color_make(r, g, b), 0);
+}
+
+lv_obj_t* build_hms_flash(lv_obj_t* parent) {
+    ensure_styles();
+
+    s_hms_overlay = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_hms_overlay);
+    lv_obj_set_size(s_hms_overlay, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(s_hms_overlay, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_bg_color(s_hms_overlay, lv_color_hex(::ui::C_ERR), 0);
+    lv_obj_set_style_bg_opa(s_hms_overlay, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(s_hms_overlay, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* icon = lv_label_create(s_hms_overlay);
+    lv_label_set_text(icon, LV_SYMBOL_WARNING);
+    lv_obj_set_style_text_font(icon, &lv_font_montserrat_36, 0);
+    lv_obj_set_style_text_color(icon, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(icon, LV_ALIGN_CENTER, 0, -86);
+
+    lv_obj_t* title = lv_label_create(s_hms_overlay);
+    lv_label_set_text(title, "HMS ERROR");
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_36, 0);
+    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(title, LV_ALIGN_CENTER, 0, -34);
+
+    s_hms_msg = lv_label_create(s_hms_overlay);
+    lv_label_set_text(s_hms_msg, "");
+    lv_obj_set_width(s_hms_msg, LV_HOR_RES - 80);
+    lv_label_set_long_mode(s_hms_msg, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(s_hms_msg, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(s_hms_msg, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(s_hms_msg, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(s_hms_msg, LV_ALIGN_CENTER, 0, 24);
+
+    lv_obj_t* hint = lv_label_create(s_hms_overlay);
+    lv_label_set_text(hint, "Press any button to dismiss");
+    lv_obj_set_style_text_font(hint, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(hint, lv_color_hex(0xFFE0E0), 0);
+    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -16);
+
+    lv_obj_add_flag(s_hms_overlay, LV_OBJ_FLAG_HIDDEN);
+    return s_hms_overlay;
+}
+
+void hms_flash_show(const char* msg) {
+    if (!s_hms_overlay) return;
+    lv_label_set_text(s_hms_msg, (msg && *msg) ? msg : "Check the printer.");
+    lv_obj_clear_flag(s_hms_overlay, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_hms_overlay);
+    s_hms_visible = true;
+
+    // Kick off the colour pulse — slow enough to read as a heartbeat rather
+    // than a strobe, fast enough to feel urgent. The anim is auto-deleted
+    // when we delete the matching exec_cb on hide.
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, s_hms_overlay);
+    lv_anim_set_values(&a, 0, 100);
+    lv_anim_set_time(&a, 700);
+    lv_anim_set_playback_time(&a, 700);
+    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_exec_cb(&a, hms_pulse_cb);
+    lv_anim_start(&a);
+}
+
+void hms_flash_hide() {
+    if (!s_hms_overlay) return;
+    lv_anim_del(s_hms_overlay, hms_pulse_cb);
+    lv_obj_add_flag(s_hms_overlay, LV_OBJ_FLAG_HIDDEN);
+    s_hms_visible = false;
+}
+
+void hms_flash_update_msg(const char* msg) {
+    if (s_hms_msg && msg) lv_label_set_text(s_hms_msg, msg);
+}
+
+bool hms_flash_is_visible() { return s_hms_visible; }
+
 // ---------- actions modal --------------------------------------------------
 //
 // A context menu for the currently-selected printer. The caller chooses
