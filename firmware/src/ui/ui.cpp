@@ -87,6 +87,7 @@ void Manager::begin() {
         lv_obj_add_flag(s_screens[i], LV_OBJ_FLAG_HIDDEN);
     }
     screens::build_toast(s_root);
+    screens::build_actions(s_root);
 
     go_to(Screen::Dashboard);
 }
@@ -153,6 +154,15 @@ void Manager::handle_input() {
         // Any input wakes the screen up.
         hw::g_display.set_backlight(display::BL_FULL);
 
+        // While the actions modal is open it owns every button.
+        if (screens::actions_is_open()) {
+            if      (e.btn == Btn::Prev && e.ev == BtnEvent::Press)     screens::actions_navigate(-1);
+            else if (e.btn == Btn::Next && e.ev == BtnEvent::Press)     screens::actions_navigate(+1);
+            else if (e.btn == Btn::Ok   && e.ev == BtnEvent::Press)     screens::actions_confirm();
+            else if (e.btn == Btn::Ok   && e.ev == BtnEvent::LongPress) screens::actions_close();
+            continue;
+        }
+
         if (e.btn == Btn::Prev && e.ev == BtnEvent::Press) {
             int next = ((int)current_ - 1 + (int)Screen::_Count) % (int)Screen::_Count;
             go_to((Screen)next);
@@ -198,6 +208,16 @@ void Manager::handle_input() {
             } else if (current_ == Screen::Ams) {
                 // Cycle to the next AMS unit on multi-AMS setups.
                 screens::ams_cycle_unit(+1);
+            } else if (current_ == Screen::Printers) {
+                // Open the per-printer actions modal (HMS clear / clear plate)
+                // for whichever printer the user is hovering, not the dashboard
+                // one — the user moved here specifically to act on this row.
+                ::bambuddy::Printer ps[8]; uint8_t n = 0;
+                ::bambuddy::g_client.snapshot_printers(ps, n);
+                if (selected_index_ >= 0 && selected_index_ < (int)n) {
+                    screens::actions_open(ps[selected_index_].id,
+                                          ps[selected_index_].name.c_str());
+                }
             }
         }
     }

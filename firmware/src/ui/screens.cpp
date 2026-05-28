@@ -144,6 +144,163 @@ static void maybe_hide_toast() {
     }
 }
 
+// ---------- actions modal --------------------------------------------------
+//
+// A 3-item context menu for the currently-selected printer. Hosts the
+// HMS-clear and clear-plate actions so the user can dismiss those states
+// without leaving the Bamboard screen. The modal is a single LVGL object
+// graph that we hide/show; the UI manager hands us button events while
+// `actions_is_open()` is true.
+
+enum class ActionItem : uint8_t {
+    ClearHms = 0,
+    ClearPlate,
+    Cancel,
+    _Count,
+};
+
+static lv_obj_t*   s_act_backdrop = nullptr;
+static lv_obj_t*   s_act_title    = nullptr;
+static lv_obj_t*   s_act_items[(uint8_t)ActionItem::_Count] = {};
+static lv_obj_t*   s_act_labels[(uint8_t)ActionItem::_Count] = {};
+static bool        s_act_open     = false;
+static uint8_t     s_act_index    = 0;
+static int         s_act_printer  = -1;
+
+static const char* action_label(ActionItem a) {
+    switch (a) {
+        case ActionItem::ClearHms:   return "Clear HMS";
+        case ActionItem::ClearPlate: return "Clear plate";
+        case ActionItem::Cancel:     return "Cancel";
+        default: return "?";
+    }
+}
+
+static void redraw_action_highlight() {
+    for (uint8_t i = 0; i < (uint8_t)ActionItem::_Count; ++i) {
+        bool sel = (i == s_act_index);
+        lv_obj_set_style_bg_color(s_act_items[i],
+            lv_color_hex(sel ? ::ui::C_PANEL_HI : ::ui::C_PANEL), 0);
+        lv_obj_set_style_border_width(s_act_items[i], sel ? 2 : 0, 0);
+        lv_obj_set_style_border_color(s_act_items[i],
+            lv_color_hex(::ui::C_ACCENT), 0);
+        lv_obj_set_style_text_color(s_act_labels[i],
+            lv_color_hex(sel ? ::ui::C_ACCENT : ::ui::C_TEXT), 0);
+    }
+}
+
+lv_obj_t* build_actions(lv_obj_t* parent) {
+    ensure_styles();
+
+    s_act_backdrop = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_act_backdrop);
+    lv_obj_set_size(s_act_backdrop, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(s_act_backdrop, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_bg_color(s_act_backdrop, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(s_act_backdrop, LV_OPA_70, 0);
+    lv_obj_clear_flag(s_act_backdrop, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* panel = lv_obj_create(s_act_backdrop);
+    lv_obj_add_style(panel, &s_panel, 0);
+    lv_obj_set_size(panel, 360, 230);
+    lv_obj_center(panel);
+    lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_all(panel, 16, 0);
+    lv_obj_set_style_border_width(panel, 2, 0);
+    lv_obj_set_style_border_color(panel, lv_color_hex(::ui::C_ACCENT), 0);
+
+    s_act_title = lv_label_create(panel);
+    lv_label_set_text(s_act_title, "Actions");
+    lv_obj_align(s_act_title, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_text_font(s_act_title, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(s_act_title, lv_color_hex(::ui::C_ACCENT), 0);
+
+    for (uint8_t i = 0; i < (uint8_t)ActionItem::_Count; ++i) {
+        lv_obj_t* row = lv_obj_create(panel);
+        lv_obj_remove_style_all(row);
+        lv_obj_set_size(row, 328, 36);
+        lv_obj_align(row, LV_ALIGN_TOP_LEFT, 0, 40 + i * 42);
+        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(row, 8, 0);
+        lv_obj_set_style_pad_all(row, 8, 0);
+        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+
+        lv_obj_t* lbl = lv_label_create(row);
+        lv_label_set_text(lbl, action_label((ActionItem)i));
+        lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 8, 0);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_20, 0);
+
+        s_act_items[i]  = row;
+        s_act_labels[i] = lbl;
+    }
+
+    lv_obj_t* hint = lv_label_create(panel);
+    lv_label_set_text(hint,
+        LV_SYMBOL_LEFT " / " LV_SYMBOL_RIGHT "  select"
+        "       OK  confirm       hold OK  close");
+    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_add_style(hint, &s_label_dim, 0);
+
+    lv_obj_add_flag(s_act_backdrop, LV_OBJ_FLAG_HIDDEN);
+    return s_act_backdrop;
+}
+
+void actions_open(int printer_id, const char* printer_name) {
+    if (!s_act_backdrop) return;
+    s_act_open    = true;
+    s_act_index   = 0;
+    s_act_printer = printer_id;
+    String t = String("Actions — ") + (printer_name ? printer_name : "Printer");
+    lv_label_set_text(s_act_title, t.c_str());
+    redraw_action_highlight();
+    lv_obj_clear_flag(s_act_backdrop, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_act_backdrop);
+}
+
+void actions_close() {
+    if (!s_act_backdrop) return;
+    s_act_open = false;
+    lv_obj_add_flag(s_act_backdrop, LV_OBJ_FLAG_HIDDEN);
+}
+
+bool actions_is_open() { return s_act_open; }
+
+void actions_navigate(int dir) {
+    if (!s_act_open) return;
+    int n = (int)ActionItem::_Count;
+    s_act_index = (uint8_t)(((int)s_act_index + dir % n + n) % n);
+    redraw_action_highlight();
+}
+
+void actions_confirm() {
+    if (!s_act_open) return;
+    ActionItem a = (ActionItem)s_act_index;
+    int id = s_act_printer;
+    actions_close();   // close first so the toast lands on the normal UI
+
+    if (id < 0 && a != ActionItem::Cancel) {
+        show_toast("No printer selected", lv_color_hex(::ui::C_WARN));
+        return;
+    }
+    switch (a) {
+        case ActionItem::ClearHms: {
+            bool ok = ::bambuddy::g_client.clear_hms(id);
+            show_toast(ok ? "HMS cleared" : "Clear HMS failed",
+                       lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
+            break;
+        }
+        case ActionItem::ClearPlate: {
+            bool ok = ::bambuddy::g_client.clear_plate(id);
+            show_toast(ok ? "Plate cleared" : "Clear plate failed",
+                       lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
+            break;
+        }
+        case ActionItem::Cancel:
+        default:
+            break;
+    }
+}
+
 // ---------- dashboard ------------------------------------------------------
 
 static lv_obj_t* s_dash_root      = nullptr;
@@ -833,10 +990,10 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
 
     s_set_hint = lv_label_create(s_set_root);
     lv_label_set_text(s_set_hint,
-        LV_SYMBOL_SETTINGS "  Long-press OK on the dashboard to cycle\n"
-        "          the print speed preset.\n"
-        LV_SYMBOL_REFRESH "  Hold a button at boot to clear settings\n"
-        "          and re-run the captive portal.");
+        LV_SYMBOL_SETTINGS "  Long-press OK on Live: cycle print speed.\n"
+        LV_SYMBOL_SETTINGS "  Long-press OK on Printers: open actions\n"
+        "          (Clear HMS / Clear plate).\n"
+        LV_SYMBOL_REFRESH "  Hold a button at boot to clear settings.");
     lv_obj_align(s_set_hint, LV_ALIGN_BOTTOM_LEFT, 18, -10);
     lv_obj_add_style(s_set_hint, &s_label_dim, 0);
     return s_set_root;
