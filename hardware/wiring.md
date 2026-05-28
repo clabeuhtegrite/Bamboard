@@ -1,8 +1,19 @@
 # Wiring
 
-All connections are made with female-female Dupont jumpers. No soldering is
-required as long as you buy the pre-soldered ESP32-S3 DevKitC, the
-pre-soldered display board, and the pre-soldered WS2812 module.
+All connections are made with female-female Dupont jumpers. No soldering
+is required **as long as you buy the right SKUs**:
+
+- ESP32-S3 DevKitC-1 with headers already in place (every variant of
+  the official board ships this way);
+- ILI9488 4" SPI display with its side-edge header pre-soldered;
+- WS2812 1-bit module **with the 3 male pin headers pre-soldered** —
+  the cheaper bare-PCB SKU has empty solder holes;
+- 3 × tactile-button **modules** (single button on a small PCB with
+  `S` / `+` / `−` headers) — *not* bare 6×6 mm tactile switches with
+  4 metal legs.
+
+See `hardware/bom.md` for AliExpress search links and notes on what to
+check in the listing photos.
 
 ## Pinout map (ESP32-S3 DevKitC-1)
 
@@ -61,8 +72,25 @@ firmware, so no external resistor is needed.
   Same for OK (GPIO 5) and NEXT (GPIO 6).
 ```
 
-If you wire the buttons on a small piece of perfboard inside the case, run
-a single GND wire to all three commons.
+### No-solder path (the default)
+
+Use 3 × tactile-button modules (`KY-004`-style — see BOM #3). Each
+module has three male pin headers:
+
+| Module pin    | ESP32-S3 pin                |
+|---------------|------------------------------|
+| `S` (signal)  | GPIO 4 / 5 / 6 respectively  |
+| `−` (GND)     | GND (share a single rail)    |
+| `+` (VCC)     | leave disconnected — the firmware uses the chip's internal pull-up, no external supply needed |
+
+Female-female Dupont jumpers plug straight onto the modules' header
+pins. Run a short GND chain so all three modules share one return.
+
+### Soldering path (if you've got bare 6×6 mm switches lying around)
+
+Wire the three bare tact switches on a small piece of perfboard and
+solder one common GND rail to all three switch commons. The firmware
+behaves identically; it just costs you an iron and 15 minutes.
 
 ## Status LED (WS2812B module)
 
