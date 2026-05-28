@@ -27,10 +27,19 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
-import shutil
 import subprocess
 import sys
 import time
+
+from _common import (
+    banner,
+    fail,
+    find_pio,
+    info,
+    quote_arg,
+    require_python,
+    stage,
+)
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -47,56 +56,6 @@ USB_SCORES: list[tuple[str, int, str]] = [
     ("1A86:55D4",  70, "QinHeng CH343"),
     ("0403:6001",  60, "FTDI FT232"),
 ]
-
-
-# ---------- pretty output --------------------------------------------------
-
-def banner() -> None:
-    print()
-    print("========================================")
-    print("  Bamboard — first-install (USB flash)")
-    print("========================================")
-    print()
-
-
-def stage(msg: str) -> None:
-    print(f"==> {msg}")
-
-
-def info(msg: str) -> None:
-    print(f"    {msg}")
-
-
-def fail(msg: str) -> "NoReturn":
-    print()
-    print(f"!! {msg}")
-    sys.exit(1)
-
-
-def _q(arg: str) -> str:
-    return f'"{arg}"' if any(c.isspace() for c in arg) else arg
-
-
-# ---------- PlatformIO discovery -------------------------------------------
-
-def find_pio() -> str:
-    on_path = shutil.which("pio")
-    if on_path:
-        return on_path
-
-    home = pathlib.Path.home()
-    candidates = [
-        home / ".platformio" / "penv" / "Scripts" / "pio.exe",
-        home / ".platformio" / "penv" / "bin"     / "pio",
-    ]
-    for c in candidates:
-        if c.is_file():
-            return str(c)
-    fail(
-        "Could not find the `pio` command.\n"
-        "    Install PlatformIO Core:\n"
-        "      https://docs.platformio.org/en/latest/core/installation/methods/installer-script.html"
-    )
 
 
 # ---------- USB port discovery --------------------------------------------
@@ -235,18 +194,15 @@ def parse_args() -> argparse.Namespace:
 def run_pio(pio: str, extra_args: list[str]) -> int:
     cmd = [pio] + extra_args
     print()
-    print("    $ " + " ".join(_q(a) for a in cmd))
+    print("    $ " + " ".join(quote_arg(a) for a in cmd))
     print()
     return subprocess.run(cmd, cwd=str(FIRMWARE)).returncode
 
 
 def main() -> int:
-    if sys.version_info < (3, 7):
-        print("ERR: Python 3.7+ required.")
-        return 1
-
+    require_python()
     args = parse_args()
-    banner()
+    banner("Bamboard — first-install (USB flash)")
 
     stage("Locating PlatformIO")
     pio = find_pio()

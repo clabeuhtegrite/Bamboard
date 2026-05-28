@@ -36,3 +36,7 @@ firmware/src/secrets.h
 
 # Update-script local cache (host the user last reached)
 scripts/.bamboard-cache.json
+
+# Python bytecode from the launcher scripts
+scripts/__pycache__/
+*.pyc

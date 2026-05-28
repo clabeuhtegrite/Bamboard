@@ -24,11 +24,20 @@ import argparse
 import json
 import os
 import pathlib
-import shutil
 import socket
 import subprocess
 import sys
 import time
+
+from _common import (
+    banner,
+    fail,
+    find_pio,
+    info,
+    quote_arg,
+    require_python,
+    stage,
+)
 
 
 REPO_ROOT  = pathlib.Path(__file__).resolve().parent.parent
@@ -39,54 +48,6 @@ DEFAULT_HOST     = "bamboard.local"
 DEFAULT_PASSWORD = "bamboard"
 ENV_HOST         = "BAMBOARD_HOST"
 ENV_PASSWORD     = "BAMBOARD_OTA_PASSWORD"
-
-
-# ---------- pretty output --------------------------------------------------
-
-def banner() -> None:
-    print()
-    print("========================================")
-    print("  Bamboard — OTA update")
-    print("========================================")
-    print()
-
-
-def stage(msg: str) -> None:
-    print(f"==> {msg}")
-
-
-def info(msg: str) -> None:
-    print(f"    {msg}")
-
-
-def fail(msg: str) -> "NoReturn":
-    print()
-    print(f"!! {msg}")
-    sys.exit(1)
-
-
-# ---------- PlatformIO discovery -------------------------------------------
-
-def find_pio() -> str:
-    """Return a usable ``pio`` command string, or exit."""
-    on_path = shutil.which("pio")
-    if on_path:
-        return on_path
-
-    home = pathlib.Path.home()
-    candidates = [
-        home / ".platformio" / "penv" / "Scripts" / "pio.exe",   # Windows
-        home / ".platformio" / "penv" / "bin"     / "pio",       # macOS / Linux
-    ]
-    for c in candidates:
-        if c.is_file():
-            return str(c)
-
-    fail(
-        "Could not find the `pio` command.\n"
-        "    Install PlatformIO Core:\n"
-        "      https://docs.platformio.org/en/latest/core/installation/methods/installer-script.html"
-    )
 
 
 # ---------- host resolution ------------------------------------------------
@@ -216,28 +177,16 @@ def run_pio(pio: str, extra_args: list[str]) -> int:
     """Stream pio output through this process and return its exit code."""
     cmd = [pio, "run"] + extra_args
     print()
-    print("    $ " + " ".join(_q(a) for a in cmd))
+    print("    $ " + " ".join(quote_arg(a) for a in cmd))
     print()
     proc = subprocess.run(cmd, cwd=str(FIRMWARE))
     return proc.returncode
 
 
-def _q(arg: str) -> str:
-    """Shell-quote ``arg`` only when it actually contains whitespace, so
-    the printed command stays readable for the common case where it
-    doesn't."""
-    if any(c.isspace() for c in arg):
-        return f'"{arg}"'
-    return arg
-
-
 def main() -> int:
-    if sys.version_info < (3, 7):
-        print("ERR: Python 3.7+ required.")
-        return 1
-
+    require_python()
     args = parse_args()
-    banner()
+    banner("Bamboard — OTA update")
 
     stage("Locating PlatformIO")
     pio = find_pio()

@@ -19,21 +19,37 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 
 ## Features
 
-### Shipped in v0.1
+### What you see on the screen
 
-- **Live dashboard** — nozzle / bed / chamber temperature, layer progress, ETA, filename
-- **AMS overview** — per-slot filament colour / type / remaining %, plus AMS humidity, temperature and active drying countdown; long-press OK to cycle through chained AMS / AMS-HT units
-- **Multi-printer** — switch between all printers known to Bambuddy with the buttons
-- **History & stats** — last 10 prints, success rate, total filament, total time
-- **Print speed control** — cycle the speed preset (Silent / Standard / Sport / Ludicrous) by long-pressing OK on the live screen, or pick it explicitly from the live-screen quick-actions popup
-- **Live quick actions** — double-click OK on the Live screen to open a contextual popup: "Cycle speed" while printing, "Clear plate" when finished, plus "Clear HMS" always. Saves a trip to the Printers screen
-- **HMS surfacing** — the HMS string is shown in red on the dashboard, the status LED breathes red, and a full-screen flashing overlay pops on every 30 s while the error persists (dismissable with any button — re-arms on the next cooldown so the alert can't be silenced indefinitely)
-- **Per-printer actions menu** — long-press OK on the Printers screen opens a modal to clear HMS errors or acknowledge a cleared build plate (so the scheduler starts the next queued print)
-- **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames; REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop
-- **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy URL + API key setup, no re-flash needed to change them
-- **OTA firmware updates** — double-click `scripts/update-windows.bat` (Windows), `scripts/update-mac.command` (macOS) or run `scripts/update-linux.sh` to compile, discover the device on the LAN and push the new firmware in one step, with a full-screen progress overlay during the upload (default password `bamboard`, override via `BAMBOARD_OTA_PASSWORD` or a build flag — see `docs/flashing.md`)
-- **Status LED** — single WS2812 RGB module, screwless plug-in, state-driven ambient patterns
-- **Auto-dim** — screen dims after inactivity to save the backlight
+- **Live dashboard** — nozzle / bed / chamber temperature, layer progress, ETA, filename.
+- **AMS overview** — per-slot filament colour / type / remaining %, plus AMS humidity, temperature and active drying countdown. Cycles through chained AMS / AMS-HT units.
+- **History & stats** — last 10 prints, success rate, total filament, total time.
+- **Printers list** — every printer Bambuddy knows about, highlighted by state.
+- **Settings** — Bambuddy URL, local IP, Wi-Fi RSSI, uptime, build info.
+
+### Alerts
+
+- **HMS surfacing** — the HMS string is shown in red on the dashboard, the status LED breathes red, and a full-screen flashing overlay pops every 30 s while the error persists (dismissable with any button — re-arms on the next cooldown so the alert can't be silenced indefinitely).
+- **Status LED** — single WS2812 RGB module, screwless plug-in, state-driven ambient patterns.
+
+### Controls
+
+- **Live quick actions** — double-click OK on the Live screen for a contextual popup: "Cycle speed" while printing, "Clear plate" when finished, plus "Clear HMS" always. Saves a trip to the Printers screen.
+- **Per-printer actions menu** — long-press OK on the Printers screen for the same modal, targeting any printer in the list.
+- **Print speed** — Silent / Standard / Sport / Ludicrous, via long-press OK on Live or the quick-actions popup.
+- **Multi-printer cycling** — long-press PREV/NEXT on Dashboard / AMS / Printers switches the focused printer.
+
+### Connectivity
+
+- **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames. REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop.
+- **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy URL + API key setup, no re-flash needed to change them.
+- **Auto-dim** — screen dims after inactivity to save the backlight.
+
+### Install & updates
+
+- **One-click USB flash** — double-click the launcher for your OS (`scripts/flash-windows.bat`, `flash-mac.command`, `flash-linux.sh`). Auto-detects the serial port via VID:PID scoring.
+- **One-click OTA updates** — equivalent launcher under `scripts/update-*` discovers the device via mDNS (with cache + IP fallback) and pushes the new firmware. Full-screen progress overlay on the device during upload.
+- **OTA password protection** — default `bamboard`, overridable via `BAMBOARD_OTA_PASSWORD` or a build flag. See [docs/flashing.md](docs/flashing.md).
 
 ### Roadmap
 
@@ -44,9 +60,15 @@ _Nothing pinned at the moment — everything originally claimed by the project i
 ```
 .
 ├── firmware/        PlatformIO project (ESP32-S3 + LVGL + TFT_eSPI)
-│   ├── src/         C++ sources (UI, network, hardware)
-│   ├── include/     TFT_eSPI User_Setup overrides
+│   ├── src/         C++ sources
+│   │   ├── hw/      Buttons, display, status LED drivers
+│   │   ├── net/     Bambuddy REST + WebSocket clients
+│   │   ├── ui/      LVGL screen manager + per-screen builders
+│   │   ├── config.h All compile-time tunables
+│   │   └── main.cpp Boot, Wi-Fi provisioning, FreeRTOS tasks, ArduinoOTA
+│   ├── include/     TFT_eSPI User_Setup + lv_conf overrides
 │   └── platformio.ini
+├── scripts/         One-click flash / update launchers (Windows/macOS/Linux)
 ├── hardware/        Bill of materials, wiring diagram
 ├── case/            Parametric OpenSCAD enclosure + STL exports
 └── docs/            Assembly, flashing, configuration guides
