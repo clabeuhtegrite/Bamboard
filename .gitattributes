@@ -1,0 +1,10 @@
+# Force LF on every script that needs to be interpreted by a POSIX shell
+# or by Python — `\r\n` would break the shebang line or trip up some
+# `subprocess` paths on macOS / Linux.
+*.sh       text eol=lf
+*.command  text eol=lf
+*.py       text eol=lf
+
+# Native CRLF on Windows-only files so they open cleanly in Notepad and
+# don't surprise cmd.exe on legacy systems.
+*.bat      text eol=crlf
