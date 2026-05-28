@@ -27,13 +27,13 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 - **History & stats** — last 10 prints, success rate, total filament, total time
 - **Print speed control** — cycle the speed preset (Silent / Standard / Sport / Ludicrous) by long-pressing OK on the live screen
 - **HMS surfacing** — the HMS string is shown in red on the dashboard and the status LED breathes red
+- **Per-printer actions menu** — long-press OK on the Printers screen opens a modal to clear HMS errors or acknowledge a cleared build plate (so the scheduler starts the next queued print)
 - **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy URL + API key setup, no re-flash needed to change them
 - **Status LED** — single WS2812 RGB module, screwless plug-in, state-driven ambient patterns
 - **Auto-dim** — screen dims after inactivity to save the backlight
 
 ### Roadmap (claimed earlier but not yet wired)
 
-- **HMS clear / clear-plate UI** — the API client methods exist (`Client::clear_hms`, `Client::clear_plate`), they just need a context menu binding (e.g. long-press OK on the Printers screen)
 - **Full-screen HMS flash** — currently only the HMS label turns red; a periodic full-screen warning overlay is TODO
 - **OTA upload** — `pio run -t upload --upload-port bamboard.local` documented but `ArduinoOTA.begin()` not yet called in `setup()`
 - **WebSocket events** — Bambuddy exposes `/ws` for push events; switching from polling would make HMS alerts near-instant. Currently we poll every 2 s, which is fine for desk-side use
