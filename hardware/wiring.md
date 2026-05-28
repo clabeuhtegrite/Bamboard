@@ -6,8 +6,9 @@ is required **as long as you buy the right SKUs**:
 - ESP32-S3 DevKitC-1 with headers already in place (every variant of
   the official board ships this way);
 - ILI9488 4" SPI display with its side-edge header pre-soldered;
-- WS2812 1-bit module **with the 3 male pin headers pre-soldered** —
-  the cheaper bare-PCB SKU has empty solder holes;
+- WS2812 **breakout** (not the bare "1-bit module") — the breakout
+  form factor ships with stake-style pin headers already soldered;
+  the 1-bit-module SKU has empty solder holes;
 - 3 × tactile-button **modules** (single button on a small PCB with
   `S` / `+` / `−` headers) — *not* bare 6×6 mm tactile switches with
   4 metal legs.
@@ -92,15 +93,15 @@ Wire the three bare tact switches on a small piece of perfboard and
 solder one common GND rail to all three switch commons. The firmware
 behaves identically; it just costs you an iron and 15 minutes.
 
-## Status LED (WS2812B module)
+## Status LED (WS2812B breakout)
 
-| Module pin | ESP32-S3 pin | Notes |
-|------------|--------------|-------|
-| VCC / 5V   | 5V           | Most modules also accept 3V3; either works for a single LED. |
-| GND        | GND          |       |
-| DIN        | GPIO 7       |       |
+| Breakout pin | ESP32-S3 pin | Notes |
+|--------------|--------------|-------|
+| VCC / 5V     | 5V           | Most breakouts also accept 3V3; either works for a single LED. |
+| GND          | GND          |       |
+| DIN          | GPIO 7       |       |
 
-If you have a 3-LED module instead of a single one, increase
+If you swap the breakout for a 3-LED stick or strip, increase
 `pins::LED_COUNT` in `firmware/src/config.h` to match.
 
 ## Power

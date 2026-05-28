@@ -9,7 +9,7 @@ course be more expensive but will deliver in days, not weeks.
 | 1 | ESP32-S3 DevKitC-1 (N8R2 or N8R8, with PSRAM)         | 1   | 6 €    | Must be an S3 variant with PSRAM. The "N8R2" suffix means 8 MB flash + 2 MB PSRAM, which is plenty. |
 | 2 | 4.0" TFT LCD ILI9488, SPI interface, 480×320          | 1   | 12 €   | Make sure to buy the **SPI** version (4-wire). The parallel 8/16-bit "MCUFRIEND" version will not work without rewiring. |
 | 3 | Tactile button **module** (3-pin, pre-soldered headers) | 3   | 1.50 € | The bare 6×6 mm Omron-style switches that ship in most "Arduino kits" need a soldering iron. We want the **module** version: one button mounted on a tiny PCB with `S` / `+` / `−` (or `SIG` / `VCC` / `GND`) male pin headers already in place. Often sold as "KY-004" or "tactile button module". |
-| 4 | WS2812B "1-bit module" **with pre-soldered headers**   | 1   | 1.50 € | Sold as "WS2812 RGB LED module". Look at the listing photo: a usable one shows 3 male pin headers already soldered into the `VCC` / `GND` / `DIN` holes. The cheaper SKU with empty plated holes is *not* plug-and-play — same SMD LED but you'd have to solder the headers yourself. |
+| 4 | WS2812B **breakout** (single pixel, with header pins)  | 1   | 1.50 € | Sold as "WS2812 breakout" or "NeoPixel breakout" — the breakout form factor (think Adafruit-style) is the one that ships with male pin headers already in place plus the 100 nF decoupling cap on the back. The "1-bit module" SKU you'll also see on AliExpress is the *same LED* but with empty solder holes; avoid it unless you've got an iron. |
 | 5 | Female-female Dupont jumper wires 20 cm               | 12  | 1 €    | Or one ribbon cable. Plug-in only, no soldering required. |
 | 6 | USB-C cable (data, not power-only)                    | 1   | 2 €    | For flashing and powering the device. |
 | 7 | M2.5 × 8 mm self-tapping screws                       | 4   | 0.50 € | To clip the case halves together (or M3 if you prefer; the SCAD file is parametric). |
@@ -64,21 +64,19 @@ gives you spares.
 Avoid: the bare loose tactile switches (no PCB, just 4 metal legs) and
 the "Arduino keypad 4×4" matrix modules — neither plugs in cleanly.
 
-### 4. WS2812B 1-bit module (with pre-soldered headers)
+### 4. WS2812B breakout (single pixel, with header pins)
 
-- [Search: "WS2812 RGB LED module with header pins"](https://www.aliexpress.com/wholesale?SearchText=WS2812+RGB+LED+module+with+header+pins)
-- [Search: "WS2812B 1 bit module pre-soldered headers"](https://www.aliexpress.com/wholesale?SearchText=WS2812B+1+bit+module+pre-soldered+headers)
+- [Search: "WS2812 breakout single pixel"](https://www.aliexpress.com/wholesale?SearchText=WS2812+breakout+single+pixel)
+- [Search: "WS2812B NeoPixel breakout board"](https://www.aliexpress.com/wholesale?SearchText=WS2812B+NeoPixel+breakout+board)
 
-The thing to look for on the listing photo: the same tiny RGB LED on a
-postage-stamp PCB, but with **3 male pin headers already soldered** in
-the `VCC` / `GND` / `DIN` holes. Two SKUs of the *exact same* board
-ship side-by-side — one with the headers in place, one with just
-empty solder holes. The empty-holes one is cheaper but defeats the
-no-soldering goal, so zoom on the product photo to confirm before
-ordering.
+The thing to look for on the listing photo: a small PCB (~10 × 18 mm)
+with one WS2812B LED, the 100 nF decoupling cap visible on the back,
+and **3 stake-style male pin headers** already soldered into the
+`VCC` / `GND` / `DIN` holes — designed to plug directly into a
+breadboard. Female-female Dupont jumpers go straight onto those pins.
 
-Filtering tip: add the word `header` or `pin` to the search if the
-results lean toward bare-PCB listings.
+What to avoid: the cheaper "WS2812 1-bit module" SKU — same SMD LED
+but ships with empty plated holes instead of pre-soldered headers.
 
 ### 5. Female-female Dupont jumper wires (20 cm, 40 pin ribbon)
 
@@ -134,11 +132,13 @@ sits in a windowsill.
 - **ILI9488 SPI** — the only widely-available 4″ panel that talks SPI.
   Cheaper 3.5″ panels (ILI9486 / ST7796) work too if you tweak
   `User_Setup.h`.
-- **WS2812 module with pre-soldered headers, not raw LED** — you wanted
-  "no soldering". The module includes the 100 nF cap baked in, and the
-  *with-headers* SKU lets you plug Dupont jumpers straight onto its 3
-  pins. The bare-PCB SKU of the same module costs ~0.50 € less but
-  needs an iron — pick carefully.
+- **WS2812 breakout, not raw LED** — you wanted "no soldering". The
+  breakout form factor (Adafruit-style and its clones) carries the
+  WS2812B with the 100 nF cap baked in and 3 stake-style header pins
+  pre-soldered for breadboard use — Dupont jumpers plug straight onto
+  them. The cheaper "1-bit module" SKU of the same LED ships with
+  empty solder holes instead and needs an iron; pick the breakout
+  variant.
 - **Button modules, not bare tactile switches** — same reason: the
   6×6 mm tact switches you find in every starter kit have 4 bare metal
   legs. Wiring them to anything but a perfboard means soldering. The
