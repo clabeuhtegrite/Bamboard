@@ -14,6 +14,7 @@ enum class Btn : uint8_t { Prev = 0, Ok = 1, Next = 2, _Count = 3 };
 enum class BtnEvent : uint8_t {
     None,
     Press,        // short press, fired on release
+    DoublePress,  // fired after a second Press lands within DOUBLE_CLICK_MS
     LongPress,    // fired once when held past threshold
     Repeat,       // fired periodically while held (after LongPress)
 };
@@ -44,6 +45,9 @@ class Buttons {
         uint32_t press_start_ms = 0;
         bool     long_fired     = false;
         uint32_t next_repeat_ms = 0;
+        // Tracks the previous short release so we can decide whether the
+        // next one is part of a double-click.
+        uint32_t last_release_ms = 0;
     };
 
     State states_[(uint8_t)Btn::_Count];

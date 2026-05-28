@@ -84,6 +84,7 @@ struct Printer {
     Temperatures temps;
     String   hms;                   // "ok" or short description
     String   filename;
+    uint8_t  speed_level = 2;       // 1=Silent, 2=Standard, 3=Sport, 4=Ludicrous
 
     // populated by /status (ams subtree):
     bool     ams_exists = false;

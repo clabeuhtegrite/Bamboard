@@ -53,9 +53,21 @@ void Buttons::update() {
                 s.next_repeat_ms = now + buttons::REPEAT_AFTER_MS;
                 last_activity_ms_ = now;
             } else {
-                // Release. If we never fired a long press, fire a short Press.
+                // Release. If we never fired a long press, fire a short Press
+                // and also fire DoublePress when this release closes a pair
+                // that started within the double-click window. Consumers that
+                // only care about single clicks can ignore DoublePress; ones
+                // that want the gesture see the pair "Press, Press, DoublePress"
+                // and choose which to act on.
                 if (!s.long_fired) {
                     push({(Btn)i, BtnEvent::Press});
+                    if (s.last_release_ms != 0 &&
+                        (now - s.last_release_ms) <= buttons::DOUBLE_CLICK_MS) {
+                        push({(Btn)i, BtnEvent::DoublePress});
+                        s.last_release_ms = 0;   // don't chain into a triple
+                    } else {
+                        s.last_release_ms = now;
+                    }
                 }
                 last_activity_ms_ = now;
             }

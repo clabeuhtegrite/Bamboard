@@ -198,13 +198,20 @@ void Manager::handle_input() {
             }
         } else if (e.btn == Btn::Ok && e.ev == BtnEvent::LongPress) {
             if (current_ == Screen::Dashboard && selected_printer_id_ >= 0) {
-                // Cycle print speed mode.
-                static uint8_t mode = 2;
-                mode = (uint8_t)((mode % 4) + 1);
-                ::bambuddy::g_client.set_print_speed(selected_printer_id_, mode);
+                // Cycle print speed using the real live value as the source
+                // of truth — a stale local counter would drift whenever the
+                // user touched the speed elsewhere (Studio, the popup).
+                ::bambuddy::Printer ps[8]; uint8_t n = 0;
+                ::bambuddy::g_client.snapshot_printers(ps, n);
+                uint8_t cur = 2;
+                for (uint8_t i = 0; i < n; ++i)
+                    if (ps[i].id == selected_printer_id_) cur = ps[i].speed_level;
+                uint8_t next = (uint8_t)((cur % 4) + 1);
+                bool ok = ::bambuddy::g_client.set_print_speed(selected_printer_id_, next);
                 const char* names[] = {"Silent", "Standard", "Sport", "Ludicrous"};
-                String msg = String("Speed: ") + names[mode - 1];
-                show_toast(msg.c_str(), lv_color_hex(::ui::C_OK));
+                String msg = String("Speed: ") + names[next - 1];
+                show_toast(msg.c_str(),
+                           lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
             } else if (current_ == Screen::Ams) {
                 // Cycle to the next AMS unit on multi-AMS setups.
                 screens::ams_cycle_unit(+1);
@@ -215,8 +222,30 @@ void Manager::handle_input() {
                 ::bambuddy::Printer ps[8]; uint8_t n = 0;
                 ::bambuddy::g_client.snapshot_printers(ps, n);
                 if (selected_index_ >= 0 && selected_index_ < (int)n) {
+                    static const screens::ActionItem kItems[] = {
+                        screens::ActionItem::ClearHms,
+                        screens::ActionItem::ClearPlate,
+                        screens::ActionItem::Cancel,
+                    };
                     screens::actions_open(ps[selected_index_].id,
-                                          ps[selected_index_].name.c_str());
+                                          ps[selected_index_].name.c_str(),
+                                          kItems, 3);
+                }
+            }
+        } else if (e.btn == Btn::Ok && e.ev == BtnEvent::DoublePress) {
+            // Double-click on Live = contextual quick-actions popup.
+            // The same gesture on other screens does nothing (the screens
+            // already saw the two Press events and acted on them).
+            if (current_ == Screen::Dashboard && selected_printer_id_ >= 0) {
+                ::bambuddy::Printer ps[8]; uint8_t n = 0;
+                ::bambuddy::g_client.snapshot_printers(ps, n);
+                for (uint8_t i = 0; i < n; ++i) {
+                    if (ps[i].id != selected_printer_id_) continue;
+                    screens::actions_open_for_live(ps[i].id,
+                                                   ps[i].name.c_str(),
+                                                   ps[i].state,
+                                                   ps[i].speed_level);
+                    break;
                 }
             }
         }

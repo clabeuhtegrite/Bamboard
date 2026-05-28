@@ -25,7 +25,8 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 - **AMS overview** — per-slot filament colour / type / remaining %, plus AMS humidity, temperature and active drying countdown; long-press OK to cycle through chained AMS / AMS-HT units
 - **Multi-printer** — switch between all printers known to Bambuddy with the buttons
 - **History & stats** — last 10 prints, success rate, total filament, total time
-- **Print speed control** — cycle the speed preset (Silent / Standard / Sport / Ludicrous) by long-pressing OK on the live screen
+- **Print speed control** — cycle the speed preset (Silent / Standard / Sport / Ludicrous) by long-pressing OK on the live screen, or pick it explicitly from the live-screen quick-actions popup
+- **Live quick actions** — double-click OK on the Live screen to open a contextual popup: "Cycle speed" while printing, "Clear plate" when finished, plus "Clear HMS" always. Saves a trip to the Printers screen
 - **HMS surfacing** — the HMS string is shown in red on the dashboard and the status LED breathes red
 - **Per-printer actions menu** — long-press OK on the Printers screen opens a modal to clear HMS errors or acknowledge a cleared build plate (so the scheduler starts the next queued print)
 - **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames; REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop
