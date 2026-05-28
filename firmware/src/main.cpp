@@ -21,6 +21,7 @@
 #include "hw/display.h"
 #include "hw/led.h"
 #include "net/bambuddy_client.h"
+#include "net/bambuddy_ws.h"
 #include "ui/screens.h"
 #include "ui/ui.h"
 
@@ -107,6 +108,7 @@ static void start_provisioning() {
     save_prefs();
 
     bambuddy::g_client.set_credentials(g_cfg_bambuddy_url, g_cfg_api_key);
+    bambuddy::g_ws.set_credentials    (g_cfg_bambuddy_url, g_cfg_api_key);
     delay(300);
     ESP.restart();   // clean restart with the new config
 }
@@ -128,6 +130,10 @@ static void net_task(void*) {
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
         }
+
+        // Drive the WS event loop on every iteration so push frames land
+        // without waiting for the next poll tick.
+        bambuddy::g_ws.loop();
 
         if (now >= next_health_ms) {
             uint32_t lat = 0;
@@ -151,7 +157,11 @@ static void net_task(void*) {
             for (uint8_t i = 0; i < n; ++i) {
                 if (ps[i].id != id) bambuddy::g_client.fetch_printer_status(ps[i].id);
             }
-            next_status_ms = now + bambuddy::POLL_DASHBOARD_MS;
+            // When the WebSocket is feeding us live deltas, drop polling to
+            // a 30 s safety net; otherwise stay on the snappy 2 s cadence.
+            next_status_ms = now + (bambuddy::g_ws.is_connected()
+                                        ? bambuddy::POLL_DASHBOARD_WS_MS
+                                        : bambuddy::POLL_DASHBOARD_MS);
         }
 
         if (now >= next_stats_ms) {
@@ -256,6 +266,7 @@ void setup() {
     log_i("Wi-Fi up: %s", WiFi.localIP().toString().c_str());
 
     bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key);
+    bambuddy::g_ws.begin    (g_cfg_bambuddy_url, g_cfg_api_key);
 
     // Tasks: net on core 0, UI on core 1.
     xTaskCreatePinnedToCore(net_task, "net", 8192, nullptr, 1, nullptr, 0);

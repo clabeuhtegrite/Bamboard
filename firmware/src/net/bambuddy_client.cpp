@@ -170,10 +170,16 @@ bool Client::fetch_printer_status(int printer_id) {
     String path = String("/api/v1/printers/") + printer_id + "/status";
     JsonDocument doc;
     if (!do_get(path, doc)) return false;
+    return apply_status_payload(printer_id, doc.as<JsonVariantConst>());
+}
 
+bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
+    if (doc.isNull()) return false;
     xSemaphoreTake(mtx_, portMAX_DELAY);
+    bool found = false;
     for (uint8_t i = 0; i < printer_count_; ++i) {
         if (printers_[i].id != printer_id) continue;
+        found = true;
         Printer& p       = printers_[i];
         p.state          = parse_state(doc["state"] | "");
         p.progress       = doc["progress"]       | 0;
@@ -189,9 +195,9 @@ bool Client::fetch_printer_status(int printer_id) {
         // --- AMS ---
         p.ams_exists = doc["ams_exists"] | false;
         p.ams_count  = 0;
-        JsonArray ams_arr = doc["ams"].as<JsonArray>();
+        JsonArrayConst ams_arr = doc["ams"].as<JsonArrayConst>();
         if (!ams_arr.isNull()) {
-            for (JsonObject ams_obj : ams_arr) {
+            for (JsonObjectConst ams_obj : ams_arr) {
                 if (p.ams_count >= 4) break;
                 AmsUnit& u = p.ams[p.ams_count++];
                 u = AmsUnit{};   // reset slots from any previous snapshot
@@ -204,9 +210,9 @@ bool Client::fetch_printer_status(int printer_id) {
                 u.dry_time_min = ams_obj["dry_time"] | 0u;
                 u.present      = true;
 
-                JsonArray trays = ams_obj["tray"].as<JsonArray>();
+                JsonArrayConst trays = ams_obj["tray"].as<JsonArrayConst>();
                 if (!trays.isNull()) {
-                    for (JsonObject t : trays) {
+                    for (JsonObjectConst t : trays) {
                         if (u.slot_count >= 4) break;
                         AmsSlot& s = u.slots[u.slot_count++];
                         s.id        = t["id"] | 0;
@@ -223,7 +229,7 @@ bool Client::fetch_printer_status(int printer_id) {
         break;
     }
     xSemaphoreGive(mtx_);
-    return true;
+    return found;
 }
 
 bool Client::fetch_statistics() {

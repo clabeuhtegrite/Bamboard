@@ -71,10 +71,14 @@ constexpr uint32_t READ_TIMEOUT_MS    = 6000;
 // Poll cadence per screen (the active screen polls more aggressively than
 // background screens). Bambuddy's read rate-limit is 100/min so we stay well
 // under it.
-constexpr uint32_t POLL_DASHBOARD_MS = 2000;     // active dashboard
+constexpr uint32_t POLL_DASHBOARD_MS = 2000;     // active dashboard, no WS
 constexpr uint32_t POLL_LIST_MS      = 5000;
 constexpr uint32_t POLL_STATS_MS     = 30000;
 constexpr uint32_t POLL_HEALTH_MS    = 15000;
+
+// When the WebSocket is connected the server pushes printer_status frames
+// on every MQTT delta, so REST polling becomes a low-cadence safety net.
+constexpr uint32_t POLL_DASHBOARD_WS_MS = 30000; // WS push is primary
 
 // Max printers we keep in RAM (more than enough for desk-side monitoring).
 constexpr uint8_t  MAX_PRINTERS = 8;

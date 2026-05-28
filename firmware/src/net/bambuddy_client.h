@@ -132,6 +132,13 @@ class Client {
     bool clear_hms(int printer_id);
     bool clear_plate(int printer_id);
 
+    // Apply a /status-shaped JSON payload to the cached Printer record.
+    // Shared between the REST poller and the WebSocket push handler — the
+    // ws layer hands us doc["data"] from a printer_status frame, which is
+    // produced by Bambuddy's printer_state_to_dict() and therefore matches
+    // the same schema this method already parses.
+    bool apply_status_payload(int printer_id, JsonVariantConst doc);
+
     // --- Snapshots (cheap; safe to call from the LVGL task) ---
     void snapshot_printers(Printer* out, uint8_t& count) const;
     Stats snapshot_stats() const;
