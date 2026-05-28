@@ -11,6 +11,7 @@
 // the captive portal.
 
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include <Preferences.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
@@ -130,6 +131,12 @@ static void net_task(void*) {
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
         }
+
+        // OTA goes before any other network work: during an active upload
+        // ArduinoOTA.handle() blocks on TCP receive in chunks, and we don't
+        // want HTTP polling or the WS reconnect timer competing for the
+        // socket while flash bytes are landing.
+        ArduinoOTA.handle();
 
         // Drive the WS event loop on every iteration so push frames land
         // without waiting for the next poll tick.
@@ -267,6 +274,43 @@ void setup() {
 
     bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key);
     bambuddy::g_ws.begin    (g_cfg_bambuddy_url, g_cfg_api_key);
+
+    // ArduinoOTA — flashing.md promises `pio run -t upload --upload-port
+    // bamboard.local` works on the LAN. Callbacks fire on net_task (core
+    // 0) and the UI task picks the new state up via ota_apply() on its
+    // next tick (core 1) — no LVGL access from the wrong core.
+    ArduinoOTA.setHostname(ota::HOSTNAME);
+    ArduinoOTA.setPassword(ota::PASSWORD);
+    ArduinoOTA.onStart([]() {
+        log_i("OTA start");
+        ui::screens::ota_set_active(true);
+        ui::screens::ota_set_progress(0);
+    });
+    ArduinoOTA.onProgress([](unsigned int p, unsigned int total) {
+        if (!total) return;
+        uint8_t pct = (uint8_t)((uint64_t)p * 100ULL / total);
+        ui::screens::ota_set_progress(pct);
+    });
+    ArduinoOTA.onEnd([]() {
+        log_i("OTA end — rebooting");
+        ui::screens::ota_set_progress(100);
+        // ArduinoOTA reboots on its own once we return.
+    });
+    ArduinoOTA.onError([](ota_error_t err) {
+        const char* msg = "Update failed.";
+        switch (err) {
+            case OTA_AUTH_ERROR:    msg = "Auth failed — wrong OTA password."; break;
+            case OTA_BEGIN_ERROR:   msg = "Begin failed — out of space?";       break;
+            case OTA_CONNECT_ERROR: msg = "Connection lost.";                   break;
+            case OTA_RECEIVE_ERROR: msg = "Receive failed.";                    break;
+            case OTA_END_ERROR:     msg = "End failed.";                        break;
+            default: break;
+        }
+        log_e("OTA error: %s", msg);
+        ui::screens::ota_set_error(msg);
+    });
+    ArduinoOTA.begin();
+    log_i("OTA ready on %s.local", ota::HOSTNAME);
 
     // Tasks: net on core 0, UI on core 1.
     xTaskCreatePinnedToCore(net_task, "net", 8192, nullptr, 1, nullptr, 0);

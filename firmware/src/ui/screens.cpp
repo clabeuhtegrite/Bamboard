@@ -144,6 +144,141 @@ static void maybe_hide_toast() {
     }
 }
 
+// ---------- OTA progress overlay -------------------------------------------
+//
+// Shown while ArduinoOTA is receiving a firmware image. The OTA callbacks
+// fire on the network task (core 0) but LVGL only tolerates updates from
+// the UI task (core 1), so the setters write to a tiny shared state and
+// the manager calls ota_apply() once per refresh tick to push it into the
+// widget. State stays "live" across the brief blocking windows ArduinoOTA
+// takes between chunks.
+
+static lv_obj_t* s_ota_overlay = nullptr;
+static lv_obj_t* s_ota_bar     = nullptr;
+static lv_obj_t* s_ota_pct_lbl = nullptr;
+static lv_obj_t* s_ota_status  = nullptr;
+
+static volatile bool    s_ota_active        = false;
+static volatile bool    s_ota_dirty         = true;
+static volatile uint8_t s_ota_pct           = 0;
+static volatile bool    s_ota_error_flag    = false;
+static char             s_ota_err_msg[80]   = {};
+static bool             s_ota_visible_cache = false;
+static uint8_t          s_ota_pct_cache     = 0;
+static bool             s_ota_error_cache   = false;
+
+lv_obj_t* build_ota_overlay(lv_obj_t* parent) {
+    ensure_styles();
+
+    s_ota_overlay = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_ota_overlay);
+    lv_obj_set_size(s_ota_overlay, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(s_ota_overlay, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_bg_color(s_ota_overlay, lv_color_hex(::ui::C_BG), 0);
+    lv_obj_set_style_bg_opa(s_ota_overlay, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(s_ota_overlay, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* icon = lv_label_create(s_ota_overlay);
+    lv_label_set_text(icon, LV_SYMBOL_DOWNLOAD);
+    lv_obj_set_style_text_font(icon, &lv_font_montserrat_36, 0);
+    lv_obj_set_style_text_color(icon, lv_color_hex(::ui::C_ACCENT), 0);
+    lv_obj_align(icon, LV_ALIGN_CENTER, 0, -86);
+
+    lv_obj_t* title = lv_label_create(s_ota_overlay);
+    lv_label_set_text(title, "Updating firmware");
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_28, 0);
+    lv_obj_set_style_text_color(title, lv_color_hex(::ui::C_TEXT), 0);
+    lv_obj_align(title, LV_ALIGN_CENTER, 0, -34);
+
+    s_ota_bar = lv_bar_create(s_ota_overlay);
+    lv_obj_set_size(s_ota_bar, 320, 18);
+    lv_obj_align(s_ota_bar, LV_ALIGN_CENTER, 0, 20);
+    lv_bar_set_range(s_ota_bar, 0, 100);
+    lv_bar_set_value(s_ota_bar, 0, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(s_ota_bar, lv_color_hex(::ui::C_PANEL_HI), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa  (s_ota_bar, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius  (s_ota_bar, 9, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(s_ota_bar, lv_color_hex(::ui::C_ACCENT), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa  (s_ota_bar, LV_OPA_COVER, LV_PART_INDICATOR);
+    lv_obj_set_style_radius  (s_ota_bar, 9, LV_PART_INDICATOR);
+
+    s_ota_pct_lbl = lv_label_create(s_ota_overlay);
+    lv_label_set_text(s_ota_pct_lbl, "0%");
+    lv_obj_set_style_text_font(s_ota_pct_lbl, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(s_ota_pct_lbl, lv_color_hex(::ui::C_TEXT), 0);
+    lv_obj_align(s_ota_pct_lbl, LV_ALIGN_CENTER, 0, 56);
+
+    s_ota_status = lv_label_create(s_ota_overlay);
+    lv_label_set_text(s_ota_status, "Do not power off the device.");
+    lv_obj_set_style_text_font(s_ota_status, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(s_ota_status, lv_color_hex(::ui::C_TEXT_DIM), 0);
+    lv_obj_align(s_ota_status, LV_ALIGN_BOTTOM_MID, 0, -16);
+
+    lv_obj_add_flag(s_ota_overlay, LV_OBJ_FLAG_HIDDEN);
+    return s_ota_overlay;
+}
+
+void ota_set_active(bool active) {
+    if (active != s_ota_active) {
+        s_ota_active = active;
+        s_ota_dirty  = true;
+    }
+}
+
+void ota_set_progress(uint8_t pct) {
+    if (pct > 100) pct = 100;
+    if (pct != s_ota_pct) {
+        s_ota_pct   = pct;
+        s_ota_dirty = true;
+    }
+}
+
+void ota_set_error(const char* msg) {
+    if (!msg) msg = "Update failed.";
+    // Single-writer convention: the OTA error path only fires from one
+    // task, and the reader only consults the buffer when error_flag is
+    // true — so a brief torn-string window doesn't matter visually.
+    strncpy(s_ota_err_msg, msg, sizeof(s_ota_err_msg) - 1);
+    s_ota_err_msg[sizeof(s_ota_err_msg) - 1] = '\0';
+    s_ota_error_flag = true;
+    s_ota_dirty      = true;
+}
+
+bool ota_is_active() { return s_ota_active; }
+
+void ota_apply() {
+    if (!s_ota_dirty) return;
+    s_ota_dirty = false;
+
+    bool    active = s_ota_active;
+    uint8_t pct    = s_ota_pct;
+    bool    err    = s_ota_error_flag;
+
+    if (active != s_ota_visible_cache) {
+        if (active) {
+            lv_obj_clear_flag(s_ota_overlay, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(s_ota_overlay);
+        } else {
+            lv_obj_add_flag(s_ota_overlay, LV_OBJ_FLAG_HIDDEN);
+        }
+        s_ota_visible_cache = active;
+    }
+    if (pct != s_ota_pct_cache) {
+        lv_bar_set_value(s_ota_bar, pct, LV_ANIM_OFF);
+        char buf[8];
+        snprintf(buf, sizeof(buf), "%u%%", (unsigned)pct);
+        lv_label_set_text(s_ota_pct_lbl, buf);
+        s_ota_pct_cache = pct;
+    }
+    if (err && !s_ota_error_cache) {
+        // Keep the overlay up so the user reads the failure reason; clears
+        // on the next boot.
+        lv_label_set_text(s_ota_status, s_ota_err_msg);
+        lv_obj_set_style_text_color(s_ota_status, lv_color_hex(::ui::C_ERR), 0);
+        s_ota_error_cache = true;
+    }
+}
+
 // ---------- HMS full-screen flash ------------------------------------------
 //
 // Big red overlay that the UI manager pops up periodically while the

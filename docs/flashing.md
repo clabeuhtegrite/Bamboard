@@ -60,8 +60,27 @@ the LAN as `bamboard`. From PlatformIO you can push firmware over the
 network with:
 
 ```bash
-pio run -t upload --upload-port bamboard.local
+pio run -t upload --upload-port bamboard.local --upload-flags --auth=bamboard
 ```
+
+The default OTA password is `bamboard`. If you'd rather not have your
+LAN neighbours be able to reflash the device, override it at build time:
+
+```bash
+pio run -t upload \
+    --upload-port bamboard.local \
+    --upload-flags --auth=my-secret \
+    -e esp32-s3-devkitc-1 \
+    -DOTA_PASSWORD_OVERRIDE='"my-secret"'
+```
+
+or set `build_flags += -DOTA_PASSWORD_OVERRIDE='"my-secret"'` in
+`platformio.ini` and flash once over USB so the new password is baked
+into the firmware. Subsequent OTA pushes must then use the same value
+in `--auth`.
+
+During the upload the device shows a progress bar; the rest of the UI is
+suppressed until the new firmware boots.
 
 ## Troubleshooting
 

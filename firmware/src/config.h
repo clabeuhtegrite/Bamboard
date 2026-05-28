@@ -124,3 +124,22 @@ constexpr const char* AP_PASSWORD = "bamboard";   // change on first boot
 constexpr uint32_t    PORTAL_TIMEOUT_S = 300;
 
 }  // namespace provision
+
+// ---------- ArduinoOTA --------------------------------------------------
+
+namespace ota {
+
+// mDNS hostname the device advertises for OTA. Matches the wifi hostname
+// set in main.cpp so `pio run -t upload --upload-port bamboard.local` and
+// "ping bamboard.local" both target the same name.
+constexpr const char* HOSTNAME = "bamboard";
+
+// Stops drive-by reflashes from the local network. Override at build time
+// with -DOTA_PASSWORD_OVERRIDE=\"...\" if you want a per-device secret.
+#ifdef OTA_PASSWORD_OVERRIDE
+constexpr const char* PASSWORD = OTA_PASSWORD_OVERRIDE;
+#else
+constexpr const char* PASSWORD = "bamboard";
+#endif
+
+}  // namespace ota
