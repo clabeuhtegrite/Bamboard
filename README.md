@@ -28,6 +28,7 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 - **Print speed control** — cycle the speed preset (Silent / Standard / Sport / Ludicrous) by long-pressing OK on the live screen
 - **HMS surfacing** — the HMS string is shown in red on the dashboard and the status LED breathes red
 - **Per-printer actions menu** — long-press OK on the Printers screen opens a modal to clear HMS errors or acknowledge a cleared build plate (so the scheduler starts the next queued print)
+- **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames; REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop
 - **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy URL + API key setup, no re-flash needed to change them
 - **Status LED** — single WS2812 RGB module, screwless plug-in, state-driven ambient patterns
 - **Auto-dim** — screen dims after inactivity to save the backlight
@@ -36,7 +37,6 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 
 - **Full-screen HMS flash** — currently only the HMS label turns red; a periodic full-screen warning overlay is TODO
 - **OTA upload** — `pio run -t upload --upload-port bamboard.local` documented but `ArduinoOTA.begin()` not yet called in `setup()`
-- **WebSocket events** — Bambuddy exposes `/ws` for push events; switching from polling would make HMS alerts near-instant. Currently we poll every 2 s, which is fine for desk-side use
 
 ## Repo layout
 
