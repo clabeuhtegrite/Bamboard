@@ -88,6 +88,7 @@ void Manager::begin() {
     }
     screens::build_toast(s_root);
     screens::build_actions(s_root);
+    screens::build_hms_flash(s_root);
 
     go_to(Screen::Dashboard);
 }
@@ -112,15 +113,14 @@ void Manager::go_to(Screen s) {
 
 void Manager::refresh() {
     // Auto-pick the first printer the first time we know about one.
-    if (selected_printer_id_ < 0) {
-        ::bambuddy::Printer ps[8];
-        uint8_t n = 0;
-        ::bambuddy::g_client.snapshot_printers(ps, n);
-        if (n > 0) {
-            selected_index_ = 0;
-            selected_printer_id_ = ps[0].id;
-        }
+    ::bambuddy::Printer ps[8];
+    uint8_t n = 0;
+    ::bambuddy::g_client.snapshot_printers(ps, n);
+    if (selected_printer_id_ < 0 && n > 0) {
+        selected_index_ = 0;
+        selected_printer_id_ = ps[0].id;
     }
+
     switch (current_) {
         case Screen::Dashboard: screens::update_dashboard(selected_printer_id_); break;
         case Screen::Ams:       screens::update_ams(selected_printer_id_);       break;
@@ -128,6 +128,44 @@ void Manager::refresh() {
         case Screen::History:   screens::update_history();                       break;
         case Screen::Settings:  screens::update_settings();                      break;
         default: break;
+    }
+
+    // --- HMS full-screen flash state machine -------------------------------
+    String hms_now;
+    for (uint8_t i = 0; i < n; ++i)
+        if (ps[i].id == selected_printer_id_) hms_now = ps[i].hms;
+    bool active = hms_now.length() && hms_now != "ok";
+    uint32_t now = millis();
+
+    if (!active) {
+        if (screens::hms_flash_is_visible()) screens::hms_flash_hide();
+        hms_was_active_ = false;
+        hms_last_msg_   = "";
+        return;
+    }
+
+    // Pop the overlay immediately on the edge from ok → error so the user
+    // gets the alert without waiting for the next periodic tick.
+    if (!hms_was_active_) {
+        screens::hms_flash_show(hms_now.c_str());
+        hms_hide_at_ms_   = now + ::bambuddy::HMS_FLASH_VISIBLE_MS;
+        hms_next_show_ms_ = now + ::bambuddy::HMS_FLASH_COOLDOWN_MS;
+        hms_was_active_   = true;
+        hms_last_msg_     = hms_now;
+        return;
+    }
+
+    if (screens::hms_flash_is_visible()) {
+        if (hms_now != hms_last_msg_) {
+            screens::hms_flash_update_msg(hms_now.c_str());
+            hms_last_msg_ = hms_now;
+        }
+        if (now >= hms_hide_at_ms_) screens::hms_flash_hide();
+    } else if (now >= hms_next_show_ms_) {
+        screens::hms_flash_show(hms_now.c_str());
+        hms_hide_at_ms_   = now + ::bambuddy::HMS_FLASH_VISIBLE_MS;
+        hms_next_show_ms_ = now + ::bambuddy::HMS_FLASH_COOLDOWN_MS;
+        hms_last_msg_     = hms_now;
     }
 }
 
@@ -153,6 +191,16 @@ void Manager::handle_input() {
     while (hw::g_buttons.next_event(e)) {
         // Any input wakes the screen up.
         hw::g_display.set_backlight(display::BL_FULL);
+
+        // The HMS overlay is on top of everything (actions modal, carousel
+        // screens). The first button press while it's visible dismisses
+        // it and consumes the event — the user doesn't want their "shut
+        // up" gesture to also navigate. The periodic state machine will
+        // re-show it after the cooldown if the error persists.
+        if (screens::hms_flash_is_visible()) {
+            screens::hms_flash_hide();
+            continue;
+        }
 
         // While the actions modal is open it owns every button.
         if (screens::actions_is_open()) {
