@@ -1,5 +1,13 @@
 # Flashing the firmware
 
+- [Prerequisites](#prerequisites)
+- [First-time build](#first-time-build)
+- [Flash (first install over USB)](#flash-first-install-over-usb)
+- [First boot](#first-boot)
+- [Re-configuring later](#re-configuring-later)
+- [OTA updates](#ota-updates)
+- [Troubleshooting](#troubleshooting)
+
 ## Prerequisites
 
 - [PlatformIO Core](https://platformio.org/install/cli) or the VS Code
