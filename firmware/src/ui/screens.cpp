@@ -146,38 +146,62 @@ static void maybe_hide_toast() {
 
 // ---------- actions modal --------------------------------------------------
 //
-// A 3-item context menu for the currently-selected printer. Hosts the
-// HMS-clear and clear-plate actions so the user can dismiss those states
-// without leaving the Bamboard screen. The modal is a single LVGL object
-// graph that we hide/show; the UI manager hands us button events while
+// A context menu for the currently-selected printer. The caller chooses
+// which items appear: the Printers screen opens the full triplet (Clear
+// HMS / Clear plate / Cancel) on long-press OK, while the Live screen
+// double-click opens a state-dependent subset built by
+// actions_open_for_live(). The modal is a single LVGL object graph we
+// hide/show; the UI manager funnels button events into us while
 // `actions_is_open()` is true.
 
-enum class ActionItem : uint8_t {
-    ClearHms = 0,
-    ClearPlate,
-    Cancel,
-    _Count,
-};
+static constexpr uint8_t ACT_MAX_ITEMS = 5;
 
 static lv_obj_t*   s_act_backdrop = nullptr;
 static lv_obj_t*   s_act_title    = nullptr;
-static lv_obj_t*   s_act_items[(uint8_t)ActionItem::_Count] = {};
-static lv_obj_t*   s_act_labels[(uint8_t)ActionItem::_Count] = {};
-static bool        s_act_open     = false;
-static uint8_t     s_act_index    = 0;
-static int         s_act_printer  = -1;
+static lv_obj_t*   s_act_items[ACT_MAX_ITEMS]  = {};
+static lv_obj_t*   s_act_labels[ACT_MAX_ITEMS] = {};
+static bool        s_act_open      = false;
+static uint8_t     s_act_index     = 0;
+static int         s_act_printer   = -1;
+// Snapshot of the speed at open time — we offer "Cycle speed" as a single
+// menu entry (advance to the next mode) and reuse this to label the row
+// with the *current* mode name.
+static uint8_t     s_act_speed_lvl = 2;
+static ActionItem  s_act_visible[ACT_MAX_ITEMS] = {};
+static uint8_t     s_act_visible_count = 0;
 
-static const char* action_label(ActionItem a) {
-    switch (a) {
-        case ActionItem::ClearHms:   return "Clear HMS";
-        case ActionItem::ClearPlate: return "Clear plate";
-        case ActionItem::Cancel:     return "Cancel";
+static const char* speed_mode_name(uint8_t mode) {
+    switch (mode) {
+        case 1: return "Silent";
+        case 2: return "Standard";
+        case 3: return "Sport";
+        case 4: return "Ludicrous";
         default: return "?";
     }
 }
 
+static String action_label(ActionItem a) {
+    switch (a) {
+        case ActionItem::ClearHms:   return String("Clear HMS");
+        case ActionItem::ClearPlate: return String("Clear plate");
+        case ActionItem::CycleSpeed: {
+            uint8_t next = (uint8_t)((s_act_speed_lvl % 4) + 1);
+            return String("Speed: ") + speed_mode_name(s_act_speed_lvl)
+                 + " " LV_SYMBOL_RIGHT " " + speed_mode_name(next);
+        }
+        case ActionItem::Cancel:     return String("Cancel");
+        default: return String("?");
+    }
+}
+
 static void redraw_action_highlight() {
-    for (uint8_t i = 0; i < (uint8_t)ActionItem::_Count; ++i) {
+    for (uint8_t i = 0; i < ACT_MAX_ITEMS; ++i) {
+        bool visible = (i < s_act_visible_count);
+        if (!visible) {
+            lv_obj_add_flag(s_act_items[i], LV_OBJ_FLAG_HIDDEN);
+            continue;
+        }
+        lv_obj_clear_flag(s_act_items[i], LV_OBJ_FLAG_HIDDEN);
         bool sel = (i == s_act_index);
         lv_obj_set_style_bg_color(s_act_items[i],
             lv_color_hex(sel ? ::ui::C_PANEL_HI : ::ui::C_PANEL), 0);
@@ -202,10 +226,10 @@ lv_obj_t* build_actions(lv_obj_t* parent) {
 
     lv_obj_t* panel = lv_obj_create(s_act_backdrop);
     lv_obj_add_style(panel, &s_panel, 0);
-    lv_obj_set_size(panel, 360, 230);
+    lv_obj_set_size(panel, 380, 300);
     lv_obj_center(panel);
     lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_pad_all(panel, 16, 0);
+    lv_obj_set_style_pad_all(panel, 14, 0);
     lv_obj_set_style_border_width(panel, 2, 0);
     lv_obj_set_style_border_color(panel, lv_color_hex(::ui::C_ACCENT), 0);
 
@@ -215,18 +239,18 @@ lv_obj_t* build_actions(lv_obj_t* parent) {
     lv_obj_set_style_text_font(s_act_title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(s_act_title, lv_color_hex(::ui::C_ACCENT), 0);
 
-    for (uint8_t i = 0; i < (uint8_t)ActionItem::_Count; ++i) {
+    for (uint8_t i = 0; i < ACT_MAX_ITEMS; ++i) {
         lv_obj_t* row = lv_obj_create(panel);
         lv_obj_remove_style_all(row);
-        lv_obj_set_size(row, 328, 36);
-        lv_obj_align(row, LV_ALIGN_TOP_LEFT, 0, 40 + i * 42);
+        lv_obj_set_size(row, 348, 36);
+        lv_obj_align(row, LV_ALIGN_TOP_LEFT, 0, 36 + i * 40);
         lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
         lv_obj_set_style_radius(row, 8, 0);
         lv_obj_set_style_pad_all(row, 8, 0);
         lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
         lv_obj_t* lbl = lv_label_create(row);
-        lv_label_set_text(lbl, action_label((ActionItem)i));
+        lv_label_set_text(lbl, "");
         lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 8, 0);
         lv_obj_set_style_text_font(lbl, &lv_font_montserrat_20, 0);
 
@@ -245,16 +269,51 @@ lv_obj_t* build_actions(lv_obj_t* parent) {
     return s_act_backdrop;
 }
 
-void actions_open(int printer_id, const char* printer_name) {
-    if (!s_act_backdrop) return;
-    s_act_open    = true;
-    s_act_index   = 0;
-    s_act_printer = printer_id;
+void actions_open(int printer_id,
+                  const char* printer_name,
+                  const ActionItem* items,
+                  uint8_t count) {
+    if (!s_act_backdrop || !items || count == 0) return;
+    if (count > ACT_MAX_ITEMS) count = ACT_MAX_ITEMS;
+
+    s_act_open     = true;
+    s_act_index    = 0;
+    s_act_printer  = printer_id;
+    s_act_visible_count = count;
+    for (uint8_t i = 0; i < count; ++i) {
+        s_act_visible[i] = items[i];
+        lv_label_set_text(s_act_labels[i], action_label(items[i]).c_str());
+    }
+
     String t = String("Actions — ") + (printer_name ? printer_name : "Printer");
     lv_label_set_text(s_act_title, t.c_str());
     redraw_action_highlight();
     lv_obj_clear_flag(s_act_backdrop, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(s_act_backdrop);
+}
+
+void actions_open_for_live(int printer_id,
+                           const char* printer_name,
+                           ::bambuddy::PrinterState state,
+                           uint8_t speed_level) {
+    using PS = ::bambuddy::PrinterState;
+    s_act_speed_lvl = (speed_level >= 1 && speed_level <= 4) ? speed_level : 2;
+
+    ActionItem items[ACT_MAX_ITEMS];
+    uint8_t n = 0;
+
+    // Speed cycling only makes sense while the printer is actively running.
+    if (state == PS::Printing || state == PS::Paused || state == PS::Prepare) {
+        items[n++] = ActionItem::CycleSpeed;
+    }
+    // Clear plate is what unblocks the queue after a finished/failed print.
+    if (state == PS::Finish || state == PS::Failed) {
+        items[n++] = ActionItem::ClearPlate;
+    }
+    items[n++] = ActionItem::ClearHms;
+    items[n++] = ActionItem::Cancel;
+
+    actions_open(printer_id, printer_name, items, n);
 }
 
 void actions_close() {
@@ -266,15 +325,15 @@ void actions_close() {
 bool actions_is_open() { return s_act_open; }
 
 void actions_navigate(int dir) {
-    if (!s_act_open) return;
-    int n = (int)ActionItem::_Count;
+    if (!s_act_open || s_act_visible_count == 0) return;
+    int n = (int)s_act_visible_count;
     s_act_index = (uint8_t)(((int)s_act_index + dir % n + n) % n);
     redraw_action_highlight();
 }
 
 void actions_confirm() {
-    if (!s_act_open) return;
-    ActionItem a = (ActionItem)s_act_index;
+    if (!s_act_open || s_act_index >= s_act_visible_count) return;
+    ActionItem a = s_act_visible[s_act_index];
     int id = s_act_printer;
     actions_close();   // close first so the toast lands on the normal UI
 
@@ -293,6 +352,18 @@ void actions_confirm() {
             bool ok = ::bambuddy::g_client.clear_plate(id);
             show_toast(ok ? "Plate cleared" : "Clear plate failed",
                        lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
+            break;
+        }
+        case ActionItem::CycleSpeed: {
+            uint8_t next = (uint8_t)((s_act_speed_lvl % 4) + 1);
+            bool ok = ::bambuddy::g_client.set_print_speed(id, next);
+            if (ok) {
+                s_act_speed_lvl = next;
+                String msg = String("Speed: ") + speed_mode_name(next);
+                show_toast(msg.c_str(), lv_color_hex(::ui::C_OK));
+            } else {
+                show_toast("Set speed failed", lv_color_hex(::ui::C_ERR));
+            }
             break;
         }
         case ActionItem::Cancel:
@@ -990,9 +1061,10 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
 
     s_set_hint = lv_label_create(s_set_root);
     lv_label_set_text(s_set_hint,
+        LV_SYMBOL_SETTINGS "  Double-click OK on Live: quick actions\n"
+        "          (speed / clear plate).\n"
         LV_SYMBOL_SETTINGS "  Long-press OK on Live: cycle print speed.\n"
-        LV_SYMBOL_SETTINGS "  Long-press OK on Printers: open actions\n"
-        "          (Clear HMS / Clear plate).\n"
+        LV_SYMBOL_SETTINGS "  Long-press OK on Printers: full actions.\n"
         LV_SYMBOL_REFRESH "  Hold a button at boot to clear settings.");
     lv_obj_align(s_set_hint, LV_ALIGN_BOTTOM_LEFT, 18, -10);
     lv_obj_add_style(s_set_hint, &s_label_dim, 0);

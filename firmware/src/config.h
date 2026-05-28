@@ -53,10 +53,14 @@ constexpr uint8_t  BL_DIM  = 40;
 
 namespace buttons {
 
-constexpr uint16_t DEBOUNCE_MS    = 25;
-constexpr uint16_t LONG_PRESS_MS  = 600;
-constexpr uint16_t REPEAT_MS      = 180;
+constexpr uint16_t DEBOUNCE_MS     = 25;
+constexpr uint16_t LONG_PRESS_MS   = 600;
+constexpr uint16_t REPEAT_MS       = 180;
 constexpr uint16_t REPEAT_AFTER_MS = 700;
+// Max gap between two releases that still counts as a double-click. Short
+// enough to feel intentional, long enough to be reachable with the
+// chunky tactiles on the case.
+constexpr uint16_t DOUBLE_CLICK_MS = 350;
 
 }  // namespace buttons
 

@@ -191,6 +191,7 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
         p.temps.chamber  = doc["temperatures"]["chamber"] | 0.0f;
         p.hms            = (const char*)(doc["hms_status"] | "ok");
         p.filename       = (const char*)(doc["filename"]   | "");
+        p.speed_level    = doc["speed_level"] | 2;
 
         // --- AMS ---
         p.ams_exists = doc["ams_exists"] | false;
