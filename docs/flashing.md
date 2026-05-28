@@ -63,24 +63,57 @@ network with:
 pio run -t upload --upload-port bamboard.local --upload-flags --auth=bamboard
 ```
 
-The default OTA password is `bamboard`. If you'd rather not have your
-LAN neighbours be able to reflash the device, override it at build time:
+### One-click update scripts (recommended)
 
-```bash
-pio run -t upload \
-    --upload-port bamboard.local \
-    --upload-flags --auth=my-secret \
-    -e esp32-s3-devkitc-1 \
+For a smoother experience, the repo ships per-OS wrappers under
+`scripts/` that compile, discover the device, and upload in one step:
+
+| OS      | How to run                              |
+|---------|------------------------------------------|
+| Windows | Double-click `scripts/update-windows.bat` (or run it from `cmd`) |
+| macOS   | Double-click `scripts/update-mac.command` in Finder, or `scripts/update-mac.command` from a terminal |
+| Linux   | `scripts/update-linux.sh`                |
+
+The scripts:
+
+- try `bamboard.local` via mDNS first, fall back to a one-time IP
+  prompt and **cache the answer** so the next run doesn't ask;
+- read the OTA password from `$BAMBOARD_OTA_PASSWORD` if set,
+  otherwise use the firmware default (`bamboard`);
+- locate `pio` on PATH or under `~/.platformio/penv/`, so you don't
+  need PlatformIO on PATH for the script to find it;
+- stream PlatformIO's compile and upload output through, then print a
+  one-line success / failure summary.
+
+Useful flags (forwarded by every launcher):
+
+- `--reset` — clear the cached host and re-discover.
+- `--host 192.168.1.42` — bypass discovery for one run.
+- `--password mysecret` — bypass the env var / default for one run.
+- `--build-only` — compile without uploading.
+
+### Changing the OTA password
+
+The default password is `bamboard`. To bake in a stronger one, edit
+`platformio.ini` and add to `build_flags`:
+
+```ini
+build_flags =
+    ...
     -DOTA_PASSWORD_OVERRIDE='"my-secret"'
 ```
 
-or set `build_flags += -DOTA_PASSWORD_OVERRIDE='"my-secret"'` in
-`platformio.ini` and flash once over USB so the new password is baked
-into the firmware. Subsequent OTA pushes must then use the same value
-in `--auth`.
+then flash once over USB so the new firmware (with the new password)
+gets installed. Subsequent OTA pushes must use the same value in
+`--auth=` — or simpler, set `BAMBOARD_OTA_PASSWORD=my-secret` in your
+shell and the update scripts pick it up automatically.
+
+### What you see on the device
 
 During the upload the device shows a progress bar; the rest of the UI is
-suppressed until the new firmware boots.
+suppressed until the new firmware boots. On failure the bottom banner
+turns red and prints the reason (wrong password, connection lost,
+flash full, …).
 
 ## Troubleshooting
 

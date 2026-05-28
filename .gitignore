@@ -33,3 +33,6 @@ case/exports/*.stl.bak
 # Secrets
 firmware/src/secrets.h
 *.local
+
+# Update-script local cache (host the user last reached)
+scripts/.bamboard-cache.json
