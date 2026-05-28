@@ -41,6 +41,17 @@ void      hms_flash_hide      ();
 void      hms_flash_update_msg(const char* msg);
 bool      hms_flash_is_visible();
 
+// Full-screen OTA progress overlay. The setters are safe to call from any
+// task (they write a tiny shared state); ota_apply() pulls that state into
+// the LVGL widget and MUST be called from the UI task — invoked once per
+// refresh tick by the manager.
+lv_obj_t* build_ota_overlay(lv_obj_t* parent);
+void      ota_set_active  (bool active);
+void      ota_set_progress(uint8_t pct);
+void      ota_set_error   (const char* msg);
+void      ota_apply       ();
+bool      ota_is_active   ();
+
 // Per-printer actions modal. Items shown are decided by the caller — the
 // Printers screen opens the full {ClearHms, ClearPlate, Cancel} set on
 // long-press OK; the Live screen opens a contextual subset on double-click

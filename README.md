@@ -31,12 +31,13 @@ on any Bambu (or other) printer with 0.4 mm nozzle.
 - **Per-printer actions menu** — long-press OK on the Printers screen opens a modal to clear HMS errors or acknowledge a cleared build plate (so the scheduler starts the next queued print)
 - **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames; REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop
 - **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy URL + API key setup, no re-flash needed to change them
+- **OTA firmware updates** — `pio run -t upload --upload-port bamboard.local --upload-flags --auth=bamboard` pushes a new build over the LAN, with a full-screen progress overlay during the upload (default password is `bamboard`, overridable via build flag — see `docs/flashing.md`)
 - **Status LED** — single WS2812 RGB module, screwless plug-in, state-driven ambient patterns
 - **Auto-dim** — screen dims after inactivity to save the backlight
 
-### Roadmap (claimed earlier but not yet wired)
+### Roadmap
 
-- **OTA upload** — `pio run -t upload --upload-port bamboard.local` documented but `ArduinoOTA.begin()` not yet called in `setup()`
+_Nothing pinned at the moment — everything originally claimed by the project is now shipped. Open an issue if you want a feature considered._
 
 ## Repo layout
 

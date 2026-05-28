@@ -89,6 +89,7 @@ void Manager::begin() {
     screens::build_toast(s_root);
     screens::build_actions(s_root);
     screens::build_hms_flash(s_root);
+    screens::build_ota_overlay(s_root);
 
     go_to(Screen::Dashboard);
 }
@@ -112,6 +113,12 @@ void Manager::go_to(Screen s) {
 }
 
 void Manager::refresh() {
+    // OTA gets right-of-way: while an update is in flight, the rest of the
+    // UI is irrelevant and the overlay is the only thing the user should
+    // see. We still tick through the other screens so they're in a sane
+    // state when the device reboots back to the same UI on success.
+    screens::ota_apply();
+
     // Auto-pick the first printer the first time we know about one.
     ::bambuddy::Printer ps[8];
     uint8_t n = 0;
@@ -131,6 +138,14 @@ void Manager::refresh() {
     }
 
     // --- HMS full-screen flash state machine -------------------------------
+    // While OTA owns the screen we suppress every other overlay; popping a
+    // red HMS flash on top of an upload progress bar would be useless and
+    // confusing.
+    if (screens::ota_is_active()) {
+        if (screens::hms_flash_is_visible()) screens::hms_flash_hide();
+        return;
+    }
+
     String hms_now;
     for (uint8_t i = 0; i < n; ++i)
         if (ps[i].id == selected_printer_id_) hms_now = ps[i].hms;
@@ -191,6 +206,11 @@ void Manager::handle_input() {
     while (hw::g_buttons.next_event(e)) {
         // Any input wakes the screen up.
         hw::g_display.set_backlight(display::BL_FULL);
+
+        // Drop every input while an OTA upload is in flight: the rest of
+        // the UI is hidden behind the progress overlay and we don't want
+        // a stray click to navigate the carousel underneath.
+        if (screens::ota_is_active()) continue;
 
         // The HMS overlay is on top of everything (actions modal, carousel
         // screens). The first button press while it's visible dismisses
