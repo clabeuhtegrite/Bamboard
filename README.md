@@ -57,7 +57,9 @@ _Nothing pinned at the moment — everything originally claimed by the project i
 1. Order the parts from `hardware/bom.md` (~30 €).
 2. Print the enclosure: `case/bamboard.scad` → export STL → slice → print PLA / PETG.
 3. Wire it up as shown in `hardware/wiring.md` (no soldering required).
-4. Flash the firmware: see `docs/flashing.md`.
+4. Flash the firmware: plug the ESP32-S3 in via USB-C, then double-click
+   `scripts/flash-windows.bat`, `scripts/flash-mac.command` or run
+   `scripts/flash-linux.sh`. See `docs/flashing.md` for details.
 5. First boot: device exposes a `Bamboard-setup` Wi-Fi AP, connect, fill in
    your Wi-Fi credentials and your Bambuddy URL + API key.
 6. Enjoy.
