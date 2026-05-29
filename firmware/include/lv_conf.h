@@ -54,13 +54,28 @@
 #define LV_USE_TABLE    1
 
 /* -------- Extra widgets -------- */
-#define LV_USE_LIST     1
-#define LV_USE_MENU     1
-#define LV_USE_MSGBOX   1
-#define LV_USE_SPINNER  1
-#define LV_USE_TABVIEW  0
-#define LV_USE_TILEVIEW 0
-#define LV_USE_WIN      0
+/* Anything we don't explicitly use is forced off here. LVGL otherwise
+ * picks "1" as the default for every widget in this section, and a
+ * couple of them (lv_keyboard) require sibling widgets that we also
+ * disabled (lv_textarea) — the build then fatal-errors out of the
+ * header. Be explicit to avoid surprises on future LVGL bumps. */
+#define LV_USE_ANIMIMG     0
+#define LV_USE_CALENDAR    0
+#define LV_USE_CHART       0
+#define LV_USE_COLORWHEEL  0
+#define LV_USE_IMGBTN      0
+#define LV_USE_KEYBOARD    0   /* would require LV_USE_TEXTAREA = 1 */
+#define LV_USE_LED         0
+#define LV_USE_LIST        1
+#define LV_USE_MENU        1
+#define LV_USE_METER       0
+#define LV_USE_MSGBOX      0
+#define LV_USE_SPAN        0
+#define LV_USE_SPINBOX     0
+#define LV_USE_SPINNER     1
+#define LV_USE_TABVIEW     0
+#define LV_USE_TILEVIEW    0
+#define LV_USE_WIN         0
 
 /* -------- Themes -------- */
 #define LV_USE_THEME_DEFAULT 1
