@@ -144,8 +144,13 @@ bool Client::do_post(const String& path, const String& body, JsonDocument* out_d
 // --- Read operations --------------------------------------------------------
 
 bool Client::fetch_printers() {
+    // Bambuddy v0.2.x declares the route with a trailing slash; without
+    // it FastAPI returns 404 (redirect_slashes=False on this build).
+    // /printers/ only carries identity fields (id / name / model / serial)
+    // — the runtime state lives on /printers/{id}/status, fetched
+    // separately by net_task.
     JsonDocument doc;
-    if (!do_get("/api/v1/printers", doc)) return false;
+    if (!do_get("/api/v1/printers/", doc)) return false;
     if (!doc.is<JsonArray>()) {
         last_error_ = "printers: expected array";
         return false;
@@ -160,7 +165,7 @@ bool Client::fetch_printers() {
         p.id         = obj["id"]            | -1;
         p.name       = (const char*)(obj["name"]   | "Printer");
         p.model      = (const char*)(obj["model"]  | "");
-        p.state      = parse_state(obj["status"]   | "");
+        // /printers/ doesn't carry state — leave as Unknown until /status fires.
     }
     xSemaphoreGive(mtx_);
     return true;
@@ -173,6 +178,18 @@ bool Client::fetch_printer_status(int printer_id) {
     return apply_status_payload(printer_id, doc.as<JsonVariantConst>());
 }
 
+// Pick the first key present on `obj` that holds a numeric value. Bambuddy's
+// PrinterStatus.temperatures is a free-form dict mirroring the MQTT payload,
+// which has used both `nozzle` and `nozzle_temper` across firmware versions.
+// Tolerate both so we don't have to guess from the schema (the openapi.json
+// only documents the field as "object").
+static float pick_float(JsonVariantConst v, const char* a, const char* b) {
+    if (v.isNull()) return 0.0f;
+    if (v[a].is<float>() || v[a].is<int>()) return v[a].as<float>();
+    if (v[b].is<float>() || v[b].is<int>()) return v[b].as<float>();
+    return 0.0f;
+}
+
 bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
     if (doc.isNull()) return false;
     xSemaphoreTake(mtx_, portMAX_DELAY);
@@ -182,16 +199,41 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
         found = true;
         Printer& p       = printers_[i];
         p.state          = parse_state(doc["state"] | "");
-        p.progress       = doc["progress"]       | 0;
+        // progress can be null (idle printer); ArduinoJson's `| 0` default
+        // handles that for us, but the actual field is a float on the wire.
+        p.progress       = (uint8_t)(doc["progress"] | 0.0f);
         p.remaining_s    = doc["remaining_time"] | 0;
-        p.current_layer  = doc["current_layer"]  | 0;
+        // Bambuddy renames Bambu's "current_layer" to "layer_num".
+        p.current_layer  = doc["layer_num"]      | 0;
         p.total_layers   = doc["total_layers"]   | 0;
-        p.temps.nozzle   = doc["temperatures"]["nozzle"]  | 0.0f;
-        p.temps.bed      = doc["temperatures"]["bed"]     | 0.0f;
-        p.temps.chamber  = doc["temperatures"]["chamber"] | 0.0f;
-        p.hms            = (const char*)(doc["hms_status"] | "ok");
-        p.filename       = (const char*)(doc["filename"]   | "");
-        p.speed_level    = doc["speed_level"] | 2;
+        // temperatures is a free-form dict; try both Bambu naming styles.
+        JsonVariantConst t = doc["temperatures"];
+        p.temps.nozzle   = pick_float(t, "nozzle",  "nozzle_temper");
+        p.temps.bed      = pick_float(t, "bed",     "bed_temper");
+        p.temps.chamber  = pick_float(t, "chamber", "chamber_temper");
+
+        // HMS: Bambuddy returns an array of {code, module, severity, attr}.
+        // Empty array → "ok"; otherwise stringify the first one's code so the
+        // existing UI (which expects a single short string) still works.
+        JsonArrayConst hms = doc["hms_errors"].as<JsonArrayConst>();
+        if (hms.isNull() || hms.size() == 0) {
+            p.hms = "ok";
+        } else {
+            JsonObjectConst first = hms[0];
+            const char* code = first["code"] | "";
+            if (hms.size() == 1) {
+                p.hms = code;
+            } else {
+                p.hms = String(code) + " (+" + (uint32_t)(hms.size() - 1) + " more)";
+            }
+        }
+
+        // Filename: Bambuddy exposes the on-printer name as `subtask_name`
+        // first, falling back to the raw `gcode_file` path.
+        const char* fn = doc["subtask_name"] | "";
+        if (!*fn) fn = doc["gcode_file"] | "";
+        p.filename    = fn;
+        p.speed_level = doc["speed_level"] | 2;
 
         // --- AMS ---
         p.ams_exists = doc["ams_exists"] | false;
@@ -201,10 +243,9 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
             for (JsonObjectConst ams_obj : ams_arr) {
                 if (p.ams_count >= 4) break;
                 AmsUnit& u = p.ams[p.ams_count++];
-                u = AmsUnit{};   // reset slots from any previous snapshot
-                u.id         = ams_obj["id"]       | -1;
-                u.is_ht      = ams_obj["is_ams_ht"]| false;
-                // humidity can legitimately be 0; treat null/missing as -1.
+                u = AmsUnit{};
+                u.id         = ams_obj["id"]        | -1;
+                u.is_ht      = ams_obj["is_ams_ht"] | false;
                 if (ams_obj["humidity"].is<int>()) u.humidity = (int16_t)ams_obj["humidity"].as<int>();
                 else                                u.humidity = -1;
                 u.temp         = ams_obj["temp"]     | 0.0f;
@@ -213,15 +254,14 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
 
                 JsonArrayConst trays = ams_obj["tray"].as<JsonArrayConst>();
                 if (!trays.isNull()) {
-                    for (JsonObjectConst t : trays) {
+                    for (JsonObjectConst tr : trays) {
                         if (u.slot_count >= 4) break;
                         AmsSlot& s = u.slots[u.slot_count++];
-                        s.id        = t["id"] | 0;
-                        const char* col = t["tray_color"] | "";
+                        s.id        = tr["id"] | 0;
+                        const char* col = tr["tray_color"] | "";
                         s.color_rgb = parse_tray_color(col);
-                        copy_short(s.type, sizeof(s.type), t["tray_type"] | "");
-                        s.remain    = t["remain"] | 0;
-                        // Bambuddy reports empty slots with no tray_type and remain=0.
+                        copy_short(s.type, sizeof(s.type), tr["tray_type"] | "");
+                        s.remain    = tr["remain"] | 0;
                         s.present   = (s.type[0] != '\0') || (s.color_rgb != 0) || (s.remain > 0);
                     }
                 }
@@ -234,39 +274,52 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
 }
 
 bool Client::fetch_statistics() {
+    // Bambuddy 0.2.x exposes archive stats under /archives/stats, not
+    // /statistics. Field names changed too: total_print_time_hours
+    // replaces total_print_time, total_filament_grams replaces
+    // total_filament_used, and success_rate isn't returned (we compute
+    // it from the counts).
     JsonDocument doc;
-    if (!do_get("/api/v1/statistics", doc)) return false;
+    if (!do_get("/api/v1/archives/stats", doc)) return false;
     xSemaphoreTake(mtx_, portMAX_DELAY);
-    stats_.total_prints      = doc["total_prints"]        | 0;
-    stats_.successful_prints = doc["successful_prints"]   | 0;
-    stats_.failed_prints     = doc["failed_prints"]       | 0;
-    stats_.stopped_prints    = doc["stopped_prints"]      | 0;
-    stats_.success_rate      = doc["success_rate"]        | 0.0f;
-    stats_.total_time_s      = doc["total_print_time"]    | 0;
-    stats_.total_filament_g  = doc["total_filament_used"] | 0.0f;
+    stats_.total_prints      = doc["total_prints"]      | 0;
+    stats_.successful_prints = doc["successful_prints"] | 0;
+    stats_.failed_prints     = doc["failed_prints"]     | 0;
+    stats_.stopped_prints    = 0;   // not in the new schema
+    stats_.total_time_s      = (uint32_t)((doc["total_print_time_hours"] | 0.0f) * 3600.0f);
+    stats_.total_filament_g  = doc["total_filament_grams"] | 0.0f;
+    stats_.success_rate      = stats_.total_prints > 0
+        ? (100.0f * stats_.successful_prints / stats_.total_prints)
+        : 0.0f;
     xSemaphoreGive(mtx_);
     return true;
 }
 
 bool Client::fetch_recent_archives(uint8_t limit) {
     if (limit == 0 || limit > MAX_RECENT_ARCHIVES) limit = MAX_RECENT_ARCHIVES;
-    String path = String("/api/v1/archives?limit=") + limit;
+    // /archives/slim returns a leaner shape — exactly what we render.
+    // Field renames vs. v0.1: name → print_name, duration → actual_time_seconds
+    // (falling back to print_time_seconds if the run wasn't tracked),
+    // filament_used → filament_used_grams.
+    String path = String("/api/v1/archives/slim?limit=") + limit;
     JsonDocument doc;
     if (!do_get(path, doc)) return false;
-    JsonArray arr = doc["archives"].as<JsonArray>();
-    if (arr.isNull()) {
-        last_error_ = "archives: missing 'archives' array";
+    if (!doc.is<JsonArray>()) {
+        last_error_ = "archives/slim: expected array";
         return false;
     }
+    JsonArray arr = doc.as<JsonArray>();
     xSemaphoreTake(mtx_, portMAX_DELAY);
     recent_count_ = 0;
     for (JsonObject obj : arr) {
         if (recent_count_ >= MAX_RECENT_ARCHIVES) break;
         Archive& a    = recent_[recent_count_++];
-        a.name        = (const char*)(obj["name"]         | "");
-        a.status      = (const char*)(obj["status"]       | "");
-        a.duration_s  = obj["duration"]      | 0;
-        a.filament_g  = obj["filament_used"] | 0.0f;
+        a.name        = (const char*)(obj["print_name"] | "");
+        a.status      = (const char*)(obj["status"]     | "");
+        uint32_t dur  = obj["actual_time_seconds"] | 0u;
+        if (dur == 0) dur = obj["print_time_seconds"] | 0u;
+        a.duration_s  = dur;
+        a.filament_g  = obj["filament_used_grams"] | 0.0f;
     }
     xSemaphoreGive(mtx_);
     return true;
@@ -302,16 +355,18 @@ bool Client::clear_plate(int printer_id) {
 
 bool Client::start_ams_drying(int printer_id, uint8_t unit_id,
                                uint16_t minutes, uint8_t temp_c) {
-    String path = String("/api/v1/printers/") + printer_id + "/ams/" +
-                  (unsigned)unit_id + "/dry";
-    String body = String("{\"minutes\":") + minutes +
-                  ",\"temp\":" + (unsigned)temp_c + "}";
-    return do_post(path, body, nullptr);
+    // Bambuddy's real route — params are query string, not JSON body.
+    //   POST /api/v1/printers/{id}/drying/start?ams_id=N&duration=M&temp=C
+    String path = String("/api/v1/printers/") + printer_id +
+                  "/drying/start?ams_id=" + (unsigned)unit_id +
+                  "&duration=" + minutes +
+                  "&temp="     + (unsigned)temp_c;
+    return do_post(path, "", nullptr);
 }
 
 bool Client::stop_ams_drying(int printer_id, uint8_t unit_id) {
-    String path = String("/api/v1/printers/") + printer_id + "/ams/" +
-                  (unsigned)unit_id + "/dry/stop";
+    String path = String("/api/v1/printers/") + printer_id +
+                  "/drying/stop?ams_id=" + (unsigned)unit_id;
     return do_post(path, "", nullptr);
 }
 
