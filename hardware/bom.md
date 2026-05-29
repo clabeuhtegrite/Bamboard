@@ -1,163 +1,95 @@
 # Bill of materials
 
-Indicative prices in EUR, sourced mostly from AliExpress / Amazon at the
-time of writing. Local electronics stores (TME, Mouser, Reichelt) will of
-course be more expensive but will deliver in days, not weeks.
+Indicative prices in EUR, sourced from AliExpress at the time of writing.
+Local electronics stores (TME, Mouser, Reichelt) will of course be more
+expensive but will deliver in days, not weeks.
+
+The build collapsed in v1.0 to a single all-in-one board (display + touch
++ ESP32-S3 on one PCB), so the parts list is short and zero-soldering is
+trivial — there's literally one cable to plug in.
 
 | # | Part                                                  | Qty | ~Price | Notes |
 |---|-------------------------------------------------------|-----|--------|-------|
-| 1 | ESP32-S3 DevKitC-1 (N8R2 or N8R8, with PSRAM)         | 1   | 6 €    | Must be an S3 variant with PSRAM. The "N8R2" suffix means 8 MB flash + 2 MB PSRAM, which is plenty. |
-| 2 | 4.0" TFT LCD ILI9488, SPI interface, 480×320          | 1   | 12 €   | Make sure to buy the **SPI** version (4-wire). The parallel 8/16-bit "MCUFRIEND" version will not work without rewiring. |
-| 3 | Tactile button **module** (3-pin, pre-soldered headers) | 3   | 1.50 € | The bare 6×6 mm Omron-style switches that ship in most "Arduino kits" need a soldering iron. We want the **module** version: one button mounted on a tiny PCB with `S` / `+` / `−` (or `SIG` / `VCC` / `GND`) male pin headers already in place. Often sold as "KY-004" or "tactile button module". |
-| 4 | WS2812B **breakout** (single pixel, with header pins)  | 1   | 1.50 € | Sold as "WS2812 breakout" or "NeoPixel breakout" — the breakout form factor (think Adafruit-style) is the one that ships with male pin headers already in place plus the 100 nF decoupling cap on the back. The "1-bit module" SKU you'll also see on AliExpress is the *same LED* but with empty solder holes; avoid it unless you've got an iron. |
-| 5 | Female-female Dupont jumper wires 20 cm               | 12  | 1 €    | Or one ribbon cable. Plug-in only, no soldering required. |
-| 6 | USB-C cable (data, not power-only)                    | 1   | 2 €    | For flashing and powering the device. |
-| 7 | M2.5 × 8 mm self-tapping screws                       | 4   | 0.50 € | To clip the case halves together (or M3 if you prefer; the SCAD file is parametric). |
-| 8 | M2 × 6 mm screws + nuts                               | 4   | 0.50 € | To mount the display to the front shell. |
-| 9 | PLA / PETG filament                                   | ~80 g | 1.20 € | For the printed enclosure. |
+| 1 | Guition **JC4827W543** all-in-one board               | 1   | 16 €   | ESP32-S3-WROOM-1 (8 MB PSRAM / 4 MB flash) + 4.3" IPS 480×272 + capacitive touch (GT911) + USB-C native. Sometimes labelled "Guition ESP32-S3 4.3 inch IPS LCD touch module". |
+| 2 | USB-C cable (data, not power-only)                    | 1   | 2 €    | For flashing and powering the device. The thin white cables bundled with phone chargers are often charge-only — look for "data" / "USB 2.0" in the listing. |
+| 3 | M3 × 8 mm self-tapping screws                         | 4   | 0.50 € | To clip the case halves together. The case is parametric — you can swap for M2.5 by editing `case/bamboard.scad`. |
+| 4 | PLA / PETG filament                                   | ~70 g | 1.10 € | For the printed enclosure. PETG is preferred since the board runs slightly warm. |
 
-**Total: ~26–30 €** depending on sourcing.
+**Total: ~20 €**
 
 ## Where to buy (AliExpress)
 
 Two search links per item — they're search queries, not product URLs,
-so they don't rot when a specific listing disappears. Pick the seller
-with the best feedback / shipping window when you order. Every part
-below stays compatible with the **no-soldering** assembly: the modules
-ship with pre-soldered headers and the kit screws together with
-plug-in Dupont jumpers.
+so they don't rot when a specific listing disappears. Every part stays
+compatible with the no-soldering build: the Guition board has every
+component already integrated, and the case ships together with screws.
 
-### 1. ESP32-S3 DevKitC-1 (N8R2 or N8R8)
+### 1. Guition JC4827W543 (ESP32-S3 + 4.3" touch)
 
-- [Search: "ESP32-S3 DevKitC-1 N8R2"](https://www.aliexpress.com/wholesale?SearchText=ESP32-S3+DevKitC-1+N8R2)
-- [Search: "ESP32-S3 DevKitC-1 N8R8 PSRAM"](https://www.aliexpress.com/wholesale?SearchText=ESP32-S3+DevKitC-1+N8R8+PSRAM)
+- [Search: "Guition ESP32-S3 4.3 inch IPS touch"](https://www.aliexpress.com/wholesale?SearchText=Guition+ESP32-S3+4.3+inch+IPS+touch)
+- [Search: "JC4827W543 ESP32-S3"](https://www.aliexpress.com/wholesale?SearchText=JC4827W543+ESP32-S3)
 
-In the listing, check the back of the board photo for the metal cans
-labelled `ESP32-S3` and `PSRAM` (or `N8R2` / `N8R8` on a sticker). Avoid
-the bare `ESP32-S3-WROOM-1` module without USB headers — you'd have to
-solder your own USB connector.
+What to verify in the listing photo:
 
-### 2. 4.0" TFT LCD ILI9488 SPI (480×320)
+- **480 × 272** resolution (not 800 × 480 — that's the bigger sibling
+  JC8048W550 which won't fit the case as-is).
+- **8 MB PSRAM, 4 MB flash** (sometimes written `N4R8`).
+- **Capacitive touch** (GT911 controller) — not resistive.
+- USB-C connector visible on the side of the PCB.
+- A clearly visible **BOOT** button on the side. The firmware uses it
+  as the factory-reset trigger when held during power-up.
 
-- [Search: "ILI9488 4 inch SPI 480x320"](https://www.aliexpress.com/wholesale?SearchText=ILI9488+4+inch+SPI+480x320)
-- [Search: "4.0 inch TFT SPI display ILI9488"](https://www.aliexpress.com/wholesale?SearchText=4.0+inch+TFT+SPI+display+ILI9488)
-
-Filter on the **SPI** wording in the title or photo — the same panel
-also ships in a 16-bit parallel "MCUFRIEND" version with a chunky
-0.1″ header at the bottom; that one needs ~20 wires and won't fit our
-layout. The SPI variant uses a single 14-pin (or sometimes 18-pin)
-0.1″ header on the side.
-
-### 3. Tactile button module (3-pin, pre-soldered headers)
-
-- [Search: "KY-004 tactile button module Arduino"](https://www.aliexpress.com/wholesale?SearchText=KY-004+tactile+button+module+Arduino)
-- [Search: "tactile push button module 3 pin"](https://www.aliexpress.com/wholesale?SearchText=tactile+push+button+module+3+pin)
-
-The thing to look for on the listing photo: a small PCB (~12 × 12 mm)
-with the 6×6 mm tact switch already soldered in the middle and **three
-visible male pin headers** sticking out the bottom, usually labelled
-`S` / `+` / `−`. Female-female Dupont jumpers plug directly onto those
-headers. Often sold in 5-packs or as part of a "37-in-1 sensor kit" —
-the kit usually works out cheaper than buying 3 modules separately and
-gives you spares.
-
-Avoid: the bare loose tactile switches (no PCB, just 4 metal legs) and
-the "Arduino keypad 4×4" matrix modules — neither plugs in cleanly.
-
-### 4. WS2812B breakout (single pixel, with header pins)
-
-- [Search: "WS2812 breakout single pixel"](https://www.aliexpress.com/wholesale?SearchText=WS2812+breakout+single+pixel)
-- [Search: "WS2812B NeoPixel breakout board"](https://www.aliexpress.com/wholesale?SearchText=WS2812B+NeoPixel+breakout+board)
-
-The thing to look for on the listing photo: a small PCB (~10 × 18 mm)
-with one WS2812B LED, the 100 nF decoupling cap visible on the back,
-and **3 stake-style male pin headers** already soldered into the
-`VCC` / `GND` / `DIN` holes — designed to plug directly into a
-breadboard. Female-female Dupont jumpers go straight onto those pins.
-
-What to avoid: the cheaper "WS2812 1-bit module" SKU — same SMD LED
-but ships with empty plated holes instead of pre-soldered headers.
-
-### 5. Female-female Dupont jumper wires (20 cm, 40 pin ribbon)
-
-- [Search: "Dupont jumper wire female female 20cm 40pin"](https://www.aliexpress.com/wholesale?SearchText=Dupont+jumper+wire+female+female+20cm+40pin)
-- [Search: "40 pin female female ribbon cable 20cm"](https://www.aliexpress.com/wholesale?SearchText=40+pin+female+female+ribbon+cable+20cm)
-
-You only need 12 lines, but the cables ship as a 40-pin rainbow ribbon
-you split by hand. 20 cm is the sweet spot for routing inside the
-case; the 10 cm version is too tight, the 30 cm one bunches up.
-
-### 6. USB-C cable (data, not power-only)
+### 2. USB-C cable
 
 - [Search: "USB C cable data sync 1m"](https://www.aliexpress.com/wholesale?SearchText=USB+C+cable+data+sync+1m)
 - [Search: "USB-C 2.0 data cable 1m"](https://www.aliexpress.com/wholesale?SearchText=USB-C+2.0+data+cable+1m)
 
-The thin white cables bundled with phone chargers are often
-charge-only — they'd power the device but PlatformIO wouldn't see it
-during the first flash. Look for "data" explicitly in the listing
-title, or for "USB 2.0" or "480 Mbps".
+The board draws ~250 mA peak (display backlight + Wi-Fi TX), well within
+USB 2.0 budget. Any decent 5 V / 1 A phone charger plus a data cable
+will run it.
 
-### 7. M2.5 × 8 mm self-tapping screws
+### 3. M3 × 8 mm self-tapping screws
 
-- [Search: "M2.5 8mm self tapping screw black"](https://www.aliexpress.com/wholesale?SearchText=M2.5+8mm+self+tapping+screw+black)
-- [Search: "M2.5 PA self-tap screw 8mm assortment"](https://www.aliexpress.com/wholesale?SearchText=M2.5+PA+self-tap+screw+8mm+assortment)
+- [Search: "M3 8mm self tapping screw black"](https://www.aliexpress.com/wholesale?SearchText=M3+8mm+self+tapping+screw+black)
+- [Search: "M3 PA self-tap screw 8mm assortment"](https://www.aliexpress.com/wholesale?SearchText=M3+PA+self-tap+screw+8mm+assortment)
 
-Assortment kits at ~3 € give you M2 to M5 in 4 to 16 mm lengths, which
-covers both this row and row #8. If you'd rather buy exactly what's
-needed, the dedicated single-spec packs run ~1 €.
+Assortment kits at ~3 € give you M2 through M5 in 4 to 16 mm lengths. If
+you'd rather buy exactly what's needed, single-spec packs run ~1 €.
 
-### 8. M2 × 6 mm screws + nuts
-
-- [Search: "M2 6mm screw nut set"](https://www.aliexpress.com/wholesale?SearchText=M2+6mm+screw+nut+set)
-- [Search: "M2 machine screw 6mm hex nut kit"](https://www.aliexpress.com/wholesale?SearchText=M2+machine+screw+6mm+hex+nut+kit)
-
-Same logic as #7 — the multi-pack assortments include both screws and
-nuts in the right metric pitches.
-
-### 9. PLA / PETG filament
+### 4. PLA / PETG filament
 
 - [Search: "PLA filament 1.75mm 1kg"](https://www.aliexpress.com/wholesale?SearchText=PLA+filament+1.75mm+1kg)
 - [Search: "PETG filament 1.75mm 1kg"](https://www.aliexpress.com/wholesale?SearchText=PETG+filament+1.75mm+1kg)
 
-You probably already own a partial spool. ~80 g covers the case.
-PETG handles desk heat (sun, summer) better than PLA if the device
-sits in a windowsill.
+You probably already own a partial spool. ~70 g covers the case.
 
 ## Why these parts?
 
-- **ESP32-S3, not C3** — we ruled out the C3 because driving a 4″ display
-  while keeping LVGL animations smooth needs the S3's dual-core +
-  PSRAM. The C3 would have worked at 1.9″ but felt too cramped for the
-  desired UI.
-- **ILI9488 SPI** — the only widely-available 4″ panel that talks SPI.
-  Cheaper 3.5″ panels (ILI9486 / ST7796) work too if you tweak
-  `User_Setup.h`.
-- **WS2812 breakout, not raw LED** — you wanted "no soldering". The
-  breakout form factor (Adafruit-style and its clones) carries the
-  WS2812B with the 100 nF cap baked in and 3 stake-style header pins
-  pre-soldered for breadboard use — Dupont jumpers plug straight onto
-  them. The cheaper "1-bit module" SKU of the same LED ships with
-  empty solder holes instead and needs an iron; pick the breakout
-  variant.
-- **Button modules, not bare tactile switches** — same reason: the
-  6×6 mm tact switches you find in every starter kit have 4 bare metal
-  legs. Wiring them to anything but a perfboard means soldering. The
-  3-pin "KY-004"-style modules carry the same switch on a small PCB
-  with `S` / `+` / `−` headers already in place; Dupont jumpers plug
-  directly on.
-- **3 buttons** — minimum for a navigable carousel UI. Short-press to
-  switch screen, long-press for context actions (see the firmware comments).
-
-## Optional extras
-
-| Part                                              | Why                                   |
-|---------------------------------------------------|---------------------------------------|
-| 0.1″ JST-XH 4-pin connector + crimped pigtail     | If you want to factor out the display ribbon cleanly. |
-| Right-angle USB-C breakout                        | If your desk space favours a side cable exit. |
-| 4× M3 brass heat-set inserts                      | Sturdier than self-tapping into plastic; needs a soldering iron though, so I left them off the default BOM. |
+- **JC4827W543, not a bare ESP32 + external display** — collapsing into
+  a single board eliminates 100 % of the wiring, every soldering
+  question and every "did I get the right SPI mode?" config. The board
+  costs about what the bare ESP32-S3 DevKitC + ILI9488 SPI combo used to
+  cost separately. The trade-off is the resolution (480 × 272 vs the old
+  480 × 320 SPI panel), but the touch interaction makes that visible
+  pixel difference irrelevant.
+- **4.3" IPS, not OLED** — sustained brightness for a desk monitor that
+  may sit in indirect sunlight, and IPS doesn't burn in like OLED would
+  with the always-on status header.
+- **Capacitive touch, not resistive** — single-finger tap on a glove
+  isn't a use case here; capacitive feels noticeably nicer and the
+  GT911 controller is well-supported by every LVGL board config in the
+  wild.
+- **Built-in BOOT button** — used by the firmware as the factory-reset
+  gesture. The old PREV-at-boot reset trigger is gone with the rest of
+  the standalone buttons.
 
 ## What we deliberately left out
 
-- **Buzzer** — by your request.
-- **Photoresistor for auto-dim** — replaced by timer-based dim in firmware (`DIM_AFTER_MS`).
-- **Battery / charging** — the device is desk-side, USB-C powered.
+- **Status LED** — the panel itself is the status indicator now. The
+  HMS-alert pulse runs as a full-screen red overlay instead of a
+  WS2812.
+- **External buttons** — replaced by on-screen touch controls. The only
+  physical switch left in the BOM is the BOOT button that's already on
+  the Guition PCB, used for factory reset.
+- **Buzzer, battery, photoresistor** — same exclusions as v0.x; desk-side
+  USB-C powered device.

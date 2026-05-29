@@ -1,119 +1,49 @@
 # Wiring
 
-All connections are made with female-female Dupont jumpers. No soldering
-is required **as long as you buy the right SKUs**:
+There isn't any.
 
-- ESP32-S3 DevKitC-1 with headers already in place (every variant of
-  the official board ships this way);
-- ILI9488 4" SPI display with its side-edge header pre-soldered;
-- WS2812 **breakout** (not the bare "1-bit module") — the breakout
-  form factor ships with stake-style pin headers already soldered;
-  the 1-bit-module SKU has empty solder holes;
-- 3 × tactile-button **modules** (single button on a small PCB with
-  `S` / `+` / `−` headers) — *not* bare 6×6 mm tactile switches with
-  4 metal legs.
+The v1.0 build uses a single all-in-one board (the Guition JC4827W543)
+that integrates the ESP32-S3, the 4.3" IPS touch panel and every signal
+between them on one PCB. The only thing you plug in is the USB-C cable.
 
-See `hardware/bom.md` for AliExpress search links and notes on what to
-check in the listing photos.
+## What used to be wiring
 
-## Pinout map (ESP32-S3 DevKitC-1)
+In v0.x there were 12+ Dupont jumpers carrying SPI / I²C / WS2812
+signals between a bare ESP32-S3 DevKitC, an ILI9488 display and three
+button modules. That whole tree is replaced by the JC4827W543's
+internal copper traces.
 
-```
-                ┌───────────────────────────────────────────┐
-                │              ESP32-S3 DevKitC-1           │
-                │                                           │
-       USB-C ───┤ USB                                       │
-                │                                           │
-        GND ────┤ GND                       GPIO 4 ────────►┤ → Button PREV
-        5V  ────┤ 5V                        GPIO 5 ────────►┤ → Button OK
-        3V3 ────┤ 3V3                       GPIO 6 ────────►┤ → Button NEXT
-                │                           GPIO 7 ────────►┤ → WS2812 DIN
-                │                           GPIO 9 ────────►┤ → Display RST
-                │                           GPIO 10 ───────►┤ → Display CS
-                │                           GPIO 11 ───────►┤ → Display SDA/MOSI
-                │                           GPIO 12 ───────►┤ → Display SCK
-                │                           GPIO 13 ───────►┤ → Display SDO/MISO
-                │                           GPIO 14 ───────►┤ → Display DC
-                │                           GPIO 21 ───────►┤ → Display BL
-                └───────────────────────────────────────────┘
-```
+If you're curious about what the board does internally, the
+manufacturer's schematic is published on
+[their AliExpress store](https://www.aliexpress.com/wholesale?SearchText=Guition+JC4827W543+ESP32-S3)
+and mirrored in various community repos. The short version:
 
-## Display (ILI9488 SPI)
+| Signal group        | How it's connected on the board                            |
+|---------------------|-------------------------------------------------------------|
+| Display (RGB565)    | 16-bit RGB parallel to the ESP32-S3's LCD_CAM peripheral.   |
+| Display backlight   | PWM on GPIO 2, controlled by firmware (auto-dim still works).|
+| Capacitive touch    | GT911 over I²C — SDA on GPIO 19, SCL on GPIO 20, INT/RST on 18 / 38. |
+| USB                 | Native USB on GPIO 19 / 20 (same physical USB-C connector that powers it). |
+| BOOT / RST buttons  | Side-mounted tactile switches on the PCB. BOOT is GPIO 0, used by the firmware as the factory-reset trigger when held during power-up. |
 
-| Display pin   | ESP32-S3 pin | Notes |
-|---------------|--------------|-------|
-| VCC           | 5V           | Some boards accept 3V3; check yours. |
-| GND           | GND          |       |
-| CS            | GPIO 10      |       |
-| RESET         | GPIO 9       |       |
-| DC / RS       | GPIO 14      |       |
-| SDI / MOSI    | GPIO 11      |       |
-| SCK           | GPIO 12      |       |
-| LED / BL      | GPIO 21      | PWM-controlled by firmware (auto-dim). |
-| SDO / MISO    | GPIO 13      | Optional — only used if the firmware reads back from the panel. |
-| T_*           | —            | Touch pins are unused; leave disconnected. |
+## Powering the device
 
-> **If colours look wrong** (red/blue swapped), edit
-> `firmware/include/User_Setup.h` and toggle `TFT_RGB_ORDER` between
-> `TFT_RGB` and `TFT_BGR`. The default is `TFT_BGR` because most cheap
-> 4″ ILI9488 panels are wired that way.
-
-## Buttons
-
-Each button shorts its GPIO to GND. The internal pull-up is enabled in
-firmware, so no external resistor is needed.
-
-```
-  GPIO 4 ───┐
-            │
-          [SW] PREV
-            │
-  GND ──────┘
-
-  Same for OK (GPIO 5) and NEXT (GPIO 6).
-```
-
-### No-solder path (the default)
-
-Use 3 × tactile-button modules (`KY-004`-style — see BOM #3). Each
-module has three male pin headers:
-
-| Module pin    | ESP32-S3 pin                |
-|---------------|------------------------------|
-| `S` (signal)  | GPIO 4 / 5 / 6 respectively  |
-| `−` (GND)     | GND (share a single rail)    |
-| `+` (VCC)     | leave disconnected — the firmware uses the chip's internal pull-up, no external supply needed |
-
-Female-female Dupont jumpers plug straight onto the modules' header
-pins. Run a short GND chain so all three modules share one return.
-
-### Soldering path (if you've got bare 6×6 mm switches lying around)
-
-Wire the three bare tact switches on a small piece of perfboard and
-solder one common GND rail to all three switch commons. The firmware
-behaves identically; it just costs you an iron and 15 minutes.
-
-## Status LED (WS2812B breakout)
-
-| Breakout pin | ESP32-S3 pin | Notes |
-|--------------|--------------|-------|
-| VCC / 5V     | 5V           | Most breakouts also accept 3V3; either works for a single LED. |
-| GND          | GND          |       |
-| DIN          | GPIO 7       |       |
-
-If you swap the breakout for a 3-LED stick or strip, increase
-`pins::LED_COUNT` in `firmware/src/config.h` to match.
-
-## Power
-
-Power the whole device from the ESP32-S3's USB-C port. The display draws
-~120 mA on full backlight, the LED ~10 mA, the MCU peaks around 200 mA on
-Wi-Fi TX — well within USB 2.0 budget.
+USB-C from any reasonable 5 V / 1 A source. Total draw is ~250 mA peak
+(backlight + Wi-Fi TX).
 
 ## Sanity-check checklist
 
-- [ ] USB-C cable is **data + power**, not power-only (a surprisingly common gotcha).
-- [ ] Display VCC is connected to **5V** (a 3V3-only build will appear very dim).
-- [ ] All three buttons have their **GND leg connected**.
-- [ ] WS2812 DIN goes to GPIO 7 and **not** to 5V (would blow the data line).
-- [ ] No GPIO is shared between two devices.
+- [ ] USB-C cable is **data + power**, not power-only (the cheap white
+      cables bundled with phone chargers are a common gotcha — the
+      device will boot but PlatformIO won't see it for the first flash).
+- [ ] The board's BOOT button is reachable from the outside of the case
+      (the parametric SCAD model leaves it exposed by default).
+
+## Factory reset (wipe Wi-Fi + Bambuddy creds)
+
+Hold the **BOOT** button on the side of the PCB while the device powers
+on. The firmware sees the GPIO 0 line pulled low at boot and clears NVS
+before re-opening the captive portal.
+
+The old "hold PREV at boot" trick is gone with the rest of the
+standalone buttons — same idea, different physical input.
