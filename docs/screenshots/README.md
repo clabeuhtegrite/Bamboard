@@ -12,7 +12,7 @@ firmware builds at runtime, with placeholder data drawn from
 | `printers_mock.svg`  | Multi-printer list, focused row highlighted | 2 |
 | `history_mock.svg`   | Stats KPIs + recent archives | 3 |
 | `settings_mock.svg`  | Diagnostics + brightness 1–5 + factory reset | 4 |
-| `device_render.svg`  | Assembled device illustration (still v1.0 style) | — |
+| `device_render.svg`  | Hero render of the assembled v1.1 device — slim PETG case, integrated desk-stand tab, screen lit on the Live dashboard | — |
 
 ## Conventions
 
