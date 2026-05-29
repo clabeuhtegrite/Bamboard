@@ -40,3 +40,7 @@ scripts/.bamboard-cache.json
 # Python bytecode from the launcher scripts
 scripts/__pycache__/
 *.pyc
+
+# Desktop LVGL sim build tree
+sim/build/
+sim/cmake-build-*/
