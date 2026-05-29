@@ -46,6 +46,27 @@ constexpr uint32_t DIM_AFTER_MS = 60UL * 1000UL;
 constexpr uint8_t  BL_FULL = 255;
 constexpr uint8_t  BL_DIM  = 40;
 
+// User-facing brightness levels (1..5). The Settings screen lets the user
+// pick one; the chosen level is stored in NVS as `bl_level`, applied at
+// boot, and used as the "wake" target by the auto-dim logic instead of
+// the hard-coded BL_FULL. Level 3 (≈ 70 %) is the default first-boot
+// value — comfortable on a desk in normal light.
+constexpr uint8_t  BL_LEVEL_DEFAULT = 3;
+constexpr uint8_t  BL_LEVEL_MIN     = 1;
+constexpr uint8_t  BL_LEVEL_MAX     = 5;
+
+// PWM duty for each level. Hand-tuned so step 1 is still readable in a
+// dark room and step 5 is full whack for sunny offices. Anything brighter
+// than ~225 starts to wash out the IPS contrast on the JC4827W543 panel,
+// so we cap there rather than running at 255.
+constexpr uint8_t  BL_LEVELS[5] = { 32, 72, 128, 180, 225 };
+
+inline uint8_t bl_pwm_for_level(uint8_t level) {
+    if (level < BL_LEVEL_MIN) level = BL_LEVEL_MIN;
+    if (level > BL_LEVEL_MAX) level = BL_LEVEL_MAX;
+    return BL_LEVELS[level - 1];
+}
+
 }  // namespace display
 
 // ---------- Bambuddy client ---------------------------------------------
@@ -86,19 +107,34 @@ constexpr uint8_t  MAX_RECENT_ARCHIVES = 10;
 namespace ui {
 
 // Bamboard accent colours (chosen to read well on the IPS panel).
-constexpr uint32_t C_BG        = 0x101418;
-constexpr uint32_t C_PANEL     = 0x1B2027;
-constexpr uint32_t C_PANEL_HI  = 0x232A33;
-constexpr uint32_t C_ACCENT    = 0x00B7C3;   // teal
-constexpr uint32_t C_OK        = 0x39D98A;
-constexpr uint32_t C_WARN      = 0xF5A524;
-constexpr uint32_t C_ERR       = 0xE5484D;
-constexpr uint32_t C_TEXT      = 0xE9EEF3;
-constexpr uint32_t C_TEXT_DIM  = 0x8A95A4;
+constexpr uint32_t C_BG          = 0x0E1116;
+constexpr uint32_t C_PANEL       = 0x1A1F26;
+constexpr uint32_t C_PANEL_HI    = 0x252B34;
+constexpr uint32_t C_PANEL_LINE  = 0x2F3742;   // hairline borders / dividers
+constexpr uint32_t C_ACCENT      = 0x00B7C3;   // teal — primary action / focus
+constexpr uint32_t C_ACCENT_DARK = 0x017782;
+constexpr uint32_t C_OK          = 0x39D98A;
+constexpr uint32_t C_WARN        = 0xF5A524;
+constexpr uint32_t C_ERR         = 0xE5484D;
+constexpr uint32_t C_TEXT        = 0xE9EEF3;
+constexpr uint32_t C_TEXT_DIM    = 0x8A95A4;
+constexpr uint32_t C_TEXT_INV    = 0x0E1116;   // text on top of accent fill
+
+// Shared radii so every panel / button / pill agrees with the others.
+// Bumping these in one place reshapes the whole UI consistently.
+constexpr uint8_t  R_PANEL      = 12;
+constexpr uint8_t  R_BUTTON     = 14;
+constexpr uint8_t  R_PILL       = 18;
+constexpr uint8_t  R_CHIP       =  8;
+
+// Standard touch-target heights — keep ≥ 40 px so fat fingers never miss.
+constexpr uint8_t  H_BTN        = 44;
+constexpr uint8_t  H_CHIP       = 30;
 
 // Tab bar (bottom of every screen): a row of icons + labels, fixed
 // at 44 px high. The active tab is highlighted in C_ACCENT.
 constexpr uint16_t TAB_BAR_H = 44;
+constexpr uint16_t HEADER_H  = 36;
 
 }  // namespace ui
 

@@ -29,6 +29,14 @@ void Display::set_backlight(uint8_t v) {
     backlight_ = v;
 }
 
+void Display::set_brightness_level(uint8_t level) {
+    if (level < 1) level = 1;
+    if (level > 5) level = 5;
+    level_ = level;
+    static const uint8_t kPwm[5] = {32, 72, 128, 180, 225};
+    set_backlight(kPwm[level - 1]);
+}
+
 bool Display::consume_touch_activity() {
     // The sim never auto-dims; the SDL window is always lit.
     return false;

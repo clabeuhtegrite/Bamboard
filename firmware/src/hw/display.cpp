@@ -199,6 +199,13 @@ void Display::set_backlight(uint8_t v) {
     s_tft.setBrightness(v);
 }
 
+void Display::set_brightness_level(uint8_t level) {
+    if (level < ::display::BL_LEVEL_MIN) level = ::display::BL_LEVEL_MIN;
+    if (level > ::display::BL_LEVEL_MAX) level = ::display::BL_LEVEL_MAX;
+    level_ = level;
+    set_backlight(::display::bl_pwm_for_level(level));
+}
+
 bool Display::consume_touch_activity() {
     bool was = s_touch_activity;
     s_touch_activity = false;

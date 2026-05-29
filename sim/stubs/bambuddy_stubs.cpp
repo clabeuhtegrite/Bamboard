@@ -111,6 +111,17 @@ bool Client::clear_plate(int id) {
     std::fprintf(stderr, "[sim] clear_plate(%d)\n", id);
     return true;
 }
+bool Client::start_ams_drying(int id, uint8_t unit, uint16_t mins, uint8_t temp) {
+    std::fprintf(stderr,
+        "[sim] start_ams_drying(printer=%d, unit=%u, %u min @ %u°C)\n",
+        id, (unsigned)unit, (unsigned)mins, (unsigned)temp);
+    return true;
+}
+bool Client::stop_ams_drying(int id, uint8_t unit) {
+    std::fprintf(stderr, "[sim] stop_ams_drying(printer=%d, unit=%u)\n",
+                 id, (unsigned)unit);
+    return true;
+}
 
 bool Client::apply_status_payload(int, JsonVariantConst) {
     return true;

@@ -37,3 +37,17 @@ String g_cfg_bambuddy_url("http://192.168.1.42:8000");
 void factory_reset() {
     std::fprintf(stderr, "[sim] factory_reset() — would wipe NVS and reboot on device\n");
 }
+
+// Settings' brightness selector pokes this. On the device it writes the
+// level to NVS and applies it; on the sim we forward to the display stub
+// (which logs the new PWM target) so you can see the wiring without
+// caring about persistence.
+#include "../../firmware/src/hw/display.h"
+uint8_t g_cfg_brightness_level = ::display::BL_LEVEL_DEFAULT;
+void save_brightness_level(uint8_t level) {
+    if (level < 1) level = 1;
+    if (level > 5) level = 5;
+    g_cfg_brightness_level = level;
+    hw::g_display.set_brightness_level(level);
+    std::fprintf(stderr, "[sim] save_brightness_level(%u)\n", (unsigned)level);
+}

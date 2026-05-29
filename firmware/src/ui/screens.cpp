@@ -39,18 +39,28 @@ extern void factory_reset();   // defined in main.cpp — used by Settings
 // `ui::screens::g_cfg_bambuddy_url` and not find it (MSVC catches this
 // strictly; gcc accepts it as a quirk). Keeping it up here forces the
 // reference to resolve to the global ::g_cfg_bambuddy_url symbol.
-extern String g_cfg_bambuddy_url;
+extern String  g_cfg_bambuddy_url;
+extern uint8_t g_cfg_brightness_level;
+extern void    save_brightness_level(uint8_t level);
 
 namespace ui::screens {
 
 // ---------- Shared styles ---------------------------------------------------
+//
+// Every widget on every screen reads from one of the styles below. Tweak
+// a token in config.h (R_PANEL / R_BUTTON / C_ACCENT / …) and the whole
+// UI shifts together — no per-widget overrides scattered around.
 
-static lv_style_t s_panel;
-static lv_style_t s_label_dim;
-static lv_style_t s_label_value;
-static lv_style_t s_label_big;
-static lv_style_t s_btn;
-static lv_style_t s_btn_accent;
+static lv_style_t s_panel;        // raised card surface (s_panel-hi bg, rounded)
+static lv_style_t s_panel_flat;   // same shape but the base C_PANEL (no elevation)
+static lv_style_t s_label_dim;    // captions / secondary text
+static lv_style_t s_label_value;  // primary readouts
+static lv_style_t s_label_big;    // hero numbers
+static lv_style_t s_btn;          // base touch button (neutral)
+static lv_style_t s_btn_accent;   // CTA button (teal bg, dark text)
+static lv_style_t s_btn_pressed;  // press state shared by every button
+static lv_style_t s_chip_off;     // inactive segment in segmented controls
+static lv_style_t s_chip_on;      // active segment in segmented controls
 static bool       styles_ready = false;
 
 static void ensure_styles() {
@@ -58,11 +68,20 @@ static void ensure_styles() {
     styles_ready = true;
 
     lv_style_init(&s_panel);
-    lv_style_set_bg_color(&s_panel, lv_color_hex(::ui::C_PANEL));
+    lv_style_set_bg_color(&s_panel, lv_color_hex(::ui::C_PANEL_HI));
     lv_style_set_bg_opa(&s_panel, LV_OPA_COVER);
-    lv_style_set_border_width(&s_panel, 0);
-    lv_style_set_radius(&s_panel, 8);
+    lv_style_set_border_width(&s_panel, 1);
+    lv_style_set_border_color(&s_panel, lv_color_hex(::ui::C_PANEL_LINE));
+    lv_style_set_border_opa(&s_panel, LV_OPA_60);
+    lv_style_set_radius(&s_panel, ::ui::R_PANEL);
     lv_style_set_pad_all(&s_panel, 8);
+
+    lv_style_init(&s_panel_flat);
+    lv_style_set_bg_color(&s_panel_flat, lv_color_hex(::ui::C_PANEL));
+    lv_style_set_bg_opa(&s_panel_flat, LV_OPA_COVER);
+    lv_style_set_border_width(&s_panel_flat, 0);
+    lv_style_set_radius(&s_panel_flat, ::ui::R_PANEL);
+    lv_style_set_pad_all(&s_panel_flat, 8);
 
     lv_style_init(&s_label_dim);
     lv_style_set_text_color(&s_label_dim, lv_color_hex(::ui::C_TEXT_DIM));
@@ -76,21 +95,50 @@ static void ensure_styles() {
     lv_style_set_text_color(&s_label_big, lv_color_hex(::ui::C_TEXT));
     lv_style_set_text_font(&s_label_big, &lv_font_montserrat_28);
 
-    // Touch button base style — rounded, panel-ish, big enough for fat
-    // fingers, with a darker pressed state.
+    // Base touch button — neutral pill, used for secondary actions like
+    // AMS prev/next chevrons or the Factory-reset row.
     lv_style_init(&s_btn);
     lv_style_set_bg_color(&s_btn, lv_color_hex(::ui::C_PANEL_HI));
     lv_style_set_bg_opa(&s_btn, LV_OPA_COVER);
-    lv_style_set_radius(&s_btn, 10);
-    lv_style_set_border_width(&s_btn, 0);
+    lv_style_set_radius(&s_btn, ::ui::R_BUTTON);
+    lv_style_set_border_width(&s_btn, 1);
+    lv_style_set_border_color(&s_btn, lv_color_hex(::ui::C_PANEL_LINE));
+    lv_style_set_border_opa(&s_btn, LV_OPA_80);
     lv_style_set_pad_all(&s_btn, 8);
     lv_style_set_text_color(&s_btn, lv_color_hex(::ui::C_TEXT));
     lv_style_set_text_font(&s_btn, &lv_font_montserrat_16);
 
-    // Accent variant — used for the "do the thing" buttons.
+    // Accent variant — the "do the thing" primary action.
     lv_style_init(&s_btn_accent);
     lv_style_set_bg_color(&s_btn_accent, lv_color_hex(::ui::C_ACCENT));
-    lv_style_set_text_color(&s_btn_accent, lv_color_hex(0x101418));
+    lv_style_set_border_color(&s_btn_accent,
+                              lv_color_hex(::ui::C_ACCENT_DARK));
+    lv_style_set_border_opa(&s_btn_accent, LV_OPA_COVER);
+    lv_style_set_text_color(&s_btn_accent, lv_color_hex(::ui::C_TEXT_INV));
+
+    // Shared press state — every button gets this so the tap feedback
+    // looks the same everywhere.
+    lv_style_init(&s_btn_pressed);
+    lv_style_set_bg_color(&s_btn_pressed, lv_color_hex(::ui::C_ACCENT_DARK));
+    lv_style_set_transform_height(&s_btn_pressed, -1);
+    lv_style_set_transform_width (&s_btn_pressed, -1);
+
+    // Segmented-control chips. We use these for the speed selector on
+    // Live and the brightness selector on Settings — same look in both
+    // places by design.
+    lv_style_init(&s_chip_off);
+    lv_style_set_bg_color(&s_chip_off, lv_color_hex(::ui::C_PANEL_HI));
+    lv_style_set_bg_opa(&s_chip_off, LV_OPA_COVER);
+    lv_style_set_border_width(&s_chip_off, 0);
+    lv_style_set_radius(&s_chip_off, ::ui::R_CHIP);
+    lv_style_set_pad_all(&s_chip_off, 0);
+    lv_style_set_text_color(&s_chip_off, lv_color_hex(::ui::C_TEXT_DIM));
+    lv_style_set_text_font(&s_chip_off, &lv_font_montserrat_14);
+
+    lv_style_init(&s_chip_on);
+    lv_style_set_bg_color(&s_chip_on, lv_color_hex(::ui::C_ACCENT));
+    lv_style_set_text_color(&s_chip_on, lv_color_hex(::ui::C_TEXT_INV));
+    lv_style_set_text_font(&s_chip_on, &lv_font_montserrat_14);
 }
 
 // =============================================================================
@@ -105,10 +153,15 @@ lv_obj_t* build_header(lv_obj_t* parent) {
     ensure_styles();
     lv_obj_t* hdr = lv_obj_create(parent);
     lv_obj_remove_style_all(hdr);
-    lv_obj_set_size(hdr, LV_HOR_RES, 36);
+    lv_obj_set_size(hdr, LV_HOR_RES, ::ui::HEADER_H);
     lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 0, 0);
     lv_obj_set_style_bg_color(hdr, lv_color_hex(::ui::C_PANEL), 0);
     lv_obj_set_style_bg_opa(hdr, LV_OPA_COVER, 0);
+    // Hairline under the header to separate it from the body.
+    lv_obj_set_style_border_side(hdr, LV_BORDER_SIDE_BOTTOM, 0);
+    lv_obj_set_style_border_width(hdr, 1, 0);
+    lv_obj_set_style_border_color(hdr, lv_color_hex(::ui::C_PANEL_LINE), 0);
+    lv_obj_set_style_border_opa(hdr, LV_OPA_70, 0);
     lv_obj_clear_flag(hdr, LV_OBJ_FLAG_SCROLLABLE);
 
     s_hdr_title = lv_label_create(hdr);
@@ -204,9 +257,10 @@ static void maybe_hide_toast() {
 // =============================================================================
 
 static lv_obj_t* s_tab_bar = nullptr;
-static lv_obj_t* s_tab_btns  [(uint8_t)Screen::_Count] = {};
-static lv_obj_t* s_tab_icons [(uint8_t)Screen::_Count] = {};
-static lv_obj_t* s_tab_labels[(uint8_t)Screen::_Count] = {};
+static lv_obj_t* s_tab_btns   [(uint8_t)Screen::_Count] = {};
+static lv_obj_t* s_tab_icons  [(uint8_t)Screen::_Count] = {};
+static lv_obj_t* s_tab_labels [(uint8_t)Screen::_Count] = {};
+static lv_obj_t* s_tab_indicat[(uint8_t)Screen::_Count] = {};
 static uint8_t   s_tab_active = 0;
 
 static const char* k_tab_labels[(uint8_t)Screen::_Count] = {
@@ -232,6 +286,11 @@ lv_obj_t* build_tab_bar(lv_obj_t* parent) {
     lv_obj_set_style_bg_color(s_tab_bar, lv_color_hex(::ui::C_PANEL), 0);
     lv_obj_set_style_bg_opa(s_tab_bar, LV_OPA_COVER, 0);
     lv_obj_set_style_pad_all(s_tab_bar, 0, 0);
+    // Hairline above the tab bar mirroring the one under the header.
+    lv_obj_set_style_border_side(s_tab_bar, LV_BORDER_SIDE_TOP, 0);
+    lv_obj_set_style_border_width(s_tab_bar, 1, 0);
+    lv_obj_set_style_border_color(s_tab_bar, lv_color_hex(::ui::C_PANEL_LINE), 0);
+    lv_obj_set_style_border_opa(s_tab_bar, LV_OPA_70, 0);
     lv_obj_clear_flag(s_tab_bar, LV_OBJ_FLAG_SCROLLABLE);
 
     // 5 buttons, equal width, sliced edge-to-edge.
@@ -246,11 +305,23 @@ lv_obj_t* build_tab_bar(lv_obj_t* parent) {
         lv_obj_add_event_cb(btn, tab_clicked_cb, LV_EVENT_CLICKED,
                             (void*)(intptr_t)i);
 
+        // Top-edge indicator: 3 px accent strip that fades in on the
+        // active tab. Makes the selected screen obvious from across the
+        // room, even without reading the label.
+        lv_obj_t* ind = lv_obj_create(btn);
+        lv_obj_remove_style_all(ind);
+        lv_obj_set_size(ind, tab_w - 24, 3);
+        lv_obj_align(ind, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_bg_color(ind, lv_color_hex(::ui::C_ACCENT), 0);
+        lv_obj_set_style_bg_opa(ind, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_radius(ind, 2, 0);
+        lv_obj_clear_flag(ind, LV_OBJ_FLAG_CLICKABLE);
+
         lv_obj_t* icon = lv_label_create(btn);
         lv_label_set_text(icon, k_tab_icons[i]);
         lv_obj_set_style_text_font(icon, &lv_font_montserrat_20, 0);
         lv_obj_set_style_text_color(icon, lv_color_hex(::ui::C_TEXT_DIM), 0);
-        lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 4);
+        lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 6);
 
         lv_obj_t* lbl = lv_label_create(btn);
         lv_label_set_text(lbl, k_tab_labels[i]);
@@ -258,9 +329,10 @@ lv_obj_t* build_tab_bar(lv_obj_t* parent) {
         lv_obj_set_style_text_color(lbl, lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, -3);
 
-        s_tab_btns  [i] = btn;
-        s_tab_icons [i] = icon;
-        s_tab_labels[i] = lbl;
+        s_tab_btns   [i] = btn;
+        s_tab_icons  [i] = icon;
+        s_tab_labels [i] = lbl;
+        s_tab_indicat[i] = ind;
     }
 
     tab_bar_set_active(0);
@@ -271,9 +343,12 @@ void tab_bar_set_active(uint8_t idx) {
     if (idx >= (uint8_t)Screen::_Count) return;
     s_tab_active = idx;
     for (uint8_t i = 0; i < (uint8_t)Screen::_Count; ++i) {
-        uint32_t col = (i == idx) ? ::ui::C_ACCENT : ::ui::C_TEXT_DIM;
+        bool on = (i == idx);
+        uint32_t col = on ? ::ui::C_ACCENT : ::ui::C_TEXT_DIM;
         lv_obj_set_style_text_color(s_tab_icons [i], lv_color_hex(col), 0);
         lv_obj_set_style_text_color(s_tab_labels[i], lv_color_hex(col), 0);
+        lv_obj_set_style_bg_opa(s_tab_indicat[i],
+                                on ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
     }
 }
 
@@ -302,8 +377,15 @@ static lv_obj_t* s_dash_t_bed        = nullptr;
 static lv_obj_t* s_dash_t_cham       = nullptr;
 static lv_obj_t* s_dash_hms          = nullptr;
 
-static lv_obj_t* s_dash_btn_speed       = nullptr;
-static lv_obj_t* s_dash_btn_speed_lbl   = nullptr;
+// --- Action area ---
+// Inline contextual actions sit at y=128. While printing, the speed
+// chip takes the full row. When the printer's finished / has an HMS
+// error, the segmented chip is hidden and the relevant single-action
+// button (Clear plate / Clear HMS) shows up in the same row instead.
+static lv_obj_t* s_dash_speed_bar       = nullptr;    // segmented chip container
+static lv_obj_t* s_dash_speed_seg[4]    = {};         // four touch targets
+static lv_obj_t* s_dash_speed_lbl[4]    = {};
+static lv_obj_t* s_dash_speed_caption   = nullptr;    // small "SPEED" label above
 static lv_obj_t* s_dash_btn_plate       = nullptr;
 static lv_obj_t* s_dash_btn_hms         = nullptr;
 
@@ -370,17 +452,15 @@ static lv_obj_t* make_temp_cell(lv_obj_t* parent, const char* title,
 
 // ----- inline action callbacks -----
 
-static void btn_speed_clicked(lv_event_t*) {
+// Segmented speed chip — each segment passes its mode (1..4) as user_data.
+static void speed_seg_clicked(lv_event_t* e) {
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0) return;
-    ::bambuddy::Printer ps[8]; uint8_t n = 0;
-    ::bambuddy::g_client.snapshot_printers(ps, n);
-    uint8_t cur = 2;
-    for (uint8_t i = 0; i < n; ++i) if (ps[i].id == id) cur = ps[i].speed_level;
-    uint8_t next = (uint8_t)((cur % 4) + 1);
-    bool ok = ::bambuddy::g_client.set_print_speed(id, next);
-    String msg = String("Speed: ") + speed_mode_name(next);
-    show_toast(msg.c_str(),
+    uint8_t mode = (uint8_t)(uintptr_t)lv_event_get_user_data(e);
+    if (mode < 1 || mode > 4) return;
+    bool ok = ::bambuddy::g_client.set_print_speed(id, mode);
+    String msg = String(LV_SYMBOL_OK " ") + speed_mode_name(mode);
+    show_toast(ok ? msg.c_str() : "Speed change failed",
                lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
 }
 
@@ -400,23 +480,87 @@ static void btn_hms_clicked(lv_event_t*) {
                lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
 }
 
-static lv_obj_t* make_action_btn(lv_obj_t* parent, int x, int w,
+// Single primary-action pill (used for Clear plate / Clear HMS).
+static lv_obj_t* make_action_btn(lv_obj_t* parent, int x, int y, int w,
                                   const char* text,
                                   lv_event_cb_t cb,
-                                  lv_obj_t** out_label = nullptr) {
+                                  uint32_t accent = ::ui::C_ACCENT) {
     lv_obj_t* btn = lv_btn_create(parent);
     lv_obj_remove_style_all(btn);
     lv_obj_add_style(btn, &s_btn, 0);
-    lv_obj_add_style(btn, &s_btn_accent, LV_STATE_DEFAULT);
-    lv_obj_set_size(btn, w, 44);
-    lv_obj_set_pos(btn, x, 128);
+    lv_obj_add_style(btn, &s_btn_accent, 0);
+    lv_obj_add_style(btn, &s_btn_pressed, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(btn, lv_color_hex(accent), 0);
+    lv_obj_set_style_radius  (btn, ::ui::R_PILL, 0);
+    lv_obj_set_size(btn, w, ::ui::H_BTN);
+    lv_obj_set_pos(btn, x, y);
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
 
     lv_obj_t* lbl = lv_label_create(btn);
     lv_label_set_text(lbl, text);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
     lv_obj_center(lbl);
-    if (out_label) *out_label = lbl;
     return btn;
+}
+
+// Build the segmented Silent / Standard / Sport / Ludicrous control. The
+// host stores per-segment pointers in s_dash_speed_seg / s_dash_speed_lbl
+// so update_dashboard() can flip the active one without rebuilding the
+// row each refresh.
+static void build_speed_segmented(lv_obj_t* parent, int x, int y, int w) {
+    s_dash_speed_caption = lv_label_create(parent);
+    lv_label_set_text(s_dash_speed_caption, "SPEED");
+    lv_obj_add_style(s_dash_speed_caption, &s_label_dim, 0);
+    lv_obj_set_pos(s_dash_speed_caption, x + 4, y - 14);
+
+    s_dash_speed_bar = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_dash_speed_bar);
+    lv_obj_set_pos (s_dash_speed_bar, x, y);
+    lv_obj_set_size(s_dash_speed_bar, w, ::ui::H_BTN);
+    lv_obj_set_style_bg_color(s_dash_speed_bar,
+                               lv_color_hex(::ui::C_PANEL_HI), 0);
+    lv_obj_set_style_bg_opa  (s_dash_speed_bar, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius  (s_dash_speed_bar, ::ui::R_PILL, 0);
+    lv_obj_set_style_border_width(s_dash_speed_bar, 1, 0);
+    lv_obj_set_style_border_color(s_dash_speed_bar,
+                                  lv_color_hex(::ui::C_PANEL_LINE), 0);
+    lv_obj_set_style_border_opa(s_dash_speed_bar, LV_OPA_80, 0);
+    lv_obj_set_style_pad_all(s_dash_speed_bar, 3, 0);
+    lv_obj_clear_flag(s_dash_speed_bar, LV_OBJ_FLAG_SCROLLABLE);
+
+    static const char* k_short[4] = { "Silent", "Standard", "Sport", "Ludicrous" };
+    int seg_w = (w - 6) / 4;
+    int seg_h = ::ui::H_BTN - 6;
+    for (uint8_t i = 0; i < 4; ++i) {
+        lv_obj_t* seg = lv_btn_create(s_dash_speed_bar);
+        lv_obj_remove_style_all(seg);
+        lv_obj_add_style(seg, &s_chip_off, 0);
+        lv_obj_add_style(seg, &s_btn_pressed, LV_STATE_PRESSED);
+        lv_obj_set_size(seg, seg_w, seg_h);
+        lv_obj_set_pos(seg, i * seg_w, 0);
+        lv_obj_add_event_cb(seg, speed_seg_clicked, LV_EVENT_CLICKED,
+                            (void*)(uintptr_t)(i + 1));
+
+        lv_obj_t* lbl = lv_label_create(seg);
+        lv_label_set_text(lbl, k_short[i]);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+        lv_obj_center(lbl);
+        s_dash_speed_seg[i] = seg;
+        s_dash_speed_lbl[i] = lbl;
+    }
+}
+
+static void speed_segmented_set_active(uint8_t mode /* 1..4 */) {
+    if (mode < 1 || mode > 4) mode = 2;
+    for (uint8_t i = 0; i < 4; ++i) {
+        bool on = (i + 1 == mode);
+        lv_obj_set_style_bg_color(s_dash_speed_seg[i],
+                                   lv_color_hex(on ? ::ui::C_ACCENT
+                                                   : ::ui::C_PANEL_HI), 0);
+        lv_obj_set_style_text_color(s_dash_speed_lbl[i],
+                                    lv_color_hex(on ? ::ui::C_TEXT_INV
+                                                    : ::ui::C_TEXT_DIM), 0);
+    }
 }
 
 lv_obj_t* build_dashboard(lv_obj_t* parent) {
@@ -488,18 +632,23 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_obj_set_style_text_color(s_dash_hms, lv_color_hex(::ui::C_ERR), 0);
     lv_obj_set_style_text_font(s_dash_hms, &lv_font_montserrat_14, 0);
 
-    // --- Inline action buttons (visibility flipped each refresh) ---
-    s_dash_btn_speed = make_action_btn(s_dash_root,  12, 156,
-                                       "Speed", btn_speed_clicked,
-                                       &s_dash_btn_speed_lbl);
-    s_dash_btn_plate = make_action_btn(s_dash_root, 174, 130,
-                                       "Clear plate", btn_plate_clicked);
-    s_dash_btn_hms   = make_action_btn(s_dash_root, 314, 154,
-                                       "Clear HMS", btn_hms_clicked);
+    // --- Inline action area ---
+    // While printing: segmented speed chip spans the whole row.
+    // When finished : single accent pill "Clear plate".
+    // When HMS err  : single red pill "Clear HMS".
+    // Only one is visible at a time — update_dashboard() picks.
+    build_speed_segmented(s_dash_root, 12, 128, LV_HOR_RES - 24);
+    s_dash_btn_plate = make_action_btn(s_dash_root, 12, 128, LV_HOR_RES - 24,
+                                       LV_SYMBOL_OK "  Clear plate",
+                                       btn_plate_clicked);
+    s_dash_btn_hms   = make_action_btn(s_dash_root, 12, 128, LV_HOR_RES - 24,
+                                       LV_SYMBOL_WARNING "  Clear HMS",
+                                       btn_hms_clicked, ::ui::C_ERR);
 
-    lv_obj_add_flag(s_dash_btn_speed, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(s_dash_btn_plate, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(s_dash_btn_hms,   LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_speed_bar,     LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_speed_caption, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_btn_plate,     LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_btn_hms,       LV_OBJ_FLAG_HIDDEN);
     return s_dash_root;
 }
 
@@ -521,9 +670,10 @@ void update_dashboard(int printer_id) {
         lv_label_set_text(s_dash_state_lbl, "NO PRINTER");
         lv_label_set_text(s_dash_file_lbl, "Add one in Bambuddy");
         header_set_printer_name("");
-        lv_obj_add_flag(s_dash_btn_speed, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(s_dash_btn_plate, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(s_dash_btn_hms,   LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_speed_bar,     LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_speed_caption, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_btn_plate,     LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_btn_hms,       LV_OBJ_FLAG_HIDDEN);
         return;
     }
     const ::bambuddy::Printer* sel = nullptr;
@@ -571,7 +721,10 @@ void update_dashboard(int printer_id) {
     snprintf(buf, sizeof(buf), "%.0f °C", sel->temps.chamber);
     lv_label_set_text(s_dash_t_cham, buf);
 
-    // --- Contextual action buttons ---
+    // --- Contextual action row ---
+    // Priority order: an active HMS error wins (Clear HMS pill), then
+    // "finished but plate dirty" wins, then while-printing speed chip.
+    // At most one widget is visible in the action row at once.
     using PS = ::bambuddy::PrinterState;
     bool can_speed = (sel->state == PS::Printing ||
                       sel->state == PS::Paused   ||
@@ -579,43 +732,50 @@ void update_dashboard(int printer_id) {
     bool can_plate = (sel->state == PS::Finish || sel->state == PS::Failed);
     bool can_hms   = hms_active;
 
+    auto show = [](lv_obj_t* o, bool v) {
+        if (!o) return;
+        if (v) lv_obj_clear_flag(o, LV_OBJ_FLAG_HIDDEN);
+        else   lv_obj_add_flag  (o, LV_OBJ_FLAG_HIDDEN);
+    };
+
+    show(s_dash_btn_hms,         can_hms);
+    show(s_dash_btn_plate,       !can_hms && can_plate);
+    show(s_dash_speed_bar,       !can_hms && !can_plate && can_speed);
+    show(s_dash_speed_caption,   !can_hms && !can_plate && can_speed);
+
     if (can_speed) {
-        uint8_t cur  = (sel->speed_level >= 1 && sel->speed_level <= 4)
+        uint8_t cur = (sel->speed_level >= 1 && sel->speed_level <= 4)
                        ? sel->speed_level : 2;
-        uint8_t next = (uint8_t)((cur % 4) + 1);
-        String label = String("Speed: ") + speed_mode_name(cur)
-                     + " " LV_SYMBOL_RIGHT " " + speed_mode_name(next);
-        lv_label_set_text(s_dash_btn_speed_lbl, label.c_str());
-        lv_obj_clear_flag(s_dash_btn_speed, LV_OBJ_FLAG_HIDDEN);
-    } else {
-        lv_obj_add_flag(s_dash_btn_speed, LV_OBJ_FLAG_HIDDEN);
+        speed_segmented_set_active(cur);
     }
-    if (can_plate) lv_obj_clear_flag(s_dash_btn_plate, LV_OBJ_FLAG_HIDDEN);
-    else           lv_obj_add_flag  (s_dash_btn_plate, LV_OBJ_FLAG_HIDDEN);
-    if (can_hms)   lv_obj_clear_flag(s_dash_btn_hms,   LV_OBJ_FLAG_HIDDEN);
-    else           lv_obj_add_flag  (s_dash_btn_hms,   LV_OBJ_FLAG_HIDDEN);
 }
 
 // =============================================================================
 // AMS
 // =============================================================================
 
-static lv_obj_t* s_ams_root        = nullptr;
-static lv_obj_t* s_ams_empty       = nullptr;
-static lv_obj_t* s_ams_unit_lbl    = nullptr;
-static lv_obj_t* s_ams_humid_lbl   = nullptr;
-static lv_obj_t* s_ams_temp_lbl    = nullptr;
-static lv_obj_t* s_ams_dry_lbl     = nullptr;
-static lv_obj_t* s_ams_prev_btn    = nullptr;
-static lv_obj_t* s_ams_next_btn    = nullptr;
-static lv_obj_t* s_ams_row         = nullptr;
-static lv_obj_t* s_ams_card[4]     = {};
-static lv_obj_t* s_ams_card_swatch[4] = {};
-static lv_obj_t* s_ams_card_type[4]   = {};
-static lv_obj_t* s_ams_card_pct[4]    = {};
-static lv_obj_t* s_ams_card_bar[4]    = {};
+static lv_obj_t* s_ams_root          = nullptr;
+static lv_obj_t* s_ams_empty         = nullptr;
+static lv_obj_t* s_ams_unit_lbl      = nullptr;   // "AMS 1 / 2"
+static lv_obj_t* s_ams_humid_lbl     = nullptr;
+static lv_obj_t* s_ams_temp_lbl      = nullptr;
+static lv_obj_t* s_ams_dry_lbl       = nullptr;
+static lv_obj_t* s_ams_prev_btn      = nullptr;
+static lv_obj_t* s_ams_next_btn      = nullptr;
+static lv_obj_t* s_ams_dry_btn       = nullptr;
+static lv_obj_t* s_ams_dry_btn_lbl   = nullptr;
+static lv_obj_t* s_ams_row           = nullptr;
+static lv_obj_t* s_ams_card        [4] = {};
+static lv_obj_t* s_ams_card_swatch [4] = {};
+static lv_obj_t* s_ams_card_type   [4] = {};
+static lv_obj_t* s_ams_card_pct    [4] = {};
+static lv_obj_t* s_ams_card_bar    [4] = {};
 
 static int s_ams_visible_index = 0;
+
+uint8_t ams_visible_unit_index() {
+    return (uint8_t)(s_ams_visible_index < 0 ? 0 : s_ams_visible_index);
+}
 
 static lv_obj_t* make_ams_slot_card(lv_obj_t* parent,
                                      lv_obj_t** swatch,
@@ -665,6 +825,38 @@ static lv_obj_t* make_ams_slot_card(lv_obj_t* parent,
 static void ams_prev_clicked(lv_event_t*) { ams_cycle_unit(-1); }
 static void ams_next_clicked(lv_event_t*) { ams_cycle_unit(+1); }
 
+// Drying toggle. The button label is updated each refresh based on the
+// `dry_time_min` field — when the unit reports a non-zero countdown,
+// tapping fires Stop; otherwise it starts a default-shaped cycle
+// (60 min @ 55 °C — a reasonable PLA / PETG dry).
+static void ams_dry_clicked(lv_event_t*) {
+    int id = ::ui::g_ui.selected_printer_id();
+    if (id < 0) return;
+    uint8_t unit = ams_visible_unit_index();
+    ::bambuddy::Printer ps[8]; uint8_t n = 0;
+    ::bambuddy::g_client.snapshot_printers(ps, n);
+    bool currently_drying = false;
+    for (uint8_t i = 0; i < n; ++i) {
+        if (ps[i].id == id && ps[i].ams_count > unit &&
+            ps[i].ams[unit].dry_time_min > 0) {
+            currently_drying = true; break;
+        }
+    }
+    bool ok;
+    if (currently_drying) {
+        ok = ::bambuddy::g_client.stop_ams_drying(id, unit);
+        show_toast(ok ? "Drying stopped" : "Stop drying failed",
+                   lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
+    } else {
+        // 60 minutes at 55 °C is the Bambu PLA/PETG default — close
+        // enough to "drying that doesn't ruin the spool" for a one-tap
+        // start. Per-material profiles can come later.
+        ok = ::bambuddy::g_client.start_ams_drying(id, unit, 60, 55);
+        show_toast(ok ? "Drying 60 min @ 55 °C" : "Start drying failed",
+                   lv_color_hex(ok ? ::ui::C_WARN : ::ui::C_ERR));
+    }
+}
+
 lv_obj_t* build_ams(lv_obj_t* parent) {
     ensure_styles();
     s_ams_root = lv_obj_create(parent);
@@ -674,59 +866,88 @@ lv_obj_t* build_ams(lv_obj_t* parent) {
     lv_obj_clear_flag(s_ams_root, LV_OBJ_FLAG_SCROLLABLE);
 
     // --- Status strip ---
+    //
+    // Layout left → right at y=4:
+    //   [ ◀ ]  AMS 1 / 2  [ ▶ ]   〈humidity〉  〈temp〉  …  [ Dry / Stop ]
+    //
+    // The chevrons sit flush against the unit label and only become
+    // visible when the focused printer has more than one chained unit.
+
+    // Left chevron
+    s_ams_prev_btn = lv_btn_create(s_ams_root);
+    lv_obj_remove_style_all(s_ams_prev_btn);
+    lv_obj_add_style(s_ams_prev_btn, &s_btn, 0);
+    lv_obj_add_style(s_ams_prev_btn, &s_btn_pressed, LV_STATE_PRESSED);
+    lv_obj_set_style_radius(s_ams_prev_btn, ::ui::R_BUTTON, 0);
+    lv_obj_set_size(s_ams_prev_btn, 36, 32);
+    lv_obj_align(s_ams_prev_btn, LV_ALIGN_TOP_LEFT, 12, 0);
+    lv_obj_set_style_pad_all(s_ams_prev_btn, 0, 0);
+    lv_obj_add_event_cb(s_ams_prev_btn, ams_prev_clicked, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t* p_lbl = lv_label_create(s_ams_prev_btn);
+    lv_label_set_text(p_lbl, LV_SYMBOL_LEFT);
+    lv_obj_set_style_text_font(p_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_center(p_lbl);
+    lv_obj_add_flag(s_ams_prev_btn, LV_OBJ_FLAG_HIDDEN);
+
     s_ams_unit_lbl = lv_label_create(s_ams_root);
     lv_label_set_text(s_ams_unit_lbl, "AMS");
-    lv_obj_align(s_ams_unit_lbl, LV_ALIGN_TOP_LEFT, 16, 4);
+    lv_obj_align(s_ams_unit_lbl, LV_ALIGN_TOP_LEFT, 56, 6);
     lv_obj_set_style_text_font(s_ams_unit_lbl, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(s_ams_unit_lbl, lv_color_hex(::ui::C_ACCENT), 0);
 
+    s_ams_next_btn = lv_btn_create(s_ams_root);
+    lv_obj_remove_style_all(s_ams_next_btn);
+    lv_obj_add_style(s_ams_next_btn, &s_btn, 0);
+    lv_obj_add_style(s_ams_next_btn, &s_btn_pressed, LV_STATE_PRESSED);
+    lv_obj_set_style_radius(s_ams_next_btn, ::ui::R_BUTTON, 0);
+    lv_obj_set_size(s_ams_next_btn, 36, 32);
+    lv_obj_align(s_ams_next_btn, LV_ALIGN_TOP_LEFT, 138, 0);
+    lv_obj_set_style_pad_all(s_ams_next_btn, 0, 0);
+    lv_obj_add_event_cb(s_ams_next_btn, ams_next_clicked, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t* n_lbl = lv_label_create(s_ams_next_btn);
+    lv_label_set_text(n_lbl, LV_SYMBOL_RIGHT);
+    lv_obj_set_style_text_font(n_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_center(n_lbl);
+    lv_obj_add_flag(s_ams_next_btn, LV_OBJ_FLAG_HIDDEN);
+
     s_ams_humid_lbl = lv_label_create(s_ams_root);
     lv_label_set_text(s_ams_humid_lbl, "");
-    lv_obj_align(s_ams_humid_lbl, LV_ALIGN_TOP_LEFT, 130, 6);
+    lv_obj_align(s_ams_humid_lbl, LV_ALIGN_TOP_LEFT, 186, 8);
     lv_obj_set_style_text_font(s_ams_humid_lbl, &lv_font_montserrat_16, 0);
 
     s_ams_temp_lbl = lv_label_create(s_ams_root);
     lv_label_set_text(s_ams_temp_lbl, "");
-    lv_obj_align(s_ams_temp_lbl, LV_ALIGN_TOP_LEFT, 220, 6);
+    lv_obj_align(s_ams_temp_lbl, LV_ALIGN_TOP_LEFT, 260, 8);
     lv_obj_set_style_text_font(s_ams_temp_lbl, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(s_ams_temp_lbl, lv_color_hex(::ui::C_TEXT), 0);
 
     s_ams_dry_lbl = lv_label_create(s_ams_root);
     lv_label_set_text(s_ams_dry_lbl, "");
-    lv_obj_align(s_ams_dry_lbl, LV_ALIGN_TOP_RIGHT, -16, 6);
+    lv_obj_align(s_ams_dry_lbl, LV_ALIGN_TOP_LEFT, 316, 8);
     lv_obj_set_style_text_font(s_ams_dry_lbl, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(s_ams_dry_lbl, lv_color_hex(::ui::C_WARN), 0);
 
-    // --- AMS-unit cycle buttons (shown only when >1 unit) ---
-    s_ams_prev_btn = lv_btn_create(s_ams_root);
-    lv_obj_remove_style_all(s_ams_prev_btn);
-    lv_obj_add_style(s_ams_prev_btn, &s_btn, 0);
-    lv_obj_set_size(s_ams_prev_btn, 32, 28);
-    lv_obj_align(s_ams_prev_btn, LV_ALIGN_TOP_LEFT, 76, 2);
-    lv_obj_set_style_pad_all(s_ams_prev_btn, 0, 0);
-    lv_obj_add_event_cb(s_ams_prev_btn, ams_prev_clicked, LV_EVENT_CLICKED, nullptr);
-    lv_obj_t* p_lbl = lv_label_create(s_ams_prev_btn);
-    lv_label_set_text(p_lbl, LV_SYMBOL_LEFT);
-    lv_obj_center(p_lbl);
-    lv_obj_add_flag(s_ams_prev_btn, LV_OBJ_FLAG_HIDDEN);
-
-    s_ams_next_btn = lv_btn_create(s_ams_root);
-    lv_obj_remove_style_all(s_ams_next_btn);
-    lv_obj_add_style(s_ams_next_btn, &s_btn, 0);
-    lv_obj_set_size(s_ams_next_btn, 32, 28);
-    lv_obj_align(s_ams_next_btn, LV_ALIGN_TOP_LEFT, 90, 2);
-    lv_obj_set_style_pad_all(s_ams_next_btn, 0, 0);
-    lv_obj_add_event_cb(s_ams_next_btn, ams_next_clicked, LV_EVENT_CLICKED, nullptr);
-    lv_obj_t* n_lbl = lv_label_create(s_ams_next_btn);
-    lv_label_set_text(n_lbl, LV_SYMBOL_RIGHT);
-    lv_obj_center(n_lbl);
-    lv_obj_add_flag(s_ams_next_btn, LV_OBJ_FLAG_HIDDEN);
+    // Right-side drying control. Tap to start (warm-grey) / stop (red)
+    // a drying cycle on the visible unit. Hidden when no AMS is present.
+    s_ams_dry_btn = lv_btn_create(s_ams_root);
+    lv_obj_remove_style_all(s_ams_dry_btn);
+    lv_obj_add_style(s_ams_dry_btn, &s_btn, 0);
+    lv_obj_add_style(s_ams_dry_btn, &s_btn_pressed, LV_STATE_PRESSED);
+    lv_obj_set_style_radius(s_ams_dry_btn, ::ui::R_PILL, 0);
+    lv_obj_set_size(s_ams_dry_btn, 80, 32);
+    lv_obj_align(s_ams_dry_btn, LV_ALIGN_TOP_RIGHT, -12, 0);
+    lv_obj_add_event_cb(s_ams_dry_btn, ams_dry_clicked, LV_EVENT_CLICKED, nullptr);
+    s_ams_dry_btn_lbl = lv_label_create(s_ams_dry_btn);
+    lv_label_set_text(s_ams_dry_btn_lbl, "Dry");
+    lv_obj_set_style_text_font(s_ams_dry_btn_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_center(s_ams_dry_btn_lbl);
+    lv_obj_add_flag(s_ams_dry_btn, LV_OBJ_FLAG_HIDDEN);
 
     // --- Slot row ---
     s_ams_row = lv_obj_create(s_ams_root);
     lv_obj_remove_style_all(s_ams_row);
-    lv_obj_set_size(s_ams_row, LV_HOR_RES - 32, 156);
-    lv_obj_align(s_ams_row, LV_ALIGN_TOP_LEFT, 16, 32);
+    lv_obj_set_size(s_ams_row, LV_HOR_RES - 32, 148);
+    lv_obj_align(s_ams_row, LV_ALIGN_TOP_LEFT, 16, 40);
     lv_obj_set_flex_flow(s_ams_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_column(s_ams_row, 8, 0);
     lv_obj_clear_flag(s_ams_row, LV_OBJ_FLAG_SCROLLABLE);
@@ -801,9 +1022,10 @@ void update_ams(int printer_id) {
     bool has_ams = (sel != nullptr) && sel->ams_exists && sel->ams_count > 0;
     if (!has_ams) {
         lv_obj_clear_flag(s_ams_empty, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(s_ams_row, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_ams_row,      LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_ams_prev_btn, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_ams_next_btn, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_ams_dry_btn,  LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(s_ams_unit_lbl, "AMS");
         lv_label_set_text(s_ams_humid_lbl, "");
         lv_label_set_text(s_ams_temp_lbl,  "");
@@ -818,19 +1040,44 @@ void update_ams(int printer_id) {
 
     char hdr[24];
     if (sel->ams_count > 1)
-        snprintf(hdr, sizeof(hdr), "AMS %d/%u%s",
+        snprintf(hdr, sizeof(hdr), "%d / %u%s",
                  s_ams_visible_index + 1, (unsigned)sel->ams_count,
-                 u.is_ht ? " HT" : "");
+                 u.is_ht ? "  HT" : "");
     else
         snprintf(hdr, sizeof(hdr), "AMS%s", u.is_ht ? "-HT" : "");
     lv_label_set_text(s_ams_unit_lbl, hdr);
 
-    if (sel->ams_count > 1) {
+    // Show prev/next only when there's something to cycle between. Keep
+    // them disabled-looking otherwise so the layout doesn't shuffle.
+    bool multi = (sel->ams_count > 1);
+    if (multi) {
         lv_obj_clear_flag(s_ams_prev_btn, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(s_ams_next_btn, LV_OBJ_FLAG_HIDDEN);
     } else {
         lv_obj_add_flag(s_ams_prev_btn, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_ams_next_btn, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    // Drying button label + colour reflect the current state of *this*
+    // unit (not the whole printer). HT units have a heater; vanilla AMS
+    // doesn't, so we hide the button entirely on those.
+    if (u.is_ht) {
+        lv_obj_clear_flag(s_ams_dry_btn, LV_OBJ_FLAG_HIDDEN);
+        if (u.dry_time_min > 0) {
+            lv_label_set_text(s_ams_dry_btn_lbl, "Stop");
+            lv_obj_set_style_bg_color(s_ams_dry_btn,
+                                       lv_color_hex(::ui::C_ERR), 0);
+            lv_obj_set_style_text_color(s_ams_dry_btn_lbl,
+                                        lv_color_hex(::ui::C_TEXT_INV), 0);
+        } else {
+            lv_label_set_text(s_ams_dry_btn_lbl, LV_SYMBOL_TINT " Dry");
+            lv_obj_set_style_bg_color(s_ams_dry_btn,
+                                       lv_color_hex(::ui::C_PANEL_HI), 0);
+            lv_obj_set_style_text_color(s_ams_dry_btn_lbl,
+                                        lv_color_hex(::ui::C_TEXT), 0);
+        }
+    } else {
+        lv_obj_add_flag(s_ams_dry_btn, LV_OBJ_FLAG_HIDDEN);
     }
 
     if (u.humidity >= 0) {
@@ -937,11 +1184,14 @@ void update_printers(int focused_id) {
         lv_obj_t* row = lv_btn_create(s_pr_list);
         lv_obj_remove_style_all(row);
         lv_obj_add_style(row, &s_panel, 0);
-        lv_obj_set_size(row, LV_PCT(100), 48);
+        lv_obj_add_style(row, &s_btn_pressed, LV_STATE_PRESSED);
+        lv_obj_set_style_radius(row, ::ui::R_PANEL, 0);
+        lv_obj_set_size(row, LV_PCT(100), 50);
         lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
         if ((int)ps[i].id == focused_id) {
             lv_obj_set_style_border_width(row, 2, 0);
             lv_obj_set_style_border_color(row, lv_color_hex(::ui::C_ACCENT), 0);
+            lv_obj_set_style_border_opa(row, LV_OPA_COVER, 0);
         }
         lv_obj_add_event_cb(row, pr_row_clicked, LV_EVENT_CLICKED,
                             (void*)(intptr_t)ps[i].id);
@@ -1087,14 +1337,40 @@ void update_history() {
 // SETTINGS
 // =============================================================================
 
-static lv_obj_t* s_set_root    = nullptr;
-static lv_obj_t* s_set_url     = nullptr;
-static lv_obj_t* s_set_ip      = nullptr;
-static lv_obj_t* s_set_rssi    = nullptr;
-static lv_obj_t* s_set_uptime  = nullptr;
-static lv_obj_t* s_set_reset_btn = nullptr;
-static lv_obj_t* s_set_reset_lbl = nullptr;
+static lv_obj_t* s_set_root         = nullptr;
+static lv_obj_t* s_set_url          = nullptr;
+static lv_obj_t* s_set_ip           = nullptr;
+static lv_obj_t* s_set_rssi         = nullptr;
+static lv_obj_t* s_set_uptime       = nullptr;
+static lv_obj_t* s_set_bright_bar   = nullptr;
+static lv_obj_t* s_set_bright_seg[5] = {};
+static lv_obj_t* s_set_reset_btn    = nullptr;
+static lv_obj_t* s_set_reset_lbl    = nullptr;
 static uint32_t  s_set_reset_armed_at = 0;
+
+static void brightness_seg_clicked(lv_event_t* e) {
+    uint8_t level = (uint8_t)(uintptr_t)lv_event_get_user_data(e);
+    ::save_brightness_level(level);
+    char buf[24];
+    snprintf(buf, sizeof(buf), "Brightness %u / 5", (unsigned)level);
+    show_toast(buf, lv_color_hex(::ui::C_ACCENT));
+}
+
+static void brightness_apply(uint8_t level) {
+    if (level < 1) level = 1;
+    if (level > 5) level = 5;
+    for (uint8_t i = 0; i < 5; ++i) {
+        bool on = (i + 1 == level);
+        lv_obj_set_style_bg_color(s_set_bright_seg[i],
+                                   lv_color_hex(on ? ::ui::C_ACCENT
+                                                   : ::ui::C_PANEL_HI), 0);
+        lv_obj_t* lbl = lv_obj_get_child(s_set_bright_seg[i], 0);
+        if (lbl) {
+            lv_obj_set_style_text_color(lbl,
+                lv_color_hex(on ? ::ui::C_TEXT_INV : ::ui::C_TEXT_DIM), 0);
+        }
+    }
+}
 
 static void set_reset_clicked(lv_event_t*) {
     uint32_t now = lv_tick_get();
@@ -1136,23 +1412,68 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
         return vl;
     };
 
-    s_set_url    = make_row("Bambuddy",    4);
-    s_set_ip     = make_row("Local IP",   26);
-    s_set_rssi   = make_row("Wi-Fi RSSI", 48);
-    s_set_uptime = make_row("Uptime",     70);
+    s_set_url    = make_row("Bambuddy",    2);
+    s_set_ip     = make_row("Local IP",   22);
+    s_set_rssi   = make_row("Wi-Fi RSSI", 42);
+    s_set_uptime = make_row("Uptime",     62);
 
-    // --- Factory reset button (two-tap confirm) ---
+    // --- Brightness 1..5 selector ---------------------------------------
+    // Identical visual language to the speed chip on Live so the user
+    // recognises segmented controls as "pick one of N" without any other
+    // affordance.
+    lv_obj_t* bl_lbl = lv_label_create(s_set_root);
+    lv_label_set_text(bl_lbl, "Brightness");
+    lv_obj_add_style(bl_lbl, &s_label_dim, 0);
+    lv_obj_align(bl_lbl, LV_ALIGN_TOP_LEFT, 18, 90);
+
+    s_set_bright_bar = lv_obj_create(s_set_root);
+    lv_obj_remove_style_all(s_set_bright_bar);
+    lv_obj_align(s_set_bright_bar, LV_ALIGN_TOP_LEFT, 130, 84);
+    lv_obj_set_size(s_set_bright_bar, LV_HOR_RES - 148, 32);
+    lv_obj_set_style_bg_color(s_set_bright_bar,
+                               lv_color_hex(::ui::C_PANEL_HI), 0);
+    lv_obj_set_style_bg_opa  (s_set_bright_bar, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius  (s_set_bright_bar, ::ui::R_PILL, 0);
+    lv_obj_set_style_border_width(s_set_bright_bar, 1, 0);
+    lv_obj_set_style_border_color(s_set_bright_bar,
+                                  lv_color_hex(::ui::C_PANEL_LINE), 0);
+    lv_obj_set_style_border_opa(s_set_bright_bar, LV_OPA_80, 0);
+    lv_obj_set_style_pad_all(s_set_bright_bar, 2, 0);
+    lv_obj_clear_flag(s_set_bright_bar, LV_OBJ_FLAG_SCROLLABLE);
+
+    int seg_w = (LV_HOR_RES - 148 - 4) / 5;
+    for (uint8_t i = 0; i < 5; ++i) {
+        lv_obj_t* seg = lv_btn_create(s_set_bright_bar);
+        lv_obj_remove_style_all(seg);
+        lv_obj_add_style(seg, &s_chip_off, 0);
+        lv_obj_add_style(seg, &s_btn_pressed, LV_STATE_PRESSED);
+        lv_obj_set_size(seg, seg_w, 28);
+        lv_obj_set_pos (seg, i * seg_w, 0);
+        lv_obj_add_event_cb(seg, brightness_seg_clicked, LV_EVENT_CLICKED,
+                            (void*)(uintptr_t)(i + 1));
+        lv_obj_t* l = lv_label_create(seg);
+        char buf[4]; snprintf(buf, sizeof(buf), "%u", (unsigned)(i + 1));
+        lv_label_set_text(l, buf);
+        lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+        lv_obj_center(l);
+        s_set_bright_seg[i] = seg;
+    }
+    brightness_apply(::g_cfg_brightness_level);
+
+    // --- Factory reset button (two-tap confirm) -------------------------
     s_set_reset_btn = lv_btn_create(s_set_root);
     lv_obj_remove_style_all(s_set_reset_btn);
     lv_obj_add_style(s_set_reset_btn, &s_btn, 0);
-    lv_obj_set_size(s_set_reset_btn, LV_HOR_RES - 36, 44);
+    lv_obj_add_style(s_set_reset_btn, &s_btn_pressed, LV_STATE_PRESSED);
+    lv_obj_set_style_radius(s_set_reset_btn, ::ui::R_PILL, 0);
+    lv_obj_set_size(s_set_reset_btn, LV_HOR_RES - 36, ::ui::H_BTN);
     lv_obj_align(s_set_reset_btn, LV_ALIGN_BOTTOM_MID, 0, -8);
     lv_obj_set_style_bg_color(s_set_reset_btn,
                                lv_color_hex(::ui::C_PANEL_HI), 0);
     lv_obj_add_event_cb(s_set_reset_btn, set_reset_clicked, LV_EVENT_CLICKED, nullptr);
 
     s_set_reset_lbl = lv_label_create(s_set_reset_btn);
-    lv_label_set_text(s_set_reset_lbl, "Factory reset");
+    lv_label_set_text(s_set_reset_lbl, LV_SYMBOL_TRASH "  Factory reset");
     lv_obj_set_style_text_font(s_set_reset_lbl, &lv_font_montserrat_16, 0);
     lv_obj_center(s_set_reset_lbl);
 
@@ -1174,6 +1495,11 @@ void update_settings() {
              (unsigned)(up / 3600), (unsigned)((up % 3600) / 60),
              (unsigned)(up % 60));
     lv_label_set_text(s_set_uptime, u);
+
+    // Keep the segmented brightness control in sync with the live value
+    // (the captive portal could rewrite it; we never do that today, but
+    // it's free to keep the binding bidirectional).
+    brightness_apply(::g_cfg_brightness_level);
 
     // Reset the "tap again to confirm" arm window after 3 s.
     if (s_set_reset_armed_at != 0 &&

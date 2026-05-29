@@ -26,8 +26,14 @@
 
 // Runtime config (read once from NVS at boot, written back when the captive
 // portal saves a new value).
-String g_cfg_bambuddy_url;
-String g_cfg_api_key;
+String  g_cfg_bambuddy_url;
+String  g_cfg_api_key;
+uint8_t g_cfg_brightness_level = ::display::BL_LEVEL_DEFAULT;
+
+// Public hook used by the Settings screen's brightness selector. Applies
+// the new level immediately and persists it to NVS so the next boot picks
+// the same brightness without flashing the previous one first.
+void save_brightness_level(uint8_t level);
 
 // ---------------------------------------------------------------------------
 // Persisted settings
@@ -37,15 +43,32 @@ static Preferences s_prefs;
 
 static void load_prefs() {
     s_prefs.begin("bamboard", true);
-    g_cfg_bambuddy_url = s_prefs.getString("url", "");
-    g_cfg_api_key      = s_prefs.getString("key", "");
+    g_cfg_bambuddy_url     = s_prefs.getString("url", "");
+    g_cfg_api_key          = s_prefs.getString("key", "");
+    g_cfg_brightness_level = s_prefs.getUChar("bl_level",
+                                              ::display::BL_LEVEL_DEFAULT);
+    if (g_cfg_brightness_level < ::display::BL_LEVEL_MIN ||
+        g_cfg_brightness_level > ::display::BL_LEVEL_MAX) {
+        g_cfg_brightness_level = ::display::BL_LEVEL_DEFAULT;
+    }
     s_prefs.end();
 }
 
 static void save_prefs() {
     s_prefs.begin("bamboard", false);
-    s_prefs.putString("url", g_cfg_bambuddy_url);
-    s_prefs.putString("key", g_cfg_api_key);
+    s_prefs.putString("url",      g_cfg_bambuddy_url);
+    s_prefs.putString("key",      g_cfg_api_key);
+    s_prefs.putUChar ("bl_level", g_cfg_brightness_level);
+    s_prefs.end();
+}
+
+void save_brightness_level(uint8_t level) {
+    if (level < ::display::BL_LEVEL_MIN) level = ::display::BL_LEVEL_MIN;
+    if (level > ::display::BL_LEVEL_MAX) level = ::display::BL_LEVEL_MAX;
+    g_cfg_brightness_level = level;
+    hw::g_display.set_brightness_level(level);
+    s_prefs.begin("bamboard", false);
+    s_prefs.putUChar("bl_level", level);
     s_prefs.end();
 }
 
@@ -204,8 +227,10 @@ static void ui_task(void*) {
         hw::g_display.tick();
         if (hw::g_display.consume_touch_activity()) {
             last_touch_seen_ms = millis();
-            if (hw::g_display.backlight() < display::BL_FULL) {
-                hw::g_display.set_backlight(display::BL_FULL);
+            uint8_t wake = display::bl_pwm_for_level(
+                hw::g_display.brightness_level());
+            if (hw::g_display.backlight() < wake) {
+                hw::g_display.set_backlight(wake);
             }
         }
 
@@ -253,6 +278,12 @@ void setup() {
     }
 
     load_prefs();
+
+    // Apply the user's saved brightness as soon as we have the value. The
+    // display starts off dimmed inside hw::Display::begin() to avoid a
+    // bright flash before the first frame is drawn; now that LVGL has
+    // ticked at least once we can ramp to the chosen level.
+    hw::g_display.set_brightness_level(g_cfg_brightness_level);
 
     // Bring up Wi-Fi. If we have no saved credentials or Bambuddy details,
     // run the captive portal.
