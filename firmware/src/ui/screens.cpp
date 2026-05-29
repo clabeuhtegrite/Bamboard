@@ -269,9 +269,12 @@ void tab_bar_set_active(uint8_t idx) {
 }
 
 // Helper used by the screen builders to size their root container to the
-// body area between the header and the tab bar.
+// body area between the header and the tab bar. We pull from
+// ::display::HEIGHT (a real compile-time constant) rather than from
+// LV_VER_RES — the latter expands to lv_disp_get_ver_res(NULL), which
+// isn't valid in a constexpr context.
 static constexpr int body_h() {
-    return LV_VER_RES - 36 - (int)::ui::TAB_BAR_H;
+    return ::display::HEIGHT - 36 - (int)::ui::TAB_BAR_H;
 }
 
 // =============================================================================

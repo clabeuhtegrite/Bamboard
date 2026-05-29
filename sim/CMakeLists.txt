@@ -89,6 +89,11 @@ target_include_directories(bamboard_sim PRIVATE
 
 target_compile_definitions(bamboard_sim PRIVATE
     LV_CONF_INCLUDE_SIMPLE=1
+    # MSVC otherwise emits a wall of C4996 deprecation warnings about
+    # the regular C runtime calls (strncpy, snprintf) the firmware uses.
+    # GCC / clang have no such concept; we only want to disarm them in
+    # the desktop build.
+    $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS=1>
 )
 
 # SDL2 link wiring — handle every shape of SDL2 install we might find.
