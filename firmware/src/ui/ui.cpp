@@ -14,7 +14,6 @@ Manager g_ui;
 // --- LVGL style helpers ----------------------------------------------------
 
 static lv_style_t s_style_bg;
-static lv_style_t s_style_panel;
 
 static void init_theme() {
     lv_style_init(&s_style_bg);
@@ -22,25 +21,13 @@ static void init_theme() {
     lv_style_set_bg_opa(&s_style_bg, LV_OPA_COVER);
     lv_style_set_border_width(&s_style_bg, 0);
     lv_style_set_pad_all(&s_style_bg, 0);
-
-    lv_style_init(&s_style_panel);
-    lv_style_set_bg_color(&s_style_panel, lv_color_hex(::ui::C_PANEL));
-    lv_style_set_bg_opa(&s_style_panel, LV_OPA_COVER);
-    lv_style_set_border_width(&s_style_panel, 0);
-    lv_style_set_radius(&s_style_panel, 10);
-    lv_style_set_pad_all(&s_style_panel, 10);
 }
 
 // --- screen carousel -------------------------------------------------------
 
-// Each screen lives in its own lv_obj_t* and we toggle visibility via a
-// horizontal slide animation, which is cheap on the S3.
-
 static lv_obj_t* s_root        = nullptr;
 static lv_obj_t* s_screens[(uint8_t)Screen::_Count] = {};
 static lv_obj_t* s_header      = nullptr;
-static lv_obj_t* s_nav         = nullptr;
-static lv_obj_t* s_nav_dots[(uint8_t)Screen::_Count] = {};
 
 static const char* screen_titles[(uint8_t)Screen::_Count] = {
     "Live",
@@ -50,6 +37,10 @@ static const char* screen_titles[(uint8_t)Screen::_Count] = {
     "Settings",
 };
 
+// Forward declaration — the swipe handler attached to each screen needs
+// to call go_to_next / go_to_prev on the manager.
+static void screen_gesture_cb(lv_event_t* e);
+
 void Manager::begin() {
     init_theme();
 
@@ -58,38 +49,29 @@ void Manager::begin() {
 
     s_header = screens::build_header(s_root);
 
-    // Bottom nav indicator (small dots)
-    s_nav = lv_obj_create(s_root);
-    lv_obj_remove_style_all(s_nav);
-    lv_obj_set_size(s_nav, LV_HOR_RES, 12);
-    lv_obj_align(s_nav, LV_ALIGN_BOTTOM_MID, 0, -6);
-    lv_obj_set_flex_flow(s_nav, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(s_nav, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(s_nav, 8, 0);
-    for (uint8_t i = 0; i < (uint8_t)Screen::_Count; ++i) {
-        s_nav_dots[i] = lv_obj_create(s_nav);
-        lv_obj_remove_style_all(s_nav_dots[i]);
-        lv_obj_set_size(s_nav_dots[i], 8, 8);
-        lv_obj_set_style_radius(s_nav_dots[i], 4, 0);
-        lv_obj_set_style_bg_opa(s_nav_dots[i], LV_OPA_COVER, 0);
-        lv_obj_set_style_bg_color(s_nav_dots[i],
-                                   lv_color_hex(::ui::C_TEXT_DIM), 0);
-    }
-
-    // Build screens
+    // Build screens.
     s_screens[(uint8_t)Screen::Dashboard] = screens::build_dashboard(s_root);
     s_screens[(uint8_t)Screen::Ams]       = screens::build_ams(s_root);
     s_screens[(uint8_t)Screen::Printers]  = screens::build_printers(s_root);
     s_screens[(uint8_t)Screen::History]   = screens::build_history(s_root);
     s_screens[(uint8_t)Screen::Settings]  = screens::build_settings(s_root);
 
+    // Attach swipe-gesture detection on every screen container so the
+    // user can flick left / right between them regardless of where they
+    // touched inside the body.
     for (uint8_t i = 0; i < (uint8_t)Screen::_Count; ++i) {
+        lv_obj_add_event_cb(s_screens[i], screen_gesture_cb,
+                            LV_EVENT_GESTURE, nullptr);
         lv_obj_add_flag(s_screens[i], LV_OBJ_FLAG_HIDDEN);
     }
+
     screens::build_toast(s_root);
-    screens::build_actions(s_root);
     screens::build_hms_flash(s_root);
     screens::build_ota_overlay(s_root);
+
+    // The tab bar lives on top of every screen and stays clickable, so
+    // build it last (LVGL z-orders by creation order within a parent).
+    screens::build_tab_bar(s_root);
 
     go_to(Screen::Dashboard);
 }
@@ -100,16 +82,21 @@ void Manager::go_to(Screen s) {
     current_ = s;
     lv_obj_clear_flag(s_screens[(uint8_t)current_], LV_OBJ_FLAG_HIDDEN);
     screens::header_set_title(screen_titles[(uint8_t)current_]);
-    // Update nav dots
-    for (uint8_t i = 0; i < (uint8_t)Screen::_Count; ++i) {
-        lv_color_t c = (i == (uint8_t)current_)
-                           ? lv_color_hex(::ui::C_ACCENT)
-                           : lv_color_hex(::ui::C_TEXT_DIM);
-        lv_obj_set_style_bg_color(s_nav_dots[i], c, 0);
-        uint16_t sz = (i == (uint8_t)current_) ? 10 : 6;
-        lv_obj_set_size(s_nav_dots[i], sz, sz);
-        lv_obj_set_style_radius(s_nav_dots[i], sz / 2, 0);
-    }
+    screens::tab_bar_set_active((uint8_t)current_);
+}
+
+void Manager::go_to_next() {
+    int next = ((int)current_ + 1) % (int)Screen::_Count;
+    go_to((Screen)next);
+}
+
+void Manager::go_to_prev() {
+    int prev = ((int)current_ - 1 + (int)Screen::_Count) % (int)Screen::_Count;
+    go_to((Screen)prev);
+}
+
+void Manager::set_selected_printer(int id) {
+    selected_printer_id_ = id;
 }
 
 void Manager::refresh() {
@@ -124,23 +111,19 @@ void Manager::refresh() {
     uint8_t n = 0;
     ::bambuddy::g_client.snapshot_printers(ps, n);
     if (selected_printer_id_ < 0 && n > 0) {
-        selected_index_ = 0;
         selected_printer_id_ = ps[0].id;
     }
 
     switch (current_) {
         case Screen::Dashboard: screens::update_dashboard(selected_printer_id_); break;
         case Screen::Ams:       screens::update_ams(selected_printer_id_);       break;
-        case Screen::Printers:  screens::update_printers(selected_index_);       break;
+        case Screen::Printers:  screens::update_printers(selected_printer_id_);  break;
         case Screen::History:   screens::update_history();                       break;
         case Screen::Settings:  screens::update_settings();                      break;
         default: break;
     }
 
     // --- HMS full-screen flash state machine -------------------------------
-    // While OTA owns the screen we suppress every other overlay; popping a
-    // red HMS flash on top of an upload progress bar would be useless and
-    // confusing.
     if (screens::ota_is_active()) {
         if (screens::hms_flash_is_visible()) screens::hms_flash_hide();
         return;
@@ -159,8 +142,6 @@ void Manager::refresh() {
         return;
     }
 
-    // Pop the overlay immediately on the edge from ok → error so the user
-    // gets the alert without waiting for the next periodic tick.
     if (!hms_was_active_) {
         screens::hms_flash_show(hms_now.c_str());
         hms_hide_at_ms_   = now + ::bambuddy::HMS_FLASH_VISIBLE_MS;
@@ -188,15 +169,22 @@ void Manager::show_toast(const char* text, lv_color_t colour) {
     screens::show_toast(text, colour);
 }
 
-// --- input handling --------------------------------------------------------
+// --- swipe gesture ---------------------------------------------------------
 
-static void cycle_printer(int dir, int& selected_index, int& selected_id) {
-    ::bambuddy::Printer ps[8];
-    uint8_t n = 0;
-    ::bambuddy::g_client.snapshot_printers(ps, n);
-    if (n == 0) return;
-    selected_index = ((selected_index + dir) % (int)n + (int)n) % (int)n;
-    selected_id = ps[selected_index].id;
+static void screen_gesture_cb(lv_event_t* e) {
+    if (screens::ota_is_active())       return;
+    if (screens::hms_flash_is_visible()) return;
+
+    lv_indev_t* indev = lv_indev_get_act();
+    if (!indev) return;
+    lv_dir_t dir = lv_indev_get_gesture_dir(indev);
+    // LVGL emits LV_EVENT_GESTURE on every event after a gesture is
+    // detected; consume the indev so we don't fire the swipe twice for
+    // the same flick.
+    lv_indev_wait_release(indev);
+
+    if (dir == LV_DIR_LEFT)       g_ui.go_to_next();
+    else if (dir == LV_DIR_RIGHT) g_ui.go_to_prev();
 }
 
 }  // namespace ui

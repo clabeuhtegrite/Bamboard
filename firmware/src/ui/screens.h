@@ -1,5 +1,5 @@
 // Per-screen builders. Each screen returns its root container; the UI
-// manager wires them into a single carousel.
+// manager wires them into a tab-bar-driven stack on the 480 × 272 panel.
 
 #pragma once
 
@@ -15,36 +15,34 @@ lv_obj_t* build_printers (lv_obj_t* parent);
 lv_obj_t* build_history  (lv_obj_t* parent);
 lv_obj_t* build_settings (lv_obj_t* parent);
 
-// Each screen exposes an update() that copies fresh data from the
-// Bambuddy client snapshot into its widgets. Called from the UI manager.
+// Per-tick updaters — copy the latest Bambuddy snapshot into each
+// screen's widgets. Called from ui::Manager::refresh().
 void update_dashboard(int printer_id);
-void update_ams(int printer_id);
-void update_printers(int selected_index);
-void update_history();
-void update_settings();
+void update_ams      (int printer_id);
+void update_printers (int focused_printer_id);
+void update_history  ();
+void update_settings ();
 
-// Cycle visible AMS unit when the selected printer has more than one. Called
-// by the UI manager on long-press OK while the AMS screen is active.
+// Cycle visible AMS unit when the selected printer has more than one.
 void ams_cycle_unit(int dir);
 
 // Toast / message overlay used by the manager.
 lv_obj_t* build_toast(lv_obj_t* parent);
 void      show_toast(const char* msg, lv_color_t bg);
 
-// Full-screen HMS-error flash. Lives above every other UI element so it's
-// visible from across the room even when the user is on the AMS / History
-// pages. The UI manager drives a periodic show/hide cycle while an HMS
-// error is active; consumers should just call show/hide/update.
+// Full-screen HMS-error flash. The UI manager drives a periodic show /
+// hide cycle while an HMS error is active; consumers just call these.
+// Touch anywhere on the overlay dismisses it immediately; the manager
+// re-arms it after the cooldown if the error persists.
 lv_obj_t* build_hms_flash(lv_obj_t* parent);
 void      hms_flash_show      (const char* msg);
 void      hms_flash_hide      ();
 void      hms_flash_update_msg(const char* msg);
 bool      hms_flash_is_visible();
 
-// Full-screen OTA progress overlay. The setters are safe to call from any
-// task (they write a tiny shared state); ota_apply() pulls that state into
-// the LVGL widget and MUST be called from the UI task — invoked once per
-// refresh tick by the manager.
+// Full-screen OTA progress overlay. Same shape as before — the setters
+// are safe to call from any task, ota_apply() is called from the UI
+// task once per refresh tick to sync the shared state into the widget.
 lv_obj_t* build_ota_overlay(lv_obj_t* parent);
 void      ota_set_active  (bool active);
 void      ota_set_progress(uint8_t pct);
@@ -52,40 +50,16 @@ void      ota_set_error   (const char* msg);
 void      ota_apply       ();
 bool      ota_is_active   ();
 
-// Per-printer actions modal. Items shown are decided by the caller — the
-// Printers screen opens the full {ClearHms, ClearPlate, Cancel} set on
-// long-press OK; the Live screen opens a contextual subset on double-click
-// (ClearPlate when the print is finished, CycleSpeed while it's running,
-// etc.). The UI manager funnels button events to actions_navigate /
-// confirm / close while it's open and skips the normal screen routing.
-enum class ActionItem : uint8_t {
-    ClearHms = 0,
-    ClearPlate,
-    CycleSpeed,
-    Cancel,
-    _Count,
-};
-
-lv_obj_t* build_actions    (lv_obj_t* parent);
-void      actions_open     (int printer_id,
-                            const char* printer_name,
-                            const ActionItem* items,
-                            uint8_t count);
-// Convenience wrapper used by the Live screen — builds the contextual
-// item list from the printer's current state + speed level internally.
-void      actions_open_for_live(int printer_id,
-                                const char* printer_name,
-                                ::bambuddy::PrinterState state,
-                                uint8_t speed_level);
-void      actions_close    ();
-void      actions_navigate (int dir);
-void      actions_confirm  ();
-bool      actions_is_open  ();
-
 // Shared header (title + connectivity indicator). Used by the carousel.
 lv_obj_t* build_header(lv_obj_t* parent);
 void      header_set_title(const char* title);
 void      header_set_online(bool online, uint32_t latency_ms);
 void      header_set_printer_name(const char* name);
+
+// Bottom tab bar. Permanent — sits above every screen and routes taps
+// to ui::g_ui.go_to(Screen). tab_bar_set_active() highlights the tab
+// matching the currently visible screen.
+lv_obj_t* build_tab_bar(lv_obj_t* parent);
+void      tab_bar_set_active(uint8_t idx);
 
 }  // namespace ui::screens
