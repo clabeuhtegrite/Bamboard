@@ -41,6 +41,7 @@ scripts/.bamboard-cache.json
 scripts/__pycache__/
 *.pyc
 
-# Desktop LVGL sim build tree
+# Desktop LVGL sim build tree (default + the -DBAMBOARD_SIM_LIVE=ON one)
 sim/build/
+sim/build-*/
 sim/cmake-build-*/
