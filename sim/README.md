@@ -21,17 +21,20 @@ What it doesn't validate:
 - The real ESP32-S3 RGB timing parameters.
 - Network paths (REST / WebSocket / OTA) — all stubbed.
 
-## Install SDL2
+## SDL2
+
+CMake tries the system / package-manager install first, and falls back
+to building SDL2 from source via `FetchContent` when nothing is found.
+So the sim **just works on a fresh Windows box** — the first
+configure spends 2-3 min compiling SDL2, after that it's incremental.
+
+If you'd rather provide SDL2 yourself (faster initial configure):
 
 | OS      | Command                                          |
 |---------|--------------------------------------------------|
-| Windows | `vcpkg install sdl2` (then pass `-DCMAKE_TOOLCHAIN_FILE=...` to CMake) |
+| Windows | `vcpkg install sdl2` then `-DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake` |
 | macOS   | `brew install sdl2`                              |
 | Linux   | `sudo apt install libsdl2-dev`                   |
-
-For Windows without vcpkg you can also drop the [official SDL2 dev
-package](https://github.com/libsdl-org/SDL/releases) into a folder and
-point CMake at it via `-DSDL2_DIR=...`.
 
 ## Build & run
 

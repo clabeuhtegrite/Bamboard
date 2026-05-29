@@ -5,20 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(FetchContent)
+
 # -----------------------------------------------------------------------------
 # Dependencies
 # -----------------------------------------------------------------------------
-
-find_package(SDL2 REQUIRED)
-if (NOT SDL2_FOUND)
-    message(FATAL_ERROR
-        "SDL2 not found. Install it first:\n"
-        "  Windows: vcpkg install sdl2 && pass -DCMAKE_TOOLCHAIN_FILE=...\n"
-        "  macOS  : brew install sdl2\n"
-        "  Linux  : sudo apt install libsdl2-dev")
-endif()
-
-include(FetchContent)
 
 # Match the firmware's pinned versions so the same screens.cpp behaves
 # identically on the desktop sim and on the board.
@@ -46,6 +37,28 @@ target_include_directories(lvgl PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/stubs
 )
 
+# SDL2 — try the system / vcpkg / brew install first (fast path on
+# Linux + macOS), fall back to fetching the official source if nothing
+# is found (the no-install path that "just works" on a fresh Windows
+# box). Building SDL2 from source adds 2-3 min to the first configure
+# but produces a self-contained static lib so the resulting .exe has
+# no external runtime dependency.
+find_package(SDL2 QUIET CONFIG)
+
+if (NOT SDL2_FOUND)
+    message(STATUS "SDL2 not found via find_package — fetching from libsdl-org/SDL.")
+    set(SDL_SHARED           OFF CACHE BOOL "" FORCE)
+    set(SDL_STATIC           ON  CACHE BOOL "" FORCE)
+    set(SDL_TEST             OFF CACHE BOOL "" FORCE)
+    set(SDL2_DISABLE_INSTALL ON  CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        SDL2
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+        GIT_TAG        release-2.30.7
+    )
+    FetchContent_MakeAvailable(SDL2)
+endif()
+
 # -----------------------------------------------------------------------------
 # Sim target
 # -----------------------------------------------------------------------------
@@ -72,22 +85,30 @@ target_include_directories(bamboard_sim PRIVATE
                                                   # shim shadows any system Arduino.h
     ${CMAKE_CURRENT_LIST_DIR}/../firmware/include
     ${FIRMWARE_SRC}
-    ${SDL2_INCLUDE_DIRS}
 )
 
-# The Arduino / WiFi / FreeRTOS / WebSocketsClient shims live in stubs/
-# and must be visible to the firmware sources *before* the real headers
-# (which don't exist on a PC build).
 target_compile_definitions(bamboard_sim PRIVATE
     LV_CONF_INCLUDE_SIMPLE=1
 )
 
-# SDL2 ships either a SDL2::SDL2 target (modern installs / vcpkg) or
-# only raw SDL2_LIBRARIES (older find modules). Handle both.
-if (TARGET SDL2::SDL2)
+# SDL2 link wiring — handle every shape of SDL2 install we might find.
+# Order matters: `SDL2::SDL2-static` exists when we built via
+# FetchContent with SDL_STATIC=ON; `SDL2::SDL2` is what vcpkg /
+# Homebrew / apt-side configs export; raw variables are the legacy
+# fallback.
+if (TARGET SDL2::SDL2-static)
+    target_link_libraries(bamboard_sim PRIVATE SDL2::SDL2-static)
+elseif (TARGET SDL2::SDL2)
     target_link_libraries(bamboard_sim PRIVATE SDL2::SDL2)
 else()
     target_link_libraries(bamboard_sim PRIVATE ${SDL2_LIBRARIES})
+    target_include_directories(bamboard_sim PRIVATE ${SDL2_INCLUDE_DIRS})
+endif()
+
+# SDL2main wraps WinMain on Windows and SDL_main on macOS so our plain
+# `int main(int, char**)` works as the entry point.
+if (TARGET SDL2::SDL2main)
+    target_link_libraries(bamboard_sim PRIVATE SDL2::SDL2main)
 endif()
 
 target_link_libraries(bamboard_sim PRIVATE lvgl ArduinoJson)
@@ -97,4 +118,9 @@ target_link_libraries(bamboard_sim PRIVATE lvgl ArduinoJson)
 if (NOT MSVC)
     target_compile_options(bamboard_sim PRIVATE
         -Wall -Wno-unused-parameter -Wno-sign-compare -Wno-deprecated-declarations)
+else()
+    # MSVC's default warning level on a stranger codebase is noisy; bump
+    # the firmware sources back to default rather than /W4 so the
+    # configure output stays readable.
+    target_compile_options(bamboard_sim PRIVATE /W3 /wd4244 /wd4267 /wd4018)
 endif()
