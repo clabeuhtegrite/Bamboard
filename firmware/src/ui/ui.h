@@ -1,27 +1,18 @@
 // Bamboard UI — LVGL screen manager.
 //
-// Four screens connected as a horizontal carousel. The three buttons
-// behave as follows:
+// Five screens stacked under a bottom tab bar (Live / AMS / Printers /
+// History / Settings). Tap a tab to switch; the follow-up commit will
+// also wire a swipe gesture across the screen body.
 //
-//   On any screen:
-//     PREV (short) ↔ NEXT (short) : switch screen
-//     OK   (long)                 : open contextual actions for the current screen
-//
-//   On the dashboard:
-//     PREV (long) : previous printer
-//     NEXT (long) : next printer
-//     OK   (short): trigger refresh
-//
-// The UI never blocks: it reads snapshots produced by the network task and
-// re-renders. Animations are kept simple (LVGL transitions) to remain
-// snappy on the S3.
+// The UI never blocks: it reads snapshots produced by the network task
+// and re-renders. Touch events come straight from the LVGL pointer
+// input device registered by hw/display.cpp, so the screen manager
+// only needs to publish the screens themselves — no manual event poll.
 
 #pragma once
 
 #include <Arduino.h>
 #include <lvgl.h>
-
-#include "../hw/buttons.h"
 
 namespace ui {
 
@@ -37,9 +28,6 @@ enum class Screen : uint8_t {
 class Manager {
    public:
     void begin();
-
-    // Pull events from the buttons module and dispatch them.
-    void handle_input();
 
     // Periodic UI refresh (pull latest snapshots into widgets).
     void refresh();

@@ -18,9 +18,7 @@
 #include <lvgl.h>
 
 #include "config.h"
-#include "hw/buttons.h"
 #include "hw/display.h"
-#include "hw/led.h"
 #include "net/bambuddy_client.h"
 #include "net/bambuddy_ws.h"
 #include "ui/screens.h"
@@ -186,34 +184,28 @@ static void net_task(void*) {
 }
 
 static void ui_task(void*) {
-    uint32_t last_refresh = 0;
+    uint32_t last_refresh       = 0;
+    uint32_t last_touch_seen_ms = millis();
     for (;;) {
-        hw::g_buttons.update();
-        ui::g_ui.handle_input();
+        // LVGL pumps both the display flush and the touch input device.
+        // The touch driver bumps `consume_touch_activity()` whenever the
+        // GT911 reports a press; we use that to reset the auto-dim timer.
         hw::g_display.tick();
+        if (hw::g_display.consume_touch_activity()) {
+            last_touch_seen_ms = millis();
+            if (hw::g_display.backlight() < display::BL_FULL) {
+                hw::g_display.set_backlight(display::BL_FULL);
+            }
+        }
 
         if (millis() - last_refresh > 250) {
             ui::g_ui.refresh();
             last_refresh = millis();
         }
 
-        // LED reflects the currently-selected printer.
-        {
-            bambuddy::Printer ps[8]; uint8_t n = 0;
-            bambuddy::g_client.snapshot_printers(ps, n);
-            int id = ui::g_ui.selected_printer_id();
-            bambuddy::PrinterState st = bambuddy::PrinterState::Unknown;
-            bool hms_err = false;
-            for (uint8_t i = 0; i < n; ++i)
-                if (ps[i].id == id) {
-                    st = ps[i].state;
-                    hms_err = ps[i].hms.length() && ps[i].hms != "ok";
-                }
-            hw::g_led.tick(st, hms_err);
-        }
-
-        // Auto-dim
-        if (millis() - hw::g_buttons.last_activity_ms() > display::DIM_AFTER_MS) {
+        // Auto-dim — no more buttons, so the touch driver is the only thing
+        // that can wake the screen back up.
+        if (millis() - last_touch_seen_ms > display::DIM_AFTER_MS) {
             if (hw::g_display.backlight() > display::BL_DIM)
                 hw::g_display.set_backlight(display::BL_DIM);
         }
@@ -231,8 +223,6 @@ void setup() {
     delay(50);
     log_i("Bamboard booting");
 
-    hw::g_buttons.begin();
-    hw::g_led.begin();
     if (!hw::g_display.begin()) {
         // Fall back to a minimal serial-only mode; the user will see no
         // output but we don't want to brick the device.
@@ -241,9 +231,12 @@ void setup() {
     ui::g_ui.begin();
     lv_timer_handler();
 
-    // If PREV is held during boot, wipe NVS and force re-provisioning.
-    if (digitalRead(pins::BTN_PREV) == LOW) {
-        log_w("PREV held — clearing settings");
+    // Factory reset: the BOOT button on the side of the Guition PCB is the
+    // only physical input left. Holding it during power-up wipes NVS and
+    // re-opens the captive portal (used to be PREV-at-boot on v0.x).
+    pinMode(pins::BOOT_BUTTON, INPUT_PULLUP);
+    if (digitalRead(pins::BOOT_BUTTON) == LOW) {
+        log_w("BOOT held — clearing settings");
         clear_all_prefs();
         delay(500);
     }
