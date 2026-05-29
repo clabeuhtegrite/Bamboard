@@ -32,6 +32,15 @@
 
 extern void factory_reset();   // defined in main.cpp — used by Settings
 
+// Defined in main.cpp (or sim/stubs/ArduinoStubs.cpp on the desktop sim).
+// MUST be declared at file scope, NOT inside the `ui::screens` namespace
+// — a `block-scope` extern declaration introduces the name in the
+// nearest enclosing namespace, which would make the linker look for
+// `ui::screens::g_cfg_bambuddy_url` and not find it (MSVC catches this
+// strictly; gcc accepts it as a quirk). Keeping it up here forces the
+// reference to resolve to the global ::g_cfg_bambuddy_url symbol.
+extern String g_cfg_bambuddy_url;
+
 namespace ui::screens {
 
 // ---------- Shared styles ---------------------------------------------------
@@ -1152,9 +1161,8 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
 
 void update_settings() {
     maybe_hide_toast();
-    extern String g_cfg_bambuddy_url;
-    lv_label_set_text(s_set_url, g_cfg_bambuddy_url.length()
-                                      ? g_cfg_bambuddy_url.c_str()
+    lv_label_set_text(s_set_url, ::g_cfg_bambuddy_url.length()
+                                      ? ::g_cfg_bambuddy_url.c_str()
                                       : "(not configured)");
     lv_label_set_text(s_set_ip,   WiFi.localIP().toString().c_str());
     char r[16];
