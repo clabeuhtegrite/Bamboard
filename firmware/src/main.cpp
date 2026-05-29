@@ -56,6 +56,17 @@ static void clear_all_prefs() {
     WiFi.disconnect(true, true);
 }
 
+// Public hook used by the Settings screen's "Factory reset" touch button
+// (declared `extern void factory_reset();` in screens.cpp). Wipes NVS the
+// same way "hold BOOT at boot" does, then reboots — on the next start,
+// the captive portal flow runs again.
+void factory_reset() {
+    log_w("Factory reset requested from UI");
+    clear_all_prefs();
+    delay(300);
+    ESP.restart();
+}
+
 // ---------------------------------------------------------------------------
 // Wi-Fi provisioning
 // ---------------------------------------------------------------------------
