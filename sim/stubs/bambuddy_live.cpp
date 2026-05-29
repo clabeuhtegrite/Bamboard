@@ -142,19 +142,49 @@ void copy_short(char* dst, size_t cap, const char* src) {
     dst[n] = '\0';
 }
 
+// Try a couple of likely key names for a numeric field. Bambuddy's
+// PrinterStatus.temperatures is a free-form dict mirroring whatever the
+// Bambu MQTT payload looks like; the underlying firmware has used both
+// `nozzle` and `nozzle_temper` across versions.
+float pick_float(JsonVariantConst v, const char* a, const char* b) {
+    if (v.isNull()) return 0.0f;
+    if (v[a].is<float>() || v[a].is<int>()) return v[a].as<float>();
+    if (v[b].is<float>() || v[b].is<int>()) return v[b].as<float>();
+    return 0.0f;
+}
+
 // Apply a /status-shaped JSON to a Printer. Called with s_mtx held.
 void apply_status(Printer& p, JsonVariantConst doc) {
     p.state          = parse_state_str(doc["state"] | "");
-    p.progress       = doc["progress"]       | 0;
+    p.progress       = (uint8_t)(doc["progress"] | 0.0f);
     p.remaining_s    = doc["remaining_time"] | 0;
-    p.current_layer  = doc["current_layer"]  | 0;
+    p.current_layer  = doc["layer_num"]      | 0;
     p.total_layers   = doc["total_layers"]   | 0;
-    p.temps.nozzle   = doc["temperatures"]["nozzle"]  | 0.0f;
-    p.temps.bed      = doc["temperatures"]["bed"]     | 0.0f;
-    p.temps.chamber  = doc["temperatures"]["chamber"] | 0.0f;
-    p.hms            = (const char*)(doc["hms_status"] | "ok");
-    p.filename       = (const char*)(doc["filename"]   | "");
-    p.speed_level    = doc["speed_level"] | 2;
+    JsonVariantConst t = doc["temperatures"];
+    p.temps.nozzle   = pick_float(t, "nozzle",  "nozzle_temper");
+    p.temps.bed      = pick_float(t, "bed",     "bed_temper");
+    p.temps.chamber  = pick_float(t, "chamber", "chamber_temper");
+
+    // HMS: array of {code, module, severity, attr}. Empty → "ok";
+    // otherwise we surface the first entry's code.
+    JsonArrayConst hms = doc["hms_errors"].as<JsonArrayConst>();
+    if (hms.isNull() || hms.size() == 0) {
+        p.hms = "ok";
+    } else {
+        const char* code = hms[0]["code"] | "";
+        if (hms.size() == 1) {
+            p.hms = code;
+        } else {
+            p.hms = String(code) + " (+" +
+                    (uint32_t)(hms.size() - 1) + " more)";
+        }
+    }
+
+    // Filename: prefer the human-friendly subtask_name, fall back to gcode_file.
+    const char* fn = doc["subtask_name"] | "";
+    if (!*fn) fn = doc["gcode_file"] | "";
+    p.filename    = fn;
+    p.speed_level = doc["speed_level"] | 2;
 
     p.ams_exists = doc["ams_exists"] | false;
     p.ams_count  = 0;
@@ -175,13 +205,13 @@ void apply_status(Printer& p, JsonVariantConst doc) {
             u.present      = true;
             JsonArrayConst trays = ams_obj["tray"].as<JsonArrayConst>();
             if (!trays.isNull()) {
-                for (JsonObjectConst t : trays) {
+                for (JsonObjectConst tr : trays) {
                     if (u.slot_count >= 4) break;
                     AmsSlot& s = u.slots[u.slot_count++];
-                    s.id        = t["id"] | 0;
-                    s.color_rgb = parse_tray_color(t["tray_color"] | "");
-                    copy_short(s.type, sizeof(s.type), t["tray_type"] | "");
-                    s.remain    = t["remain"] | 0;
+                    s.id        = tr["id"] | 0;
+                    s.color_rgb = parse_tray_color(tr["tray_color"] | "");
+                    copy_short(s.type, sizeof(s.type), tr["tray_type"] | "");
+                    s.remain    = tr["remain"] | 0;
                     s.present   = (s.type[0] != '\0') ||
                                   (s.color_rgb != 0) ||
                                   (s.remain > 0);
@@ -196,28 +226,83 @@ void set_error(const std::string& msg) {
     s_last_error = msg;
 }
 
+// ---- Diagnostic helpers ----------------------------------------------------
+//
+// Live mode is the path the user runs *to debug a real Bambuddy*. Silent
+// failures here mean the user sees an empty UI with no idea why — so we
+// log every request's outcome to stderr, plus a snippet of the response
+// body whenever we reject one (wrong status, bad JSON, unexpected shape).
+
+// Truncate `body` to 200 chars + a trailing "...(<n> bytes total)" if
+// the original was longer. Returned by value because std::string is
+// move-cheap and this is debug-path code.
+std::string snippet(const std::string& body, size_t cap = 200) {
+    if (body.size() <= cap) return body;
+    std::string out = body.substr(0, cap);
+    char tail[40];
+    std::snprintf(tail, sizeof(tail), " …(%zu bytes total)", body.size());
+    out += tail;
+    return out;
+}
+
+// Log one HTTP outcome in a consistent shape so the user can grep.
+//   [sim/live] GET /api/v1/printers/ -> 200 (12ms, 482 bytes)
+//   [sim/live] GET /api/v1/printers/ -> CONNECT FAILED (httplib err 2)
+void log_get(const char* path, const httplib::Result& res, long long ms) {
+    if (!res) {
+        std::fprintf(stderr,
+            "[sim/live] GET %s -> CONNECT FAILED (httplib err %d: %s)\n",
+            path, (int)res.error(),
+            httplib::to_string(res.error()).c_str());
+        return;
+    }
+    std::fprintf(stderr,
+        "[sim/live] GET %s -> HTTP %d (%lldms, %zu bytes)\n",
+        path, res->status, ms, res->body.size());
+}
+
 // ---- One full poll cycle ----------------------------------------------------
 
 void poll_once() {
+    static uint32_t s_cycle = 0;
+    ++s_cycle;
+    std::fprintf(stderr, "[sim/live] --- poll #%u ---\n", s_cycle);
+
     auto c = make_http();
+    auto now = []{ return std::chrono::steady_clock::now(); };
+    auto ms_since = [](auto t0) {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - t0).count();
+    };
 
     // 1) /printers ----------------------------------------------------------
     {
-        auto res = c.Get("/api/v1/printers");
-        if (!res) {
-            set_error("connect failed");
-            return;
-        }
+        auto t0 = now();
+        auto res = c.Get("/api/v1/printers/");
+        log_get("/api/v1/printers/", res, ms_since(t0));
+        if (!res) { set_error("connect failed"); return; }
         if (res->status != 200) {
+            std::fprintf(stderr, "[sim/live]   body: %s\n",
+                         snippet(res->body).c_str());
             char buf[64];
             std::snprintf(buf, sizeof(buf), "HTTP %d on /printers", res->status);
             set_error(buf);
             return;
         }
         JsonDocument doc;
-        if (deserializeJson(doc, res->body) != DeserializationError::Ok ||
-            !doc.is<JsonArray>()) {
+        auto err = deserializeJson(doc, res->body);
+        if (err) {
+            std::fprintf(stderr, "[sim/live]   JSON parse: %s\n", err.c_str());
+            std::fprintf(stderr, "[sim/live]   body: %s\n",
+                         snippet(res->body).c_str());
             set_error("bad JSON on /printers");
+            return;
+        }
+        if (!doc.is<JsonArray>()) {
+            std::fprintf(stderr,
+                "[sim/live]   /printers didn't return a JSON array.\n"
+                "[sim/live]   body: %s\n", snippet(res->body).c_str());
+            set_error("/printers: expected array");
             return;
         }
         std::lock_guard<std::mutex> lk(s_mtx);
@@ -232,6 +317,8 @@ void poll_once() {
             p.state = parse_state_str(obj["status"] | "");
         }
         s_last_error.clear();
+        std::fprintf(stderr, "[sim/live]   parsed %u printer(s) from /printers\n",
+                     (unsigned)s_printer_count);
     }
 
     // 2) /printers/:id/status — one fetch per printer ----------------------
@@ -245,10 +332,21 @@ void poll_once() {
         char path[64];
         std::snprintf(path, sizeof(path),
                       "/api/v1/printers/%d/status", ids[i]);
+        auto t0 = now();
         auto res = c.Get(path);
-        if (!res || res->status != 200) continue;
+        log_get(path, res, ms_since(t0));
+        if (!res || res->status != 200) {
+            if (res) std::fprintf(stderr, "[sim/live]   body: %s\n",
+                                  snippet(res->body).c_str());
+            continue;
+        }
         JsonDocument doc;
-        if (deserializeJson(doc, res->body) != DeserializationError::Ok) continue;
+        auto err = deserializeJson(doc, res->body);
+        if (err) {
+            std::fprintf(stderr, "[sim/live]   JSON parse: %s — body: %s\n",
+                         err.c_str(), snippet(res->body).c_str());
+            continue;
+        }
         std::lock_guard<std::mutex> lk(s_mtx);
         for (uint8_t k = 0; k < s_printer_count; ++k) {
             if (s_printers[k].id == ids[i]) {
@@ -258,38 +356,71 @@ void poll_once() {
         }
     }
 
-    // 3) /statistics --------------------------------------------------------
-    if (auto res = c.Get("/api/v1/statistics"); res && res->status == 200) {
-        JsonDocument doc;
-        if (deserializeJson(doc, res->body) == DeserializationError::Ok) {
-            std::lock_guard<std::mutex> lk(s_mtx);
-            s_stats.total_prints      = doc["total_prints"]        | 0;
-            s_stats.successful_prints = doc["successful_prints"]   | 0;
-            s_stats.failed_prints     = doc["failed_prints"]       | 0;
-            s_stats.stopped_prints    = doc["stopped_prints"]      | 0;
-            s_stats.success_rate      = doc["success_rate"]        | 0.0f;
-            s_stats.total_time_s      = doc["total_print_time"]    | 0;
-            s_stats.total_filament_g  = doc["total_filament_used"] | 0.0f;
+    // 3) /archives/stats ----------------------------------------------------
+    {
+        auto t0 = now();
+        auto res = c.Get("/api/v1/archives/stats");
+        log_get("/api/v1/archives/stats", res, ms_since(t0));
+        if (res && res->status == 200) {
+            JsonDocument doc;
+            auto err = deserializeJson(doc, res->body);
+            if (err) {
+                std::fprintf(stderr, "[sim/live]   JSON parse: %s — body: %s\n",
+                             err.c_str(), snippet(res->body).c_str());
+            } else {
+                std::lock_guard<std::mutex> lk(s_mtx);
+                s_stats.total_prints      = doc["total_prints"]      | 0;
+                s_stats.successful_prints = doc["successful_prints"] | 0;
+                s_stats.failed_prints     = doc["failed_prints"]     | 0;
+                s_stats.stopped_prints    = 0;   // not in the new schema
+                s_stats.total_time_s      = (uint32_t)((doc["total_print_time_hours"] | 0.0f) * 3600.0f);
+                s_stats.total_filament_g  = doc["total_filament_grams"] | 0.0f;
+                s_stats.success_rate      = s_stats.total_prints > 0
+                    ? (100.0f * s_stats.successful_prints / s_stats.total_prints)
+                    : 0.0f;
+            }
+        } else if (res) {
+            std::fprintf(stderr, "[sim/live]   body: %s\n",
+                         snippet(res->body).c_str());
         }
     }
 
-    // 4) /archives?limit=10 -------------------------------------------------
-    if (auto res = c.Get("/api/v1/archives?limit=10"); res && res->status == 200) {
-        JsonDocument doc;
-        if (deserializeJson(doc, res->body) == DeserializationError::Ok) {
-            JsonArray arr = doc["archives"].as<JsonArray>();
-            if (!arr.isNull()) {
+    // 4) /archives/slim?limit=10 -------------------------------------------
+    {
+        auto t0 = now();
+        auto res = c.Get("/api/v1/archives/slim?limit=10");
+        log_get("/api/v1/archives/slim?limit=10", res, ms_since(t0));
+        if (res && res->status == 200) {
+            JsonDocument doc;
+            auto err = deserializeJson(doc, res->body);
+            if (err) {
+                std::fprintf(stderr, "[sim/live]   JSON parse: %s — body: %s\n",
+                             err.c_str(), snippet(res->body).c_str());
+            } else if (!doc.is<JsonArray>()) {
+                std::fprintf(stderr,
+                    "[sim/live]   /archives/slim didn't return a JSON array.\n"
+                    "[sim/live]   body: %s\n", snippet(res->body).c_str());
+            } else {
+                JsonArray arr = doc.as<JsonArray>();
                 std::lock_guard<std::mutex> lk(s_mtx);
                 s_recent_count = 0;
                 for (JsonObject obj : arr) {
                     if (s_recent_count >= 10) break;
                     Archive& a = s_recent[s_recent_count++];
-                    a.name       = (const char*)(obj["name"]   | "");
-                    a.status     = (const char*)(obj["status"] | "");
-                    a.duration_s = obj["duration"]      | 0;
-                    a.filament_g = obj["filament_used"] | 0.0f;
+                    a.name       = (const char*)(obj["print_name"] | "");
+                    a.status     = (const char*)(obj["status"]     | "");
+                    uint32_t dur = obj["actual_time_seconds"] | 0u;
+                    if (dur == 0) dur = obj["print_time_seconds"] | 0u;
+                    a.duration_s = dur;
+                    a.filament_g = obj["filament_used_grams"] | 0.0f;
                 }
+                std::fprintf(stderr,
+                    "[sim/live]   parsed %u archive(s) from /archives/slim\n",
+                    (unsigned)s_recent_count);
             }
+        } else if (res) {
+            std::fprintf(stderr, "[sim/live]   body: %s\n",
+                         snippet(res->body).c_str());
         }
     }
 }
@@ -404,14 +535,12 @@ bool Client::clear_plate(int id) {
 
 bool Client::start_ams_drying(int id, uint8_t unit,
                                uint16_t minutes, uint8_t temp_c) {
-    char p[80];
+    // Real Bambuddy route — params via query string, no JSON body.
+    char p[128];
     std::snprintf(p, sizeof(p),
-                  "/api/v1/printers/%d/ams/%u/dry", id, (unsigned)unit);
-    char body[80];
-    std::snprintf(body, sizeof(body),
-                  "{\"minutes\":%u,\"temp\":%u}",
-                  (unsigned)minutes, (unsigned)temp_c);
-    bool ok = do_post_json(p, body);
+        "/api/v1/printers/%d/drying/start?ams_id=%u&duration=%u&temp=%u",
+        id, (unsigned)unit, (unsigned)minutes, (unsigned)temp_c);
+    bool ok = do_post_path(p);
     std::fprintf(stderr,
                  "[sim/live] start_ams_drying(%d, unit=%u, %u min @ %u C) -> %s\n",
                  id, (unsigned)unit, (unsigned)minutes, (unsigned)temp_c,
@@ -420,9 +549,9 @@ bool Client::start_ams_drying(int id, uint8_t unit,
 }
 
 bool Client::stop_ams_drying(int id, uint8_t unit) {
-    char p[80];
+    char p[96];
     std::snprintf(p, sizeof(p),
-                  "/api/v1/printers/%d/ams/%u/dry/stop",
+                  "/api/v1/printers/%d/drying/stop?ams_id=%u",
                   id, (unsigned)unit);
     bool ok = do_post_path(p);
     std::fprintf(stderr, "[sim/live] stop_ams_drying(%d, unit=%u) -> %s\n",
