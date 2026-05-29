@@ -1,92 +1,123 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Bamboard AMS screen mockup, 1:1 scale (480x320).
-  Layout grid:
-    Header          : y =   0..36
-    Status strip    : y =  44..76   (unit label · humidity · temp · drying)
-    Slot cards row  : y =  86..276  (four 104×190 cards, 8-px gutters)
-    Nav dots        : y = 304..316  (5 screens — AMS is index 1, active)
+  Bamboard v1.1 AMS overview, 1:1 scale of the JC4827W543 (480 x 272).
+
+  Layout grid (matches firmware/src/ui/screens/ams.cpp):
+    Header        : y =   0 ..  36
+    Body content  : y =  36 .. 228
+      - status strip (◀ / unit / ▶ / humidity / temp / Dry): y =  36 ..  68
+      - 4 slot cards (106 x 148, 8 px gutter)              : y =  76 .. 224
+    Tab bar       : y = 228 .. 272
+
+  Mockup shows AMS 1 of 2 chained units (so the chevrons are active) on a
+  Workshop X1C, with 4 slots: PLA cyan / PETG green / EMPTY / TPU orange.
+  The Dry pill is hidden on this view because unit 1 is a vanilla AMS;
+  swiping to unit 2 (the AMS-HT) reveals it on the right.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" width="480" height="320">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#101418"/>
-      <stop offset="1" stop-color="#1B2027"/>
-    </linearGradient>
-    <style>
-      .t   { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; fill: #E9EEF3; }
-      .dim { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; fill: #8A95A4; }
-      .ac  { fill: #00B7C3; }
-      .ok  { fill: #39D98A; }
-      .wn  { fill: #F5A524; }
-      .er  { fill: #E5484D; }
-    </style>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 272" width="480" height="272">
+  <style>
+    .t   { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; fill: #E9EEF3; }
+    .dim { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; fill: #8A95A4; }
+    .inv { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; fill: #0E1116; }
+    .ac  { fill: #00B7C3; }
+    .ok  { fill: #39D98A; }
+    .warn{ fill: #F5A524; }
+    .err { fill: #E5484D; }
+  </style>
 
-  <rect width="480" height="320" fill="url(#bg)"/>
+  <!-- Background -->
+  <rect width="480" height="272" fill="#0E1116"/>
 
-  <!-- ============ Header (y 0..36) ============ -->
-  <rect x="0" y="0" width="480" height="36" fill="#1B2027"/>
-  <text class="t ac" x="14" y="24" font-size="18" font-weight="700">Bamboard</text>
-  <text class="t"    x="240" y="24" font-size="15" text-anchor="middle">Workshop X1C</text>
-  <text class="ok"   x="466" y="24" font-size="13" text-anchor="end" font-weight="600">● online 41ms</text>
+  <!-- ============ Header ============ -->
+  <rect x="0" y="0"  width="480" height="36" fill="#1A1F26"/>
+  <rect x="0" y="35" width="480" height="1"  fill="#2F3742"/>
+  <text class="t ac" x="12"  y="24" font-size="18" font-weight="700">Bamboard</text>
+  <text class="t"    x="240" y="22" font-size="14" text-anchor="middle">Workshop X1C</text>
+  <text class="ok"   x="468" y="22" font-size="12" text-anchor="end" font-weight="600">▲ 36 ms</text>
 
-  <!-- ============ Status strip (y 44..76) ============ -->
-  <text class="t ac" x="20"  y="64" font-size="18" font-weight="700">AMS 1/2</text>
-  <text class="ok"   x="140" y="64" font-size="15">~ 28%</text>
-  <text class="t"    x="260" y="64" font-size="15">29 °C</text>
-  <text class="wn"   x="460" y="64" font-size="15" text-anchor="end">Dry 1h12</text>
-
-  <!-- ============ Slot cards (y 86..276) ============ -->
-  <!-- Card 1 — PLA Basic, blue, 62% -->
-  <g transform="translate(20,86)">
-    <rect width="104" height="190" rx="10" fill="#1B2027"/>
-    <rect width="104" height="60"  rx="10" fill="#00A0E9"/>
-    <rect y="50" width="104" height="10" fill="#00A0E9"/>
-    <text class="t"  x="12" y="92"  font-size="14" font-weight="600">PLA</text>
-    <text class="t"  x="12" y="130" font-size="26" font-weight="700">62%</text>
-    <rect x="10" y="170" width="84" height="8" rx="4" fill="#232A33"/>
-    <rect x="10" y="170" width="52" height="8" rx="4" fill="#00B7C3"/>
+  <!-- ============ Status strip ============ -->
+  <!-- Left chevron 36 x 32 at (12, 36) -->
+  <g transform="translate(12,36)">
+    <rect width="36" height="32" rx="14" fill="#252B34" stroke="#2F3742"/>
+    <text class="t" x="18" y="22" font-size="16" font-weight="700" text-anchor="middle">‹</text>
+  </g>
+  <!-- Unit label "1 / 2" -->
+  <text class="ac" x="97" y="58" font-size="18" font-weight="700" text-anchor="middle">1 / 2</text>
+  <!-- Right chevron at (138, 36) -->
+  <g transform="translate(138,36)">
+    <rect width="36" height="32" rx="14" fill="#252B34" stroke="#2F3742"/>
+    <text class="t" x="18" y="22" font-size="16" font-weight="700" text-anchor="middle">›</text>
+  </g>
+  <!-- Humidity 28 % (OK colour, < 40) -->
+  <text class="ok" x="186" y="58" font-size="14" font-weight="600">▼ 28%</text>
+  <!-- Ambient temp -->
+  <text class="t"  x="260" y="58" font-size="14" font-weight="600">29 °C</text>
+  <!-- Dry pill on the right edge: 80 x 32 at (388, 36) -->
+  <g transform="translate(388,36)">
+    <rect width="80" height="32" rx="18" fill="#252B34" stroke="#2F3742"/>
+    <text class="t" x="40" y="22" font-size="13" font-weight="600" text-anchor="middle">▼ Dry</text>
   </g>
 
-  <!-- Card 2 — PETG, green, 88% -->
-  <g transform="translate(132,86)">
-    <rect width="104" height="190" rx="10" fill="#1B2027"/>
-    <rect width="104" height="60"  rx="10" fill="#39D98A"/>
-    <rect y="50" width="104" height="10" fill="#39D98A"/>
-    <text class="t"  x="12" y="92"  font-size="14" font-weight="600">PETG</text>
-    <text class="t"  x="12" y="130" font-size="26" font-weight="700">88%</text>
-    <rect x="10" y="170" width="84" height="8" rx="4" fill="#232A33"/>
-    <rect x="10" y="170" width="74" height="8" rx="4" fill="#39D98A"/>
+  <!-- ============ Slot row ============ -->
+  <!--
+    4 cards of 106 x 148 with 8 px gaps. First card at x=16:
+       16, 130, 244, 358 (right edge = 358 + 106 = 464)
+  -->
+
+  <!-- Slot 1 — PLA cyan, 62 % -->
+  <g transform="translate(16,76)">
+    <rect width="106" height="148" rx="12" fill="#252B34" stroke="#2F3742"/>
+    <rect x="0" y="0" width="106" height="50" rx="8" fill="#00A0E9"/>
+    <text class="t" x="8" y="76" font-size="14" font-weight="600">PLA</text>
+    <text class="t" x="8" y="106" font-size="22" font-weight="700">62%</text>
+    <rect x="8" y="124" width="90" height="8" rx="4" fill="#1A1F26"/>
+    <rect x="8" y="124" width="55" height="8" rx="4" fill="#00B7C3"/>
   </g>
 
-  <!-- Card 3 — empty -->
-  <g transform="translate(244,86)">
-    <rect width="104" height="190" rx="10" fill="#1B2027"/>
-    <rect width="104" height="60"  rx="10" fill="#232A33"/>
-    <rect y="50" width="104" height="10" fill="#232A33"/>
-    <text class="dim" x="12" y="92"  font-size="14" font-weight="600">EMPTY</text>
-    <text class="dim" x="12" y="130" font-size="26" font-weight="700">—</text>
-    <rect x="10" y="170" width="84" height="8" rx="4" fill="#232A33"/>
+  <!-- Slot 2 — PETG green, 88 % -->
+  <g transform="translate(130,76)">
+    <rect width="106" height="148" rx="12" fill="#252B34" stroke="#2F3742"/>
+    <rect x="0" y="0" width="106" height="50" rx="8" fill="#39D98A"/>
+    <text class="t" x="8" y="76" font-size="14" font-weight="600">PETG</text>
+    <text class="t" x="8" y="106" font-size="22" font-weight="700">88%</text>
+    <rect x="8" y="124" width="90" height="8" rx="4" fill="#1A1F26"/>
+    <rect x="8" y="124" width="79" height="8" rx="4" fill="#39D98A"/>
   </g>
 
-  <!-- Card 4 — TPU, yellow, 12% (low → red) -->
-  <g transform="translate(356,86)">
-    <rect width="104" height="190" rx="10" fill="#1B2027"/>
-    <rect width="104" height="60"  rx="10" fill="#F5A524"/>
-    <rect y="50" width="104" height="10" fill="#F5A524"/>
-    <text class="t"  x="12" y="92"  font-size="14" font-weight="600">TPU</text>
-    <text class="er" x="12" y="130" font-size="26" font-weight="700">12%</text>
-    <rect x="10" y="170" width="84" height="8" rx="4" fill="#232A33"/>
-    <rect x="10" y="170" width="10" height="8" rx="4" fill="#E5484D"/>
+  <!-- Slot 3 — empty -->
+  <g transform="translate(244,76)">
+    <rect width="106" height="148" rx="12" fill="#252B34" stroke="#2F3742"/>
+    <rect x="0" y="0" width="106" height="50" rx="8" fill="#252B34"/>
+    <text class="dim" x="8" y="76"  font-size="14" font-weight="600">EMPTY</text>
+    <text class="dim" x="8" y="106" font-size="22" font-weight="700">—</text>
+    <rect x="8" y="124" width="90" height="8" rx="4" fill="#1A1F26"/>
   </g>
 
-  <!-- ============ Bottom nav dots (5 screens, AMS = index 1) ============ -->
-  <g transform="translate(240,310)">
-    <circle cx="-28" cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="-14" cy="0" r="5" fill="#00B7C3"/>
-    <circle cx="0"   cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="14"  cy="0" r="3" fill="#8A95A4"/>
-    <circle cx="28"  cy="0" r="3" fill="#8A95A4"/>
+  <!-- Slot 4 — TPU orange, 12 % (error colour < 15) -->
+  <g transform="translate(358,76)">
+    <rect width="106" height="148" rx="12" fill="#252B34" stroke="#2F3742"/>
+    <rect x="0" y="0" width="106" height="50" rx="8" fill="#F5A524"/>
+    <text class="t"   x="8" y="76"  font-size="14" font-weight="600">TPU</text>
+    <text class="err" x="8" y="106" font-size="22" font-weight="700">12%</text>
+    <rect x="8" y="124" width="90" height="8" rx="4" fill="#1A1F26"/>
+    <rect x="8" y="124" width="11" height="8" rx="4" fill="#E5484D"/>
+  </g>
+
+  <!-- ============ Tab bar ============ -->
+  <rect x="0" y="228" width="480" height="44" fill="#1A1F26"/>
+  <rect x="0" y="228" width="480" height="1"  fill="#2F3742"/>
+  <!-- Active tab (AMS = index 1) -->
+  <rect x="108" y="228" width="72" height="3" rx="2" fill="#00B7C3"/>
+  <g font-family="Inter, 'Segoe UI', system-ui, sans-serif" text-anchor="middle">
+    <text class="dim" x="48"  y="248" font-size="14">⌂</text>
+    <text class="dim" x="48"  y="265" font-size="10">Live</text>
+    <text class="ac"  x="144" y="248" font-size="14">▦</text>
+    <text class="ac"  x="144" y="265" font-size="10">AMS</text>
+    <text class="dim" x="240" y="248" font-size="14">≡</text>
+    <text class="dim" x="240" y="265" font-size="10">Printers</text>
+    <text class="dim" x="336" y="248" font-size="14">⟲</text>
+    <text class="dim" x="336" y="265" font-size="10">History</text>
+    <text class="dim" x="432" y="248" font-size="14">⚙</text>
+    <text class="dim" x="432" y="265" font-size="10">Settings</text>
   </g>
 </svg>

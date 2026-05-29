@@ -19,10 +19,12 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 |------|-----|----------|---------|----------|
 | ![Live](docs/screenshots/dashboard_mock.svg) | ![AMS](docs/screenshots/ams_mock.svg) | ![Printers](docs/screenshots/printers_mock.svg) | ![History](docs/screenshots/history_mock.svg) | ![Settings](docs/screenshots/settings_mock.svg) |
 
-> The mockups above are from the v0.x button era and still illustrate
-> the data each screen shows. The v1.0 touch UI keeps the same
-> information density and grows a permanent bottom tab bar plus inline
-> action buttons on Live; refreshed renders are on the v1.0 roadmap.
+> 1:1 SVG mockups of the **v1.1 touch UI** at the real 480 × 272 panel
+> resolution. The permanent bottom tab bar highlights the active screen
+> with a 3 px accent strip; on Live the segmented speed chip replaces
+> the old cycle-on-tap button, on AMS the chevrons flank the unit
+> label, and on Settings a 1–5 segmented selector controls the panel
+> brightness.
 
 ## Features
 

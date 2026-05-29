@@ -71,8 +71,16 @@ add_executable(bamboard_sim
     # Firmware sources compiled as-is — these are display- and
     # network-agnostic; everything below this line is from the same TUs
     # that flash onto the Guition board.
-    ${FIRMWARE_SRC}/ui/screens.cpp
     ${FIRMWARE_SRC}/ui/ui.cpp
+    ${FIRMWARE_SRC}/ui/screens/theme.cpp
+    ${FIRMWARE_SRC}/ui/screens/header.cpp
+    ${FIRMWARE_SRC}/ui/screens/tab_bar.cpp
+    ${FIRMWARE_SRC}/ui/screens/dashboard.cpp
+    ${FIRMWARE_SRC}/ui/screens/ams.cpp
+    ${FIRMWARE_SRC}/ui/screens/printers.cpp
+    ${FIRMWARE_SRC}/ui/screens/history.cpp
+    ${FIRMWARE_SRC}/ui/screens/settings.cpp
+    ${FIRMWARE_SRC}/ui/screens/overlays.cpp
 
     # Sim stubs that replace the on-device hw + net layers.
     stubs/ArduinoStubs.cpp
