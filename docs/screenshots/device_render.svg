@@ -1,123 +1,291 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Bamboard hero render. White FDM-printed front shell, 4" ILI9488 showing the
-  live dashboard, 3 button caps below the screen, status LED in the top-right
-  corner, USB-C cable trailing off the right side. Pure SVG, no raster assets.
+  Bamboard v1.1 hero render.
+
+  Photorealistic-leaning SVG product shot of the assembled v1.1 device:
+  Guition JC4827W543 (4.3" IPS 480x272 capacitive touch, ESP32-S3 +
+  8 MB PSRAM, all on one PCB) sitting in the new compact PETG case
+  with the chamfered front edge and the integrated 15° desk-stand
+  tab. Screen renders the v1.1 Live dashboard — Workshop X1C printing
+  a benchy at 62 %, segmented speed chip with "Standard" active.
+
+  No raster assets; everything is layered SVG gradients + paths.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img">
-  <title>Bamboard device assembled in its white 3D-printed case</title>
-  <desc>Studio render of the Bamboard front face — white FDM enclosure, 4 inch display showing the live dashboard, three button caps below the screen, status LED glowing teal in the top-right corner, USB-C cable trailing off the right side.</desc>
+  <title>Bamboard v1.1 device in its 3D-printed case, screen lit, on a desk</title>
+  <desc>Studio render of the assembled Bamboard v1.1: light PETG enclosure with slim 3 mm bezel and a chamfered front edge, 4.3 inch IPS touch screen showing the Live dashboard, an integrated desk-stand tab tilting it back 15 degrees, and a USB-C cable trailing off the right side.</desc>
+
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <!-- ===== Scene ===== -->
+    <radialGradient id="scene" cx="32%" cy="14%" r="100%">
       <stop offset="0%"   stop-color="#1c2530"/>
-      <stop offset="60%"  stop-color="#10161f"/>
-      <stop offset="100%" stop-color="#070a0e"/>
-    </linearGradient>
-    <radialGradient id="spot" cx="68%" cy="18%" r="70%">
-      <stop offset="0%"   stop-color="#3a566c" stop-opacity="0.55"/>
-      <stop offset="70%"  stop-color="#10161f" stop-opacity="0"/>
+      <stop offset="55%"  stop-color="#10161f"/>
+      <stop offset="100%" stop-color="#05080c"/>
     </radialGradient>
-    <linearGradient id="pla" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"   stop-color="#fbfbfc"/>
-      <stop offset="45%"  stop-color="#eeeff1"/>
-      <stop offset="100%" stop-color="#c8cccf"/>
+    <radialGradient id="spot" cx="22%" cy="10%" r="55%">
+      <stop offset="0%"   stop-color="#5c7a93" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#10161f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#0c1118" stop-opacity="0"/>
+      <stop offset="40%"  stop-color="#0c1118" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#04060a" stop-opacity="0.95"/>
     </linearGradient>
-    <pattern id="fdm" x="0" y="0" width="140" height="5" patternUnits="userSpaceOnUse">
-      <line x1="0" y1="2.5" x2="140" y2="2.5" stroke="#000" stroke-opacity="0.05" stroke-width="0.7"/>
+
+    <!-- ===== PETG plastic ===== -->
+    <linearGradient id="petg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#f5f3ee"/>
+      <stop offset="35%"  stop-color="#e8e5dd"/>
+      <stop offset="80%"  stop-color="#c9c4ba"/>
+      <stop offset="100%" stop-color="#a8a39a"/>
+    </linearGradient>
+    <linearGradient id="petgSide" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#bcb6ac"/>
+      <stop offset="100%" stop-color="#7d7770"/>
+    </linearGradient>
+    <linearGradient id="petgStand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#9a9388"/>
+      <stop offset="100%" stop-color="#615b53"/>
+    </linearGradient>
+    <linearGradient id="chamfer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="fdm" x="0" y="0" width="200" height="3.6" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="1.8" x2="200" y2="1.8" stroke="#000" stroke-opacity="0.045" stroke-width="0.7"/>
     </pattern>
-    <linearGradient id="scr" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"   stop-color="#101418"/>
-      <stop offset="100%" stop-color="#1b2027"/>
+
+    <!-- ===== Display ===== -->
+    <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#15191e"/>
+      <stop offset="100%" stop-color="#0b0e12"/>
     </linearGradient>
-    <linearGradient id="arc" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#080a0d"/>
+      <stop offset="100%" stop-color="#101418"/>
+    </linearGradient>
+    <linearGradient id="glassRefl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="60%"  stop-color="#ffffff" stop-opacity="0.0"/>
+    </linearGradient>
+
+    <!-- ===== Dashboard widgets ===== -->
+    <linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%"   stop-color="#00b7c3"/>
       <stop offset="100%" stop-color="#39d98a"/>
     </linearGradient>
-    <radialGradient id="btn" cx="35%" cy="30%" r="75%">
-      <stop offset="0%"   stop-color="#ffffff"/>
-      <stop offset="55%"  stop-color="#eaebec"/>
-      <stop offset="100%" stop-color="#b3b5b7"/>
-    </radialGradient>
-    <radialGradient id="ledHalo" cx="50%" cy="50%" r="50%">
-      <stop offset="0%"   stop-color="#7cffe9" stop-opacity="0.8"/>
-      <stop offset="50%"  stop-color="#00b7c3" stop-opacity="0.35"/>
-      <stop offset="100%" stop-color="#00b7c3" stop-opacity="0"/>
-    </radialGradient>
+
+    <!-- ===== USB-C cable ===== -->
+    <linearGradient id="cable" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#1c2128"/>
+      <stop offset="50%"  stop-color="#2c333d"/>
+      <stop offset="100%" stop-color="#0d1116"/>
+    </linearGradient>
+
+    <!-- ===== Shadows / blur filter ===== -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="14"/>
+    </filter>
   </defs>
 
-  <rect width="1200" height="800" fill="url(#bg)"/>
+  <!-- ===== Background ===== -->
+  <rect width="1200" height="800" fill="url(#scene)"/>
   <rect width="1200" height="800" fill="url(#spot)"/>
+  <rect x="0" y="600" width="1200" height="200" fill="url(#floor)"/>
 
-  <ellipse cx="600" cy="755" rx="430" ry="22" fill="#000" opacity="0.55"/>
-  <circle cx="974" cy="158" r="160" fill="url(#ledHalo)"/>
+  <!-- Ground shadow under the device (drawn before the device itself) -->
+  <ellipse cx="600" cy="715" rx="430" ry="22" fill="#000" opacity="0.55"/>
+  <ellipse cx="600" cy="725" rx="360" ry="10" fill="#000" opacity="0.35"/>
 
-  <g transform="translate(160,90)">
-    <rect x="0" y="0" width="880" height="660" rx="42" fill="url(#pla)"/>
-    <rect x="0" y="0" width="880" height="660" rx="42" fill="url(#fdm)"/>
-    <path d="M 0 42 Q 0 0, 42 0 L 838 0 Q 880 0, 880 42"
-          fill="none" stroke="#ffffff" stroke-opacity="0.78" stroke-width="2"/>
-    <path d="M 0 618 Q 0 660, 42 660 L 838 660 Q 880 660, 880 618"
-          fill="none" stroke="#000" stroke-opacity="0.18" stroke-width="2"/>
-
-    <rect x="51" y="103" width="654" height="444" rx="12" fill="#1a1f26"/>
-    <rect x="61" y="113" width="634" height="424" rx="6"  fill="#0a0d11"/>
-
-    <g transform="translate(61,113) scale(1.321,1.325)">
-      <rect width="480" height="320" fill="url(#scr)"/>
-      <rect x="0" y="0" width="480" height="36" fill="#1b2027"/>
-      <text x="14"  y="24" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#00b7c3">Bamboard</text>
-      <text x="240" y="24" font-family="system-ui, sans-serif" font-size="15" fill="#e9eef3" text-anchor="middle">Workshop X1C</text>
-      <text x="466" y="24" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#39d98a" text-anchor="end">● online 36ms</text>
-      <g transform="translate(108,128)">
-        <circle r="64" fill="none" stroke="#232a33" stroke-width="12"/>
-        <circle r="64" fill="none" stroke="url(#arc)" stroke-width="12" stroke-linecap="round" stroke-dasharray="249.3 402.12" transform="rotate(-90)"/>
-        <text font-family="system-ui, sans-serif" font-size="38" font-weight="700" fill="#e9eef3" text-anchor="middle" dominant-baseline="central">62%</text>
-      </g>
-      <g font-family="system-ui, sans-serif">
-        <text x="210" y="78"  font-size="26" font-weight="700" fill="#00b7c3">PRINTING</text>
-        <text x="210" y="102" font-size="13" fill="#8a95a4">benchy_v2_pla.3mf</text>
-        <text x="210" y="142" font-size="22" font-weight="600" fill="#e9eef3">ETA 1h12</text>
-        <text x="210" y="166" font-size="13" fill="#8a95a4">layer 164 / 267</text>
-      </g>
-      <g transform="translate(16,220)" font-family="system-ui, sans-serif">
-        <rect width="144" height="74" rx="10" fill="#1b2027"/>
-        <text x="14" y="24" font-size="11" font-weight="600" letter-spacing="1" fill="#8a95a4">NOZZLE</text>
-        <text x="14" y="58" font-size="24" font-weight="700" fill="#e9eef3">220°C</text>
-      </g>
-      <g transform="translate(172,220)" font-family="system-ui, sans-serif">
-        <rect width="144" height="74" rx="10" fill="#1b2027"/>
-        <text x="14" y="24" font-size="11" font-weight="600" letter-spacing="1" fill="#8a95a4">BED</text>
-        <text x="14" y="58" font-size="24" font-weight="700" fill="#e9eef3">60°C</text>
-      </g>
-      <g transform="translate(328,220)" font-family="system-ui, sans-serif">
-        <rect width="144" height="74" rx="10" fill="#1b2027"/>
-        <text x="14" y="24" font-size="11" font-weight="600" letter-spacing="1" fill="#8a95a4">CHAMBER</text>
-        <text x="14" y="58" font-size="24" font-weight="700" fill="#e9eef3">35°C</text>
-      </g>
-      <g transform="translate(240,310)">
-        <circle cx="-21" cy="0" r="5" fill="#00b7c3"/>
-        <circle cx="-7"  cy="0" r="3" fill="#8a95a4"/>
-        <circle cx="7"   cy="0" r="3" fill="#8a95a4"/>
-        <circle cx="21"  cy="0" r="3" fill="#8a95a4"/>
-      </g>
-      <polygon points="0,0 220,0 90,320 0,320" fill="#ffffff" opacity="0.03"/>
-    </g>
-
-    <circle cx="814" cy="68" r="16" fill="#ffffff" stroke="#c5c7c9" stroke-width="1.2"/>
-    <circle cx="814" cy="68" r="7.5" fill="#7cffe9"/>
-    <circle cx="814" cy="68" r="3.2" fill="#ffffff"/>
-
-    <g>
-      <circle cx="298" cy="608" r="26" fill="url(#btn)" stroke="#a4a6a8" stroke-width="0.8"/>
-      <circle cx="440" cy="608" r="26" fill="url(#btn)" stroke="#a4a6a8" stroke-width="0.8"/>
-      <circle cx="582" cy="608" r="26" fill="url(#btn)" stroke="#a4a6a8" stroke-width="0.8"/>
-      <text x="298" y="615" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="#5a5c5e" text-anchor="middle">‹</text>
-      <text x="440" y="615" font-family="system-ui, sans-serif" font-size="16" font-weight="700" fill="#5a5c5e" text-anchor="middle">OK</text>
-      <text x="582" y="615" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="#5a5c5e" text-anchor="middle">›</text>
-    </g>
+  <!-- =========================================================
+       DESK STAND TAB
+       The back shell's integrated tab pivots out at the bottom
+       and tilts the device back 15°. From this near-front angle
+       we mainly see its base where it meets the desk — a slim
+       PETG sliver behind / below the case.
+       ========================================================= -->
+  <g>
+    <!-- Tab edge poking out behind the device, slightly tilted to imply depth -->
+    <polygon points="370,690 830,690 800,710 400,710" fill="url(#petgStand)"/>
+    <!-- Tab front face shading -->
+    <polygon points="370,690 830,690 820,696 380,696" fill="#ffffff" opacity="0.18"/>
   </g>
 
-  <rect x="900" y="730" width="38" height="19" rx="5" fill="#23272d" stroke="#0e1115" stroke-width="0.8"/>
-  <path d="M 938 740 Q 1000 770, 1060 776 T 1190 786" stroke="#161a1f" stroke-width="9" fill="none" stroke-linecap="round"/>
-  <path d="M 938 740 Q 1000 770, 1060 776 T 1190 786" stroke="#2a3038" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <!-- =========================================================
+       CASE — front face
+       Real device is 112 x 82 mm; rendered at 720 x 520 SVG-px
+       (≈ 6.43 px/mm). Slim 3 mm bezel = 19.3 SVG-px around the
+       active screen. Corner radius 18 px ≈ 2.8 mm — matches the
+       v1.1 outer rounding.
+       ========================================================= -->
+  <g transform="translate(240,130)">
+
+    <!-- Thin right-side wall hint (3D illusion + USB-C / BOOT cut-outs) -->
+    <g transform="translate(718,0)">
+      <rect x="0" y="6" width="14" height="508" rx="4" fill="url(#petgSide)"/>
+      <!-- Hairline highlight along the chamfered edge -->
+      <rect x="0" y="6" width="14" height="2" fill="#ffffff" opacity="0.55"/>
+      <!-- USB-C cut-out (y aligned with the GPIO USB-C on the Guition's right edge) -->
+      <rect x="4" y="58"  width="10" height="20" rx="3" fill="#0a0d12"/>
+      <!-- BOOT button window -->
+      <circle cx="9" cy="148" r="6" fill="#0a0d12"/>
+      <!-- RST button window -->
+      <circle cx="9" cy="218" r="6" fill="#0a0d12"/>
+      <!-- microSD slot -->
+      <rect x="3" y="334" width="11" height="22" rx="2" fill="#0a0d12"/>
+    </g>
+
+    <!-- Body — PETG front face -->
+    <rect x="0" y="0" width="720" height="520" rx="18" fill="url(#petg)"/>
+    <!-- Subtle FDM layer-line texture -->
+    <rect x="0" y="0" width="720" height="520" rx="18" fill="url(#fdm)"/>
+    <!-- Chamfered top edge — bright catch suggesting the 0.6 mm 45° -->
+    <path d="M 0 18 Q 0 0, 18 0 L 702 0 Q 720 0, 720 18"
+          fill="none" stroke="url(#chamfer)" stroke-width="2.5"/>
+    <!-- Bottom edge soft shadow -->
+    <path d="M 0 502 Q 0 520, 18 520 L 702 520 Q 720 520, 720 502"
+          fill="none" stroke="#000" stroke-opacity="0.22" stroke-width="2"/>
+    <!-- Left edge gentle vertical highlight -->
+    <rect x="3" y="40" width="2" height="440" fill="#ffffff" opacity="0.18"/>
+    <!-- Right edge gentle shadow -->
+    <rect x="713" y="40" width="3" height="440" fill="#000" opacity="0.18"/>
+
+    <!-- =====================================================
+         DISPLAY POCKET + GLASS
+         Bezel between case outline and active area:
+           horiz = (720 - 611) / 2 = 54.5
+           vert  = (520 - 347) / 2 = 86.5
+         Active area itself is 611 x 347 (480:272 = 1.764).
+         ===================================================== -->
+
+    <!-- Inset shadow (suggests the PCB sits recessed under the bezel) -->
+    <rect x="50"  y="82"  width="620" height="356" rx="10" fill="#000" opacity="0.18"/>
+    <!-- Bezel ring — dark IPS frame -->
+    <rect x="54" y="86" width="612" height="348" rx="8" fill="url(#bezel)"/>
+    <!-- Glass surface -->
+    <rect x="58" y="90" width="604" height="340" rx="6" fill="url(#glass)"/>
+    <!-- Visible active area, exactly 480x272 scaled by 1.273 -->
+    <g transform="translate(58.5,89.5) scale(1.2729,1.2757)">
+
+      <!-- Background (matches C_BG = 0x0E1116) -->
+      <rect width="480" height="272" fill="#0E1116"/>
+
+      <!-- Header -->
+      <rect x="0" y="0"  width="480" height="36" fill="#1A1F26"/>
+      <rect x="0" y="35" width="480" height="1"  fill="#2F3742"/>
+      <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+            x="12"  y="24" font-size="18" font-weight="700" fill="#00B7C3">Bamboard</text>
+      <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+            x="240" y="22" font-size="14" text-anchor="middle" fill="#E9EEF3">Workshop X1C</text>
+      <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+            x="468" y="22" font-size="12" font-weight="600" text-anchor="end" fill="#39D98A">▲ 36 ms</text>
+
+      <!-- Progress arc -->
+      <g transform="translate(42,66)">
+        <circle r="27" fill="none" stroke="#252B34" stroke-width="6"/>
+        <circle r="27" fill="none" stroke="url(#arcGrad)" stroke-width="6"
+                stroke-linecap="round"
+                stroke-dasharray="105.1 169.6"
+                transform="rotate(-90)"/>
+        <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+              font-size="13" font-weight="700" fill="#E9EEF3"
+              text-anchor="middle" dominant-baseline="central">62%</text>
+      </g>
+
+      <!-- State / ETA / file / layer -->
+      <g font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+        <text x="88"  y="54" font-size="18" font-weight="700" fill="#00B7C3">PRINTING</text>
+        <text x="468" y="54" font-size="14" font-weight="600" text-anchor="end" fill="#E9EEF3">ETA 1h12</text>
+        <text x="88"  y="74" font-size="11" fill="#8A95A4">benchy_v2_pla.3mf</text>
+        <text x="468" y="74" font-size="11" text-anchor="end" fill="#8A95A4">layer 164 / 267</text>
+      </g>
+
+      <!-- Temperature cells -->
+      <g font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+        <g transform="translate(12,100)">
+          <rect width="142" height="36" rx="12" fill="#252B34" stroke="#2F3742"/>
+          <text x="10"  y="13" font-size="9"  font-weight="700" letter-spacing="1" fill="#8A95A4">NOZZLE</text>
+          <text x="132" y="25" font-size="14" font-weight="700" text-anchor="end" fill="#E9EEF3">220 °C</text>
+        </g>
+        <g transform="translate(162,100)">
+          <rect width="142" height="36" rx="12" fill="#252B34" stroke="#2F3742"/>
+          <text x="10"  y="13" font-size="9"  font-weight="700" letter-spacing="1" fill="#8A95A4">BED</text>
+          <text x="132" y="25" font-size="14" font-weight="700" text-anchor="end" fill="#E9EEF3">60 °C</text>
+        </g>
+        <g transform="translate(312,100)">
+          <rect width="156" height="36" rx="12" fill="#252B34" stroke="#2F3742"/>
+          <text x="10"  y="13" font-size="9"  font-weight="700" letter-spacing="1" fill="#8A95A4">CHAMBER</text>
+          <text x="146" y="25" font-size="14" font-weight="700" text-anchor="end" fill="#E9EEF3">35 °C</text>
+        </g>
+      </g>
+
+      <!-- Segmented speed chip -->
+      <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+            x="16" y="160" font-size="9" font-weight="700" letter-spacing="1" fill="#8A95A4">SPEED</text>
+      <g transform="translate(12,164)" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+        <rect width="456" height="44" rx="18" fill="#252B34" stroke="#2F3742"/>
+        <g transform="translate(3,3)">
+          <rect x="0"   y="0" width="112" height="38" rx="8" fill="#252B34"/>
+          <text x="56"  y="24" font-size="13" text-anchor="middle" fill="#8A95A4">Silent</text>
+          <rect x="112" y="0" width="112" height="38" rx="8" fill="#00B7C3"/>
+          <text x="168" y="24" font-size="13" font-weight="600" text-anchor="middle" fill="#0E1116">Standard</text>
+          <rect x="224" y="0" width="112" height="38" rx="8" fill="#252B34"/>
+          <text x="280" y="24" font-size="13" text-anchor="middle" fill="#8A95A4">Sport</text>
+          <rect x="336" y="0" width="112" height="38" rx="8" fill="#252B34"/>
+          <text x="392" y="24" font-size="13" text-anchor="middle" fill="#8A95A4">Ludicrous</text>
+        </g>
+      </g>
+
+      <!-- Tab bar -->
+      <rect x="0" y="228" width="480" height="44" fill="#1A1F26"/>
+      <rect x="0" y="228" width="480" height="1"  fill="#2F3742"/>
+      <rect x="12" y="228" width="72" height="3" rx="2" fill="#00B7C3"/>
+      <g font-family="Inter, 'Segoe UI', system-ui, sans-serif" text-anchor="middle">
+        <text x="48"  y="248" font-size="14" fill="#00B7C3">⌂</text>
+        <text x="48"  y="265" font-size="10" fill="#00B7C3">Live</text>
+        <text x="144" y="248" font-size="14" fill="#8A95A4">▦</text>
+        <text x="144" y="265" font-size="10" fill="#8A95A4">AMS</text>
+        <text x="240" y="248" font-size="14" fill="#8A95A4">≡</text>
+        <text x="240" y="265" font-size="10" fill="#8A95A4">Printers</text>
+        <text x="336" y="248" font-size="14" fill="#8A95A4">⟲</text>
+        <text x="336" y="265" font-size="10" fill="#8A95A4">History</text>
+        <text x="432" y="248" font-size="14" fill="#8A95A4">⚙</text>
+        <text x="432" y="265" font-size="10" fill="#8A95A4">Settings</text>
+      </g>
+    </g>
+
+    <!-- Glass reflection sweep (top-band glossy highlight) -->
+    <rect x="58" y="90" width="604" height="170" rx="6" fill="url(#glassRefl)"/>
+    <!-- Diagonal specular glint -->
+    <polygon points="58,90 200,90 95,260 58,260" fill="#ffffff" opacity="0.04"/>
+
+  </g>
+
+  <!-- =========================================================
+       USB-C CABLE — trails off the right side of the case
+       Connector head sits flush against the right wall, the
+       sleeve drapes down and curves off the canvas.
+       ========================================================= -->
+  <g transform="translate(972,180)">
+    <!-- Plug head -->
+    <rect x="-6" y="-9" width="22" height="18" rx="4" fill="#23272d" stroke="#0e1115" stroke-width="0.8"/>
+    <rect x="14" y="-7" width="18" height="14" rx="3" fill="#1a1d22"/>
+    <!-- Cable shadow -->
+    <path d="M 32 0 Q 130 60, 200 110 T 320 200"
+          stroke="#000" stroke-opacity="0.55" stroke-width="14"
+          fill="none" stroke-linecap="round"/>
+    <!-- Cable body -->
+    <path d="M 32 0 Q 130 60, 200 110 T 320 200"
+          stroke="url(#cable)" stroke-width="9"
+          fill="none" stroke-linecap="round"/>
+    <!-- Cable highlight -->
+    <path d="M 32 -2 Q 130 58, 200 108 T 320 198"
+          stroke="#ffffff" stroke-opacity="0.18" stroke-width="2"
+          fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- =========================================================
+       Subtle bottom-cast soft glow from the lit display
+       ========================================================= -->
+  <ellipse cx="600" cy="720" rx="380" ry="14" fill="#00b7c3" opacity="0.06"/>
 </svg>
