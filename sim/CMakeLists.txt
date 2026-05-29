@@ -8,6 +8,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(FetchContent)
 
 # -----------------------------------------------------------------------------
+# Options
+# -----------------------------------------------------------------------------
+# BAMBOARD_SIM_LIVE: when ON, swap the canned bambuddy_stubs.cpp for a real
+# HTTP-backed backend (sim/stubs/bambuddy_live.cpp) that polls a real
+# Bambuddy instance over its REST API. Credentials at runtime come from
+# the BAMBUDDY_URL + BAMBUDDY_KEY environment variables. WebSocket push
+# is intentionally not wired (REST stays at the 2-second cadence the
+# firmware uses when its WS is down). HTTPS likewise — self-hosted
+# Bambuddy almost always runs plain HTTP on the LAN.
+option(BAMBOARD_SIM_LIVE "Build the sim against a real Bambuddy backend (HTTP)" OFF)
+
+# -----------------------------------------------------------------------------
 # Dependencies
 # -----------------------------------------------------------------------------
 
@@ -25,6 +37,20 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(lvgl ArduinoJson)
+
+# cpp-httplib — only needed for the live backend. Header-only, no extra
+# runtime deps; on Windows the live TU links winsock further down. We
+# fetch it unconditionally because it's tiny and skipping it gates the
+# entire BAMBOARD_SIM_LIVE option behind a re-configure cycle if the
+# user toggles it later.
+if (BAMBOARD_SIM_LIVE)
+    FetchContent_Declare(
+        httplib
+        GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+        GIT_TAG        v0.15.3
+    )
+    FetchContent_MakeAvailable(httplib)
+endif()
 
 # LVGL needs to be told where to find lv_conf.h. We point it at the same
 # header the firmware uses so colour depth / fonts / tick settings are
@@ -84,9 +110,24 @@ add_executable(bamboard_sim
 
     # Sim stubs that replace the on-device hw + net layers.
     stubs/ArduinoStubs.cpp
-    stubs/bambuddy_stubs.cpp
     stubs/display_stub.cpp
 )
+
+# Pick the bambuddy backend. Both files implement the same public API
+# (bambuddy::Client + bambuddy::WsClient with the bambuddy::g_* globals)
+# so only one of them links into the binary.
+if (BAMBOARD_SIM_LIVE)
+    target_sources(bamboard_sim PRIVATE stubs/bambuddy_live.cpp)
+    target_compile_definitions(bamboard_sim PRIVATE BAMBOARD_SIM_LIVE=1)
+    target_link_libraries(bamboard_sim PRIVATE httplib::httplib)
+    if (WIN32)
+        target_link_libraries(bamboard_sim PRIVATE ws2_32)
+    endif()
+    message(STATUS "bamboard_sim: LIVE backend (cpp-httplib + real Bambuddy)")
+else()
+    target_sources(bamboard_sim PRIVATE stubs/bambuddy_stubs.cpp)
+    message(STATUS "bamboard_sim: canned-data backend")
+endif()
 
 target_include_directories(bamboard_sim PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/stubs              # MUST come first so our Arduino.h

@@ -22,6 +22,8 @@
 #include <cstring>
 
 #include "../firmware/src/config.h"
+#include "../firmware/src/net/bambuddy_client.h"
+#include "../firmware/src/net/bambuddy_ws.h"
 #include "../firmware/src/ui/screens.h"
 #include "../firmware/src/ui/ui.h"
 
@@ -115,6 +117,13 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
     // Bring up the same UI manager the firmware uses.
     ui::g_ui.begin();
+
+    // Kick off the Bambuddy client. With the default canned backend this
+    // is a no-op (every snapshot returns hardcoded fixtures). With
+    // -DBAMBOARD_SIM_LIVE=ON this spawns a 2-second poller against the
+    // real Bambuddy URL pulled from $BAMBUDDY_URL + $BAMBUDDY_KEY.
+    ::bambuddy::g_client.begin(String(""), String(""));
+    ::bambuddy::g_ws.begin    (String(""), String(""));
 
     std::fprintf(stderr,
         "Bamboard sim running.\n"

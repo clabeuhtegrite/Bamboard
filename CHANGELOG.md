@@ -36,6 +36,13 @@ tooling. v1.0 owners get a re-flash + a one-night reprint of the case.
 - **Subtle accent indicator** above the active tab — 3 px strip in
   C_ACCENT that fades in on tap. The selected screen is obvious from
   across the room without reading the labels.
+- **Sim live mode** — the desktop simulator can now talk to a real
+  Bambuddy instead of the canned fixtures. Configure with
+  `cmake -DBAMBOARD_SIM_LIVE=ON`, set `BAMBUDDY_URL` + `BAMBUDDY_KEY`
+  in the environment, and every UI tap fires a real POST against the
+  server. A 2-second background poller refreshes the cached state.
+  HTTPS + WebSocket push are out of scope; plain HTTP REST polling is
+  enough for UI iteration. See `sim/README.md` for details.
 
 ### Changed
 
