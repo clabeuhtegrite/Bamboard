@@ -5,6 +5,89 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v1.0.0 — 2026-05
+
+Major architectural pivot: the standalone ESP32-S3 DevKitC + ILI9488
+SPI + 3 button modules + WS2812 breakout build is replaced by a
+single all-in-one board (Guition JC4827W543: ESP32-S3-WROOM-1 with
+8 MB PSRAM, 4.3" IPS 480 × 272 RGB-parallel panel, GT911 capacitive
+touch on the same PCB). Zero soldering, zero wiring, BOM down to
+~20 €.
+
+### Added
+
+- **Touch UI** end-to-end. Bottom tab bar with 5 tabs (Live / AMS /
+  Printers / History / Settings). Tap a tab to switch; swipe left /
+  right inside the body to move to the next / previous tab.
+- **Inline contextual actions on Live** — `Speed: <current> →
+  <next>` while printing, `Clear plate` when finished, `Clear HMS`
+  when an error is active. No more long-press / double-click.
+- **Tap-a-row on Printers** focuses that printer and auto-navigates
+  to Live.
+- **Two-tap Factory reset** button on Settings — first tap arms it
+  for 3 s, second tap calls `factory_reset()` which wipes NVS and
+  reboots into the captive portal.
+- **HMS overlay tap-to-dismiss** instead of swallowing the next
+  button press.
+- **AMS unit cycling** via on-screen ◀ / ▶ buttons in the status
+  strip when multiple AMS units are present.
+- **Desktop LVGL simulator** under `sim/` — CMake + SDL2 harness
+  that runs the same `firmware/src/ui/{screens,ui}.cpp` sources at
+  the real 480 × 272 resolution. Mouse drives the touch input
+  device. Validates layout + navigation + canned-snapshot rendering
+  without hardware.
+
+### Changed
+
+- `platformio.ini` swaps `bodmer/TFT_eSPI` + `fastled/FastLED` for
+  `lovyan03/LovyanGFX`. Same `esp32-s3-devkitc-1` board target
+  (the WROOM-1 module is identical), but the partition layout
+  drops to 4 MB to match the Guition's flash.
+- `firmware/src/hw/display.{h,cpp}` rewritten on top of LovyanGFX
+  with a JC4827W543**C** pin map at the top of the file (RGB bus +
+  GT911 + backlight PWM). All other firmware sources stay
+  identical except for losing the `selected_index_` / button-event
+  state that's no longer relevant.
+- `firmware/src/ui/screens.cpp` redesigned for the new 480 × 272
+  body area (192 px tall between the 36 px header and the 44 px
+  tab bar). All five screens recompacted.
+- Wi-Fi captive-portal factory-reset trigger moves from "hold PREV
+  at boot" to "hold BOOT at boot" (GPIO 0, the side-mounted
+  tactile switch on the Guition PCB).
+- `case/bamboard.scad` rewritten for the JC4827W543 PCB: two
+  shells (front with display cut-out + board pocket + optional M3
+  standoffs, back with USB-C / BOOT / RST / SD cut-outs + vents).
+  ~20 % less filament than the v0.x case.
+- `hardware/{bom,wiring}.md` collapsed to a single board + a USB
+  cable. wiring.md is now a one-paragraph "plug USB-C in" note.
+
+### Removed
+
+- `firmware/src/hw/buttons.{h,cpp}` — no more external buttons.
+- `firmware/src/hw/led.{h,cpp}` — no more WS2812 module. The HMS
+  alert pulses run as a full-screen red overlay on the panel.
+- Actions modal (`screens::build_actions / actions_open / …`) —
+  every interaction is a direct on-screen tap now.
+- `Manager::handle_input()` — LVGL's pointer indev (fed by the
+  GT911) drives the UI via event callbacks, no manual event pump.
+- `User_Setup.h` (TFT_eSPI's config) and `lib_deps` for TFT_eSPI +
+  FastLED.
+
+### Migration notes
+
+If you've got the v0.x build running and want to switch to v1.0:
+
+1. Buy a Guition JC4827W543 (see `hardware/bom.md` for AliExpress
+   search links). The DevKitC + ILI9488 SPI + buttons + LED parts
+   you already have don't carry over — sell them or use them in a
+   different project.
+2. Print the new case (`case/bamboard.scad` part = "front" / "back").
+3. Flash via `scripts/flash-windows.bat` / `flash-mac.command` /
+   `flash-linux.sh` as before. The OTA update path still works on
+   the new board.
+4. The captive-portal AP name + password and the Bambuddy URL / API
+   key format are unchanged, so the same first-boot setup applies.
+
 ## v0.2.0 — 2026-05
 
 The Bambuddy-side features that were claimed in v0.1's README but
