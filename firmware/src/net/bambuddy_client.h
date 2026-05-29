@@ -133,6 +133,16 @@ class Client {
     bool clear_hms(int printer_id);
     bool clear_plate(int printer_id);
 
+    // AMS drying control. The exact Bambuddy route hasn't shipped upstream
+    // at the time of writing — these issue a POST to
+    //   /api/v1/printers/{id}/ams/{unit_id}/dry  (body {"minutes":N,"temp":C})
+    //   /api/v1/printers/{id}/ams/{unit_id}/dry/stop
+    // and report success/failure to the UI. Once Bambuddy lands an official
+    // dryer endpoint we re-point these without UI changes.
+    bool start_ams_drying(int printer_id, uint8_t unit_id,
+                          uint16_t minutes, uint8_t temp_c);
+    bool stop_ams_drying (int printer_id, uint8_t unit_id);
+
     // Apply a /status-shaped JSON payload to the cached Printer record.
     // Shared between the REST poller and the WebSocket push handler — the
     // ws layer hands us doc["data"] from a printer_status frame, which is

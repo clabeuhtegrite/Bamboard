@@ -26,6 +26,11 @@ void update_settings ();
 // Cycle visible AMS unit when the selected printer has more than one.
 void ams_cycle_unit(int dir);
 
+// Currently visible AMS unit index inside the focused printer. Used by
+// the AMS drying-button event handler to address the right unit when it
+// fires the POST.
+uint8_t ams_visible_unit_index();
+
 // Toast / message overlay used by the manager.
 lv_obj_t* build_toast(lv_obj_t* parent);
 void      show_toast(const char* msg, lv_color_t bg);

@@ -35,6 +35,13 @@ class Display {
     // Current backlight value (cached locally to avoid PWM read-back).
     uint8_t backlight() const { return backlight_; }
 
+    // User-facing brightness level (1..5). Stored centrally so both the
+    // Settings UI and the auto-dim wake path agree on the same "full"
+    // value. set_brightness_level() persists nothing on its own — the
+    // caller is responsible for writing it to NVS.
+    uint8_t brightness_level() const { return level_; }
+    void    set_brightness_level(uint8_t level);   // applies PWM immediately
+
     // True when the touch driver reported any contact since the last call.
     // Resets to false after each read — used by main.cpp's auto-dim timer
     // to wake the screen on any user interaction.
@@ -42,6 +49,7 @@ class Display {
 
    private:
     uint8_t backlight_ = ::display::BL_FULL;
+    uint8_t level_     = ::display::BL_LEVEL_DEFAULT;
 };
 
 extern Display g_display;

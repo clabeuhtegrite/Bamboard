@@ -5,6 +5,82 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v1.1.0 — 2026-05
+
+Polish pass on the v1.0 touch UI plus a slimmer second-gen case. No
+hardware changes — same Guition JC4827W543 BOM, same one-click flash
+tooling. v1.0 owners get a re-flash + a one-night reprint of the case.
+
+### Added
+
+- **Segmented speed chip on Live** — the v1.0 "Speed: Standard → Sport"
+  button (cycle-on-tap) is replaced by a 4-segment Silent / Standard /
+  Sport / Ludicrous chip. Active segment highlighted in accent; tap any
+  segment to set that speed directly. No more cycling through three to
+  reach Ludicrous.
+- **AMS prev / next side buttons** — chevrons now sit flanking the unit
+  label as proper 36 × 32 tap targets (was a tiny clustered pair tucked
+  under the title). Visible only when the focused printer has more than
+  one chained AMS / AMS-HT unit.
+- **AMS drying control** — one-tap `Dry` pill on the AMS-HT status
+  strip starts a 60 min @ 55 °C cycle (Bambu's PLA / PETG default).
+  When a cycle is active the pill turns red and reads `Stop`. Plumbed
+  through `bambuddy::Client::start_ams_drying()` /
+  `stop_ams_drying()`. Bambuddy doesn't ship the route upstream yet, so
+  the POSTs land on a placeholder path; we'll re-point them once the
+  Bambuddy dryer endpoint lands.
+- **Brightness 1–5** in Settings — segmented selector, identical visual
+  language to the speed chip. Persisted to NVS as `bl_level`, applied
+  at boot, and used as the auto-dim wake target instead of the
+  hard-coded full PWM. Default level 3 (≈ 50 % PWM).
+- **Subtle accent indicator** above the active tab — 3 px strip in
+  C_ACCENT that fades in on tap. The selected screen is obvious from
+  across the room without reading the labels.
+
+### Changed
+
+- **Modern theme tokens** — every screen now reads radius / colour /
+  button-height from `ui::R_PANEL`, `ui::R_BUTTON`, `ui::R_PILL`,
+  `ui::H_BTN` in `config.h`. Tweak one constant and the whole UI moves
+  together. New `C_PANEL_LINE` hairline colour for borders,
+  `C_ACCENT_DARK` for pressed states.
+- **Press state** on every button shares one `s_btn_pressed` style — a
+  consistent darken + 1 px scale-down on tap. Was previously absent on
+  most buttons.
+- **Header + tab bar hairlines** — 1 px C_PANEL_LINE underline /
+  overline so the chrome reads as separated layers without a heavy
+  divider rule.
+- **Printers rows** picked up the new panel radius (12 px) + press
+  state, focused row gets a 2 px accent border (was 2 px without
+  state).
+- **Action button shape** moved to pill (R_PILL = 18 px) for primary
+  CTAs to differentiate them from neutral chips.
+- **Case rebuilt for compactness** — `case/bamboard.scad` v1.1:
+  - PCB pocket clearance dropped 6 mm → 0.6 mm. Overall case 8 mm
+    narrower, 6 mm shorter.
+  - Walls trimmed 2.4 mm → 1.8 mm; top 2.0 mm → 1.6 mm.
+  - Bezel around the active area dropped ~6 mm → ~3 mm.
+  - Chamfered front edge (0.6 mm 45°) so it reads as one solid piece.
+  - Vent slots rotated to vertical and grouped over the ESP module.
+  - **Integrated 15° desk-stand tab** on the back shell — no
+    accessory print needed.
+  - Mating screws **M3 × 6 mm** (was 8 mm) to suit the thinner walls.
+  - Total filament for both shells: ~32 g (was ~50 g).
+
+### Removed
+
+- The "cycle-on-tap" speed button. The new segmented chip exposes all
+  four modes simultaneously.
+
+### Migration notes
+
+- **Firmware**: re-flash via `scripts/flash-*` or `scripts/update-*`.
+  Your captive-portal Wi-Fi + Bambuddy creds carry over; brightness
+  starts at the default level 3 on first boot after the upgrade.
+- **Case**: print the new front + back shells from `case/bamboard.scad`
+  and swap. The board itself drops in unchanged; the four corner
+  screws change from M3 × 8 mm to M3 × 6 mm.
+
 ## v1.0.0 — 2026-05
 
 Major architectural pivot: the standalone ESP32-S3 DevKitC + ILI9488

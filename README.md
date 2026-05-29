@@ -29,10 +29,10 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 ### What you see on the screen
 
 - **Live dashboard** — nozzle / bed / chamber temperature, layer progress, ETA, filename.
-- **AMS overview** — per-slot filament colour / type / remaining %, plus AMS humidity, temperature and active drying countdown. On-screen ◀ / ▶ buttons cycle through chained AMS / AMS-HT units.
+- **AMS overview** — per-slot filament colour / type / remaining %, plus AMS humidity, temperature and active drying countdown. Big ◀ / ▶ side buttons cycle through chained AMS / AMS-HT units, and a one-tap **Dry / Stop** pill on AMS-HT units kicks off (or aborts) a 60 min @ 55 °C drying cycle.
 - **Printers list** — every printer Bambuddy knows about, highlighted by state. **Tap a row** to focus that printer and jump to Live.
 - **History & stats** — last 10 prints, success rate, total filament, total time.
-- **Settings** — Bambuddy URL, local IP, Wi-Fi RSSI, uptime, plus a two-tap **Factory reset** button.
+- **Settings** — Bambuddy URL, local IP, Wi-Fi RSSI, uptime, **brightness 1–5** segmented selector, and a two-tap **Factory reset** button.
 
 ### Alerts
 
@@ -42,10 +42,11 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 
 - **Bottom tab bar** — 5 tabs always visible (Live / AMS / Printers / History / Settings). Tap to switch.
 - **Swipe gesture** — swipe left / right inside the screen body to move to the next / previous tab.
-- **Inline action buttons on Live** — appear contextually based on the focused printer's state:
-  - while printing → `Speed: <current> → <next>` (tap to cycle Silent / Standard / Sport / Ludicrous);
-  - when finished → `Clear plate`;
-  - while an HMS error is active → `Clear HMS`.
+- **Inline action area on Live** — appears contextually based on the focused printer's state:
+  - while printing → a 4-segment **speed chip** (Silent / Standard / Sport / Ludicrous); tap a segment to switch — the active one is highlighted in accent;
+  - when finished → `Clear plate` pill;
+  - while an HMS error is active → red `Clear HMS` pill (takes priority over the other two).
+- **Brightness 1–5** — segmented selector on Settings. Persisted to NVS and applied at boot. The auto-dim wake target follows the chosen level instead of always ramping to full.
 - **Factory reset** — Settings → "Factory reset" → tap a second time within 3 s to confirm. Wipes Wi-Fi + Bambuddy creds and reboots into the captive portal.
 
 ### Connectivity

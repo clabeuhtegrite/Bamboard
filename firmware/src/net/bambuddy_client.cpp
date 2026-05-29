@@ -300,6 +300,21 @@ bool Client::clear_plate(int printer_id) {
     return do_post(String("/api/v1/printers/") + printer_id + "/clear-plate", "", nullptr);
 }
 
+bool Client::start_ams_drying(int printer_id, uint8_t unit_id,
+                               uint16_t minutes, uint8_t temp_c) {
+    String path = String("/api/v1/printers/") + printer_id + "/ams/" +
+                  (unsigned)unit_id + "/dry";
+    String body = String("{\"minutes\":") + minutes +
+                  ",\"temp\":" + (unsigned)temp_c + "}";
+    return do_post(path, body, nullptr);
+}
+
+bool Client::stop_ams_drying(int printer_id, uint8_t unit_id) {
+    String path = String("/api/v1/printers/") + printer_id + "/ams/" +
+                  (unsigned)unit_id + "/dry/stop";
+    return do_post(path, "", nullptr);
+}
+
 // --- Snapshots --------------------------------------------------------------
 
 void Client::snapshot_printers(Printer* out, uint8_t& count) const {
