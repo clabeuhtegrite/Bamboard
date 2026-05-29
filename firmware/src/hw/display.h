@@ -1,31 +1,47 @@
-// LVGL ⇄ TFT_eSPI bridge plus backlight handling.
+// Display + touch HAL for the Guition JC4827W543.
 //
-// Encapsulates the boilerplate needed to wire LVGL to TFT_eSPI on the
-// ILI9488. The draw buffer is allocated from PSRAM (ESP32-S3 octal PSRAM)
-// so we have room for a roomy two-line buffer without blowing internal SRAM.
+// Wraps LovyanGFX (which drives the 480×272 RGB-parallel IPS panel via the
+// ESP32-S3's LCD_CAM peripheral and reads the GT911 capacitive touch
+// controller over I²C), and hooks both into LVGL: a display flush callback
+// pushes draw buffers to the panel, and a pointer input device feeds touch
+// coordinates into LVGL's event system.
+//
+// Higher layers (ui/) talk to LVGL directly; they don't see LovyanGFX at
+// all. The only thing they call here is set_backlight() to drive the
+// auto-dim behaviour.
 
 #pragma once
 
 #include <Arduino.h>
-#include <lvgl.h>
+
+#include "../config.h"
 
 namespace hw {
 
 class Display {
    public:
+    // Bring up the panel, register the LVGL display + touch input devices,
+    // and set the backlight to full. Returns false if the panel init failed.
     bool begin();
 
-    // Backlight 0..255. Used by the auto-dim logic.
-    void set_backlight(uint8_t value);
-    uint8_t backlight() const { return current_bl_; }
-
-    // Call from the main loop or from the LVGL task at >= 60 Hz.
+    // Call once per UI loop iteration: dispatches LVGL timers (which run
+    // both the display flush and the touch input read).
     void tick();
 
-   private:
-    static void flush_cb_(lv_disp_drv_t* drv, const lv_area_t* area, lv_color_t* buf);
+    // PWM the backlight between 0 and 255. The auto-dim logic in main.cpp
+    // calls this; nothing else should.
+    void set_backlight(uint8_t value);
 
-    uint8_t current_bl_ = 0;
+    // Current backlight value (cached locally to avoid PWM read-back).
+    uint8_t backlight() const { return backlight_; }
+
+    // True when the touch driver reported any contact since the last call.
+    // Resets to false after each read — used by main.cpp's auto-dim timer
+    // to wake the screen on any user interaction.
+    bool consume_touch_activity();
+
+   private:
+    uint8_t backlight_ = ::display::BL_FULL;
 };
 
 extern Display g_display;

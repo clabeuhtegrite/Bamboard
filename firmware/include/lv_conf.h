@@ -12,8 +12,8 @@
 #include <stdint.h>
 
 /* -------- Colour depth -------- */
-#define LV_COLOR_DEPTH 16        /* ILI9488 driven in 16-bit via TFT_eSPI */
-#define LV_COLOR_16_SWAP 1
+#define LV_COLOR_DEPTH 16        /* RGB565 — LovyanGFX drives the JC4827W543 panel in 16-bit */
+#define LV_COLOR_16_SWAP 0       /* RGB parallel bus, no byte swap needed */
 
 /* -------- Memory -------- */
 #define LV_MEM_CUSTOM 0

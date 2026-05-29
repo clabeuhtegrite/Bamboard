@@ -4,8 +4,10 @@
 // URL, API key, Wi-Fi credentials) is *not* stored here — it's provisioned at
 // runtime via the WiFiManager captive portal and saved in NVS (Preferences).
 //
-// If you fork this project for a different display or MCU, this is the only
-// file you should normally need to touch, alongside include/User_Setup.h.
+// v1.0+ targets the Guition JC4827W543 all-in-one board (ESP32-S3-WROOM-1
+// with a 4.3" RGB-parallel IPS panel + GT911 capacitive touch on the same
+// PCB). The display + touch pinout lives in `hw/display.cpp` because it's
+// wide enough to deserve its own file.
 
 #pragma once
 
@@ -15,19 +17,16 @@
 
 namespace pins {
 
-// Buttons (active-low, internal pull-up)
-constexpr uint8_t BTN_PREV = 4;
-constexpr uint8_t BTN_OK   = 5;
-constexpr uint8_t BTN_NEXT = 6;
+// The only physical button still in the firmware: the side-mounted BOOT
+// switch on the Guition PCB. We sample it once at boot to detect a
+// factory-reset gesture; LVGL touch handles every other interaction.
+constexpr uint8_t BOOT_BUTTON = 0;
 
-// WS2812 status LED module (single LED, plug-in module: VCC / GND / DIN)
-constexpr uint8_t LED_DIN  = 7;
-constexpr uint8_t LED_COUNT = 1;
-
-// Display backlight PWM channel (LEDC)
-constexpr uint8_t BL_CHANNEL = 0;
-constexpr uint32_t BL_FREQ   = 5000;   // Hz
-constexpr uint8_t BL_RES     = 8;      // bits
+// Display backlight PWM (LovyanGFX drives this internally, but we keep
+// the constants here so other firmware code can reference them if needed).
+constexpr uint8_t BL_PIN     = 2;
+constexpr uint32_t BL_FREQ   = 5000;
+constexpr uint8_t  BL_RES    = 8;
 
 }  // namespace pins
 
@@ -36,33 +35,18 @@ constexpr uint8_t BL_RES     = 8;      // bits
 namespace display {
 
 constexpr uint16_t WIDTH  = 480;
-constexpr uint16_t HEIGHT = 320;
+constexpr uint16_t HEIGHT = 272;
 
 // LVGL draw buffer height in lines. ~40 lines * 480 px * 2 B/px ≈ 38 KB,
 // which we allocate from PSRAM on ESP32-S3.
 constexpr uint16_t DRAW_BUF_LINES = 40;
 
-// Auto-dim
-constexpr uint32_t DIM_AFTER_MS = 60UL * 1000UL;   // dim after 1 min idle
+// Auto-dim: backlight drops after this many ms of no touch activity.
+constexpr uint32_t DIM_AFTER_MS = 60UL * 1000UL;
 constexpr uint8_t  BL_FULL = 255;
 constexpr uint8_t  BL_DIM  = 40;
 
 }  // namespace display
-
-// ---------- Buttons ------------------------------------------------------
-
-namespace buttons {
-
-constexpr uint16_t DEBOUNCE_MS     = 25;
-constexpr uint16_t LONG_PRESS_MS   = 600;
-constexpr uint16_t REPEAT_MS       = 180;
-constexpr uint16_t REPEAT_AFTER_MS = 700;
-// Max gap between two releases that still counts as a double-click. Short
-// enough to feel intentional, long enough to be reachable with the
-// chunky tactiles on the case.
-constexpr uint16_t DOUBLE_CLICK_MS = 350;
-
-}  // namespace buttons
 
 // ---------- Bambuddy client ---------------------------------------------
 
@@ -82,11 +66,10 @@ constexpr uint32_t POLL_HEALTH_MS    = 15000;
 
 // When the WebSocket is connected the server pushes printer_status frames
 // on every MQTT delta, so REST polling becomes a low-cadence safety net.
-constexpr uint32_t POLL_DASHBOARD_WS_MS = 30000; // WS push is primary
+constexpr uint32_t POLL_DASHBOARD_WS_MS = 30000;
 
 // Full-screen HMS-error flash: how long each pulse is shown, and how long
-// to stay quiet between pulses while the error persists. Tuned to be
-// across-the-room visible without becoming background noise on the desk.
+// to stay quiet between pulses while the error persists.
 constexpr uint32_t HMS_FLASH_VISIBLE_MS  = 5000;
 constexpr uint32_t HMS_FLASH_COOLDOWN_MS = 30000;
 
@@ -113,29 +96,18 @@ constexpr uint32_t C_ERR       = 0xE5484D;
 constexpr uint32_t C_TEXT      = 0xE9EEF3;
 constexpr uint32_t C_TEXT_DIM  = 0x8A95A4;
 
+// Tab bar (bottom of every screen): a row of icons + labels, fixed
+// at 44 px high. The active tab is highlighted in C_ACCENT.
+constexpr uint16_t TAB_BAR_H = 44;
+
 }  // namespace ui
-
-// ---------- Wi-Fi provisioning ------------------------------------------
-
-namespace provision {
-
-constexpr const char* AP_SSID     = "Bamboard-setup";
-constexpr const char* AP_PASSWORD = "bamboard";   // change on first boot
-constexpr uint32_t    PORTAL_TIMEOUT_S = 300;
-
-}  // namespace provision
 
 // ---------- ArduinoOTA --------------------------------------------------
 
 namespace ota {
 
-// mDNS hostname the device advertises for OTA. Matches the wifi hostname
-// set in main.cpp so `pio run -t upload --upload-port bamboard.local` and
-// "ping bamboard.local" both target the same name.
 constexpr const char* HOSTNAME = "bamboard";
 
-// Stops drive-by reflashes from the local network. Override at build time
-// with -DOTA_PASSWORD_OVERRIDE=\"...\" if you want a per-device secret.
 #ifdef OTA_PASSWORD_OVERRIDE
 constexpr const char* PASSWORD = OTA_PASSWORD_OVERRIDE;
 #else
@@ -143,3 +115,13 @@ constexpr const char* PASSWORD = "bamboard";
 #endif
 
 }  // namespace ota
+
+// ---------- Wi-Fi provisioning ------------------------------------------
+
+namespace provision {
+
+constexpr const char* AP_SSID     = "Bamboard-setup";
+constexpr const char* AP_PASSWORD = "bamboard";
+constexpr uint32_t    PORTAL_TIMEOUT_S = 300;
+
+}  // namespace provision
