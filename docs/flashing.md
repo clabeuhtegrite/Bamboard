@@ -92,6 +92,11 @@ firmware than the one running, downloads and flashes it before the rest of the
 UI comes up. If the device is offline, GitHub is unreachable, or it's already
 on the latest version, boot just continues.
 
+The device also **reboots itself once a day at local midnight** so this check
+runs unattended — a device that's never manually power-cycled still picks up
+new releases overnight. The hour and timezone are configurable in the
+`schedule` namespace in `config.h` (see [configuration.md](configuration.md)).
+
 How it works:
 
 - The device fetches
