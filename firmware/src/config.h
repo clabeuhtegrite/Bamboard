@@ -198,8 +198,12 @@ constexpr uint32_t CHECK_TIMEOUT_MS = 8000;
 
 namespace schedule {
 
+// DAILY_REBOOT_ENABLED / DAILY_REBOOT_HOUR / TZ below are first-boot DEFAULTS.
+// The captive portal lets the user override the timezone and reboot hour at
+// runtime (NVS keys `tz` / `reboot_h`); those take precedence over these.
 constexpr bool     DAILY_REBOOT_ENABLED = true;
 constexpr uint8_t  DAILY_REBOOT_HOUR    = 0;     // 0 = local midnight
+constexpr uint8_t  REBOOT_DISABLED      = 255;   // NVS `reboot_h` value = off
 
 // Ignore the reboot window until the device has been up this long, so a
 // reboot that lands inside the 00:00 minute can't immediately re-trigger
