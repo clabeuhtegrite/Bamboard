@@ -15,6 +15,7 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <lvgl.h>
+#include <time.h>
 
 #include "config.h"
 #include "hw/display.h"
@@ -151,11 +152,12 @@ static void start_provisioning() {
 // ---------------------------------------------------------------------------
 
 static void net_task(void*) {
-    uint32_t next_printers_ms = 0;
-    uint32_t next_status_ms   = 0;
-    uint32_t next_stats_ms    = 0;
-    uint32_t next_recent_ms   = 0;
-    uint32_t next_health_ms   = 0;
+    uint32_t next_printers_ms     = 0;
+    uint32_t next_status_ms       = 0;
+    uint32_t next_stats_ms        = 0;
+    uint32_t next_recent_ms       = 0;
+    uint32_t next_health_ms       = 0;
+    uint32_t next_reboot_check_ms = 0;
 
     for (;;) {
         uint32_t now = millis();
@@ -167,6 +169,23 @@ static void net_task(void*) {
         // Drive the WS event loop on every iteration so push frames land
         // without waiting for the next poll tick.
         bambuddy::g_ws.loop();
+
+        // Daily scheduled reboot: at local DAILY_REBOOT_HOUR:00 the device
+        // restarts so the boot-time OTA check applies any new firmware
+        // unattended. getLocalTime() returns false until SNTP has synced, so
+        // we simply don't reboot until the clock is valid. The MIN_UPTIME
+        // guard stops a reboot that lands in the 00:00 minute from looping.
+        if (schedule::DAILY_REBOOT_ENABLED && now >= next_reboot_check_ms) {
+            next_reboot_check_ms = now + schedule::CHECK_INTERVAL_MS;
+            struct tm lt;
+            if (now > schedule::MIN_UPTIME_MS && getLocalTime(&lt, 0) &&
+                lt.tm_hour == schedule::DAILY_REBOOT_HOUR && lt.tm_min == 0) {
+                log_w("Scheduled daily reboot at %02d:%02d local time",
+                      lt.tm_hour, lt.tm_min);
+                delay(200);
+                ESP.restart();
+            }
+        }
 
         if (now >= next_health_ms) {
             uint32_t lat = 0;
@@ -341,6 +360,11 @@ void setup() {
         start_provisioning();
     }
     log_i("Wi-Fi up: %s", WiFi.localIP().toString().c_str());
+
+    // Start SNTP so the daily scheduled reboot (net_task) can tell when it's
+    // local midnight. Non-blocking: the first sync lands a few seconds later,
+    // and the reboot check tolerates "clock not set yet".
+    configTzTime(schedule::TZ, schedule::NTP_SERVER1, schedule::NTP_SERVER2);
 
     // Boot-time firmware update. The device pulls the latest release straight
     // from GitHub; if it's newer than what we're running, the update is
