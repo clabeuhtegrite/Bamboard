@@ -9,8 +9,21 @@
 
 #include "display.h"
 
+// LGFX_USE_V1 is also set in platformio.ini build_flags; guard the define so
+// this translation unit doesn't trigger a "macro redefined" warning.
+#ifndef LGFX_USE_V1
 #define LGFX_USE_V1
+#endif
 #include <LovyanGFX.hpp>
+
+// The ESP32-S3 RGB-parallel bus and its framebuffer panel are NOT pulled in by
+// <LovyanGFX.hpp>: device.hpp only wires the SPI / I2C / Parallel8 / Parallel16
+// buses for the S3, so lgfx::Bus_RGB / lgfx::Panel_RGB are otherwise undefined.
+// Including them explicitly is the canonical LovyanGFX pattern for custom RGB
+// panels (the JC4827W543 drives the ST7262 over a 16-bit RGB bus).
+#include <lgfx/v1/platforms/esp32s3/Panel_RGB.hpp>
+#include <lgfx/v1/platforms/esp32s3/Bus_RGB.hpp>
+
 #include <esp_heap_caps.h>
 #include <lvgl.h>
 
