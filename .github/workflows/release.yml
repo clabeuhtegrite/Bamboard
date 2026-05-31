@@ -11,9 +11,11 @@ name: release
 #                          image the web installer / esptool writes at 0x0
 #   manifest.json          {version,url,sha256,size} the device reads for OTA
 #
-# The web installer (GitHub Pages) is deployed separately by pages.yml, which
-# pulls the factory bin from the latest release — so a firmware release and a
-# web-page tweak each redeploy the site without involving the other.
+# The web installer (GitHub Pages) is deployed by pages.yml; this workflow
+# kicks it via workflow_dispatch once the release is published — a `release`
+# event fired by GITHUB_TOKEN would NOT trigger pages.yml on its own (Actions'
+# anti-recursion rule), but workflow_dispatch is an explicit exception to it.
+# pages.yml also runs on web/ edits, so releases and page tweaks stay decoupled.
 
 on:
   push:
@@ -22,6 +24,7 @@ on:
 
 permissions:
   contents: write   # required for the release-creation step
+  actions:  write   # required to dispatch the Pages deploy (pages.yml)
 
 jobs:
   build-and-release:
@@ -128,3 +131,11 @@ jobs:
             dist/firmware.bin
             dist/bamboard-factory.bin
             dist/manifest.json
+
+      - name: Redeploy web installer with the new release
+        # The release is published above; now kick pages.yml so the web
+        # installer picks up this release's factory bin. workflow_dispatch is
+        # the exception that GITHUB_TOKEN is allowed to trigger.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
