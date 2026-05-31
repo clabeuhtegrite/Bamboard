@@ -5,7 +5,7 @@
 - [Flash (first install over USB)](#flash-first-install-over-usb)
 - [First boot](#first-boot)
 - [Re-configuring later](#re-configuring-later)
-- [OTA updates](#ota-updates)
+- [Updates (over-the-air, from GitHub)](#updates-over-the-air-from-github)
 - [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
@@ -22,8 +22,9 @@ cd firmware/
 pio run                # compiles and downloads all libraries
 ```
 
-The first build pulls in TFT_eSPI, LVGL, ArduinoJson, WiFiManager and
-FastLED, then compiles them. Expect ~5 minutes on a modern laptop.
+The first build pulls in LovyanGFX, LVGL, ArduinoJson, WiFiManager and
+the WebSockets client, then compiles them. Expect ~5 minutes on a modern
+laptop.
 
 ## Flash (first install over USB)
 
@@ -91,70 +92,56 @@ On a fresh device with no saved settings:
 ## Re-configuring later
 
 You don't need to reflash to change the Bambuddy URL, the API key, or the
-Wi-Fi network. Hold the **PREV** button while the device boots — this
-wipes the saved settings and re-opens the captive portal.
+Wi-Fi network. Hold the side **BOOT** button while the device boots — this
+wipes the saved settings and re-opens the captive portal. (The Settings
+screen also has a two-tap **Factory reset** button that does the same.)
 
-## OTA updates
+## Updates (over-the-air, from GitHub)
 
-After the first flash, the ESP32-S3 advertises itself for ArduinoOTA on
-the LAN as `bamboard`. From PlatformIO you can push firmware over the
-network with:
+After the first USB flash you never need a cable again. On every boot the
+device checks this repo's **latest GitHub Release** and, if it carries a
+newer firmware than the one running, downloads and flashes it before the
+rest of the UI comes up. If the device is offline, GitHub is unreachable,
+or it's already on the latest version, boot just continues.
+
+How it works:
+
+- The device fetches
+  `https://github.com/clabeuhtegrite/Bamboard/releases/latest/download/manifest.json`
+  — a tiny file (`{version, tag, url, sha256, size}`) attached to every
+  release. The `latest/download/...` URL always resolves to the newest
+  release, so nothing on the device has to change between versions.
+- It compares `manifest.version` against its own build version (shown at
+  the bottom of the Settings screen). If the release is newer, it
+  downloads the `firmware.bin` asset, flashes it into the spare OTA
+  partition, and reboots into it.
+- Dev builds — compiled locally with no version tag — skip the check, so a
+  USB-flashed work-in-progress isn't immediately pulled back to the
+  published release. (You can also force-disable the check with
+  `-DBAMBOARD_OTA_AUTOCHECK=0` in `build_flags`.)
+
+### Cutting a release
+
+Releases are produced automatically by GitHub Actions — you never build or
+upload the binary by hand:
 
 ```bash
-pio run -t upload --upload-port bamboard.local --upload-flags --auth=bamboard
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
-### One-click update scripts (recommended)
-
-For a smoother experience, the repo ships per-OS wrappers under
-`scripts/` that compile, discover the device, and upload in one step:
-
-| OS      | How to run                              |
-|---------|------------------------------------------|
-| Windows | Double-click `scripts/update-windows.bat` (or run it from `cmd`) |
-| macOS   | Double-click `scripts/update-mac.command` in Finder, or `scripts/update-mac.command` from a terminal |
-| Linux   | `scripts/update-linux.sh`                |
-
-The scripts:
-
-- try `bamboard.local` via mDNS first, fall back to a one-time IP
-  prompt and **cache the answer** so the next run doesn't ask;
-- read the OTA password from `$BAMBOARD_OTA_PASSWORD` if set,
-  otherwise use the firmware default (`bamboard`);
-- locate `pio` on PATH or under `~/.platformio/penv/`, so you don't
-  need PlatformIO on PATH for the script to find it;
-- stream PlatformIO's compile and upload output through, then print a
-  one-line success / failure summary.
-
-Useful flags (forwarded by every launcher):
-
-- `--reset` — clear the cached host and re-discover.
-- `--host 192.168.1.42` — bypass discovery for one run.
-- `--password mysecret` — bypass the env var / default for one run.
-- `--build-only` — compile without uploading.
-
-### Changing the OTA password
-
-The default password is `bamboard`. To bake in a stronger one, edit
-`platformio.ini` and add to `build_flags`:
-
-```ini
-build_flags =
-    ...
-    -DOTA_PASSWORD_OVERRIDE='"my-secret"'
-```
-
-then flash once over USB so the new firmware (with the new password)
-gets installed. Subsequent OTA pushes must use the same value in
-`--auth=` — or simpler, set `BAMBOARD_OTA_PASSWORD=my-secret` in your
-shell and the update scripts pick it up automatically.
+The [`release` workflow](../.github/workflows/release.yml) compiles the
+firmware with that version baked in, generates `manifest.json`, and creates
+the GitHub Release with both assets attached. Use plain
+`vMAJOR.MINOR.PATCH` tags. Within a few minutes every device picks up the
+new version on its next boot.
 
 ### What you see on the device
 
-During the upload the device shows a progress bar; the rest of the UI is
-suppressed until the new firmware boots. On failure the bottom banner
-turns red and prints the reason (wrong password, connection lost,
-flash full, …).
+While an update downloads, the device shows a full-screen progress bar and
+the rest of the UI is suppressed until the new firmware boots. If the
+download fails it briefly shows the reason, then continues on the current
+firmware and retries on the next boot.
 
 ## Troubleshooting
 
