@@ -32,7 +32,3 @@ case/exports/*.stl.bak
 
 # Local overrides
 *.local
-
-# Python bytecode from the launcher scripts
-scripts/__pycache__/
-*.pyc
