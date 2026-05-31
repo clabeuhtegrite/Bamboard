@@ -43,6 +43,20 @@ hardware change.
   the `ota::HOSTNAME` / `ota::PASSWORD` config go with them. First-time
   install is still the USB `scripts/flash-*` path.
 
+### Fixed
+
+- **The firmware now actually compiles for the Guition JC4827W543.** The
+  first CI build surfaced three issues that had gone unnoticed without a build
+  pipeline: the display HAL used `lgfx::Bus_RGB` / `lgfx::Panel_RGB` without
+  including the ESP32-S3 RGB headers (`<LovyanGFX.hpp>` doesn't pull them in);
+  the `PrinterState` alias `PS` collided with the Xtensa `PS` register macro
+  from `<Arduino.h>`; and the linked image (~1.4 MB) overflowed `default.csv`'s
+  1.25 MB OTA slots, so the partition table moved to `min_spiffs.csv` (still
+  two OTA slots, ~1.9 MB each — Bamboard keeps all config in NVS, not SPIFFS).
+- **CI build workflow** (`.github/workflows/ci.yml`) compiles the firmware on
+  every pull request and push to `main`, so a build break is caught before a
+  release tag is cut rather than after.
+
 ### Migration notes
 
 - **Repo**: to start shipping OTA, tag a commit `vX.Y.Z` and push the tag;
