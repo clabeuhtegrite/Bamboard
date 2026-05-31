@@ -1,0 +1,103 @@
+name: release
+
+# Build + publish a firmware release whenever a version tag is pushed.
+#
+#   git tag v1.2.0 && git push origin v1.2.0
+#
+# This compiles the firmware with the tag baked in as its version, then
+# creates a GitHub Release carrying two assets:
+#   - firmware.bin    the image the device flashes over the air
+#   - manifest.json   {version,url,sha256,size} the device reads to decide
+#                     whether it needs to update
+#
+# The device pulls https://github.com/<repo>/releases/latest/download/manifest.json
+# at boot (see firmware/src/net/github_ota.cpp), so "latest" always points at
+# the newest tag with no firmware change needed.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # required for the release-creation step
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Derive version from tag
+        id: ver
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"          # e.g. v1.2.0
+          FULL="${TAG#v}"                   # e.g. 1.2.0  (used in the manifest)
+          NUM="$(printf '%s' "$FULL" | sed -E 's/[-+].*$//')"  # numeric core only
+          {
+            echo "tag=$TAG"
+            echo "full=$FULL"
+            echo "num=$NUM"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build firmware
+        working-directory: firmware
+        env:
+          # Injected as a bare pp-number token; config.h stringifies it into
+          # BAMBOARD_VERSION. Appended to build_flags by PlatformIO.
+          PLATFORMIO_BUILD_FLAGS: -DBAMBOARD_FW_VERSION=${{ steps.ver.outputs.num }}
+        run: pio run -e esp32-s3-devkitc-1
+
+      - name: Stage release assets
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          FULL: ${{ steps.ver.outputs.full }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          BIN="firmware/.pio/build/esp32-s3-devkitc-1/firmware.bin"
+          test -f "$BIN" || { echo "::error::firmware.bin not found at $BIN"; exit 1; }
+          cp "$BIN" dist/firmware.bin
+          SHA="$(sha256sum dist/firmware.bin | cut -d' ' -f1)"
+          SIZE="$(stat -c%s dist/firmware.bin)"
+          cat > dist/manifest.json <<EOF
+          {
+            "version": "${FULL}",
+            "tag": "${TAG}",
+            "url": "https://github.com/${REPO}/releases/download/${TAG}/firmware.bin",
+            "sha256": "${SHA}",
+            "size": ${SIZE}
+          }
+          EOF
+          echo "----- manifest.json -----"
+          cat dist/manifest.json
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Bamboard ${{ steps.ver.outputs.full }}
+          generate_release_notes: true
+          files: |
+            dist/firmware.bin
+            dist/manifest.json

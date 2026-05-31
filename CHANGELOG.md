@@ -5,6 +5,52 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v1.2.0 — 2026-05
+
+Self-updating firmware. The device now pulls new firmware straight from
+this repo's GitHub Releases instead of a PC pushing it over the LAN. No
+hardware change.
+
+### Added
+
+- **Over-the-air updates from GitHub Releases.** On every boot the device
+  fetches `releases/latest/download/manifest.json`, compares its version
+  against the running build, and — if a newer release exists — downloads
+  the `firmware.bin` asset and flashes it (full-screen progress overlay)
+  before normal operation. Offline / GitHub-down / already-current all
+  fall through so the device still boots. Implemented in
+  `firmware/src/net/github_ota.{h,cpp}`; the boot-time call lives in
+  `main.cpp::run_boot_update()`.
+- **CI release pipeline** — `.github/workflows/release.yml` builds the
+  firmware and publishes a GitHub Release carrying `firmware.bin` +
+  `manifest.json` on every pushed `v*` tag. The version is baked into the
+  build from the tag (`-DBAMBOARD_FW_VERSION=…`).
+- **Build version in the UI** — the Settings screen now shows
+  `Firmware <version>` so you can confirm an OTA actually took.
+- **Dev-build guard** — locally compiled builds (no tag) report version
+  `0.0.0-dev` and skip the boot-time auto-update, so a USB-flashed
+  work-in-progress isn't immediately overwritten by the latest release.
+  `-DBAMBOARD_OTA_AUTOCHECK=0` disables the check explicitly too.
+
+### Removed
+
+- **The desktop simulator (`sim/`).** UI iteration now happens on real
+  hardware. Removes the CMake + SDL2 harness, its stubs, and the
+  `BAMBOARD_SIM_LIVE` live-backend path.
+- **LAN OTA push.** Dropped `ArduinoOTA` from the firmware along with the
+  `scripts/update-*` launchers and `scripts/ota.py` (mDNS discovery /
+  espota). The `OTA_PASSWORD_OVERRIDE` / `BAMBOARD_OTA_PASSWORD` knobs and
+  the `ota::HOSTNAME` / `ota::PASSWORD` config go with them. First-time
+  install is still the USB `scripts/flash-*` path.
+
+### Migration notes
+
+- **Repo**: to start shipping OTA, tag a commit `vX.Y.Z` and push the tag;
+  CI builds and publishes the release. Flash that build once over USB, and
+  every release after it lands over the air.
+- **Tags**: use plain `vMAJOR.MINOR.PATCH` — the numeric core is what the
+  device compares.
+
 ## v1.1.0 — 2026-05
 
 Polish pass on the v1.0 touch UI plus a slimmer second-gen case. No

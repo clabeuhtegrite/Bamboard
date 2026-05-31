@@ -59,13 +59,8 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 
 ### Install & updates
 
-- **One-click USB flash** — `scripts/flash-windows.bat`, `scripts/flash-mac.command`, `scripts/flash-linux.sh`. Auto-detects the serial port via VID:PID scoring.
-- **One-click OTA updates** — `scripts/update-*` discovers the device via mDNS (with cache + IP fallback) and pushes the new firmware. Full-screen progress overlay on the device during upload.
-- **OTA password protection** — default `bamboard`, overridable via `BAMBOARD_OTA_PASSWORD` or a build flag. See [docs/flashing.md](docs/flashing.md).
-
-### Development
-
-- **Desktop sim** — `sim/` ships a CMake + SDL2 harness that runs the same `firmware/src/ui/{screens,ui}.cpp` sources in a native 480 × 272 window so the UI can be tweaked without flashing. Mouse = touch. See [sim/README.md](sim/README.md).
+- **One-click USB flash** — `scripts/flash-windows.bat`, `scripts/flash-mac.command`, `scripts/flash-linux.sh`. Auto-detects the serial port via VID:PID scoring. Only needed for the very first install.
+- **Over-the-air updates from GitHub** — on every boot the device checks this repo's latest GitHub Release. If it carries a newer firmware than the one running, the device downloads and flashes it (with a full-screen progress overlay) before coming up — no PC, no LAN tooling, no being on the same network. If it's offline or already current, boot continues normally. Releases are built and published automatically by [`.github/workflows/release.yml`](.github/workflows/release.yml) on every pushed `v*` tag. See [docs/flashing.md](docs/flashing.md).
 
 ## Repo layout
 
@@ -74,14 +69,14 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 ├── firmware/        PlatformIO project (ESP32-S3 + LVGL + LovyanGFX)
 │   ├── src/         C++ sources
 │   │   ├── hw/      Display + GT911 touch HAL (LovyanGFX-based)
-│   │   ├── net/     Bambuddy REST + WebSocket clients
+│   │   ├── net/     Bambuddy REST + WebSocket clients + GitHub OTA updater
 │   │   ├── ui/      LVGL screen manager + per-screen builders
 │   │   ├── config.h All compile-time tunables
-│   │   └── main.cpp Boot, Wi-Fi provisioning, FreeRTOS tasks, ArduinoOTA
+│   │   └── main.cpp Boot, Wi-Fi provisioning, FreeRTOS tasks, boot-time OTA
 │   ├── include/     lv_conf overrides
 │   └── platformio.ini
-├── sim/             Desktop LVGL preview (CMake + SDL2)
-├── scripts/         One-click flash / update launchers (Windows/macOS/Linux)
+├── .github/         CI: build + publish a release on every v* tag
+├── scripts/         One-click USB flash launchers (Windows/macOS/Linux)
 ├── hardware/        Bill of materials, wiring diagram
 ├── case/            Parametric OpenSCAD enclosure + STL exports
 └── docs/            Assembly, flashing, configuration guides
