@@ -2,7 +2,7 @@
 
 There isn't any.
 
-The v1.0 build uses a single all-in-one board (the Guition JC4827W543)
+The v0.3 build uses a single all-in-one board (the Guition JC4827W543)
 that integrates the ESP32-S3, the 4.3" IPS touch panel and every signal
 between them on one PCB. The only thing you plug in is the USB-C cable.
 

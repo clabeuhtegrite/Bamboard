@@ -126,8 +126,8 @@ Releases are produced automatically by GitHub Actions — you never build or
 upload the binary by hand:
 
 ```bash
-git tag v1.2.0
-git push origin v1.2.0
+git tag v0.5.0
+git push origin v0.5.0
 ```
 
 The [`release` workflow](../.github/workflows/release.yml) compiles the

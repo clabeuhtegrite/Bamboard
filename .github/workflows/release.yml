@@ -2,7 +2,7 @@ name: release
 
 # Build + publish a firmware release whenever a version tag is pushed.
 #
-#   git tag v1.2.0 && git push origin v1.2.0
+#   git tag v0.5.0 && git push origin v0.5.0
 #
 # This compiles the firmware with the tag baked in as its version, then
 # creates a GitHub Release carrying two assets:
@@ -50,8 +50,8 @@ jobs:
         id: ver
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"          # e.g. v1.2.0
-          FULL="${TAG#v}"                   # e.g. 1.2.0  (used in the manifest)
+          TAG="${GITHUB_REF_NAME}"          # e.g. v0.5.0
+          FULL="${TAG#v}"                   # e.g. 0.5.0 (used in the manifest)
           NUM="$(printf '%s' "$FULL" | sed -E 's/[-+].*$//')"  # numeric core only
           {
             echo "tag=$TAG"

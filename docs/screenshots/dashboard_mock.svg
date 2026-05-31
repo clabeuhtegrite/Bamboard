@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Bamboard v1.1 Live dashboard, 1:1 scale of the JC4827W543 (480 x 272).
+  Bamboard v0.4 Live dashboard, 1:1 scale of the JC4827W543 (480 x 272).
 
   Layout grid (matches firmware/src/ui/screens/dashboard.cpp):
     Header        : y =   0 ..  36

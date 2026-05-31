@@ -4,7 +4,7 @@ Indicative prices in EUR, sourced from AliExpress at the time of writing.
 Local electronics stores (TME, Mouser, Reichelt) will of course be more
 expensive but will deliver in days, not weeks.
 
-The build collapsed in v1.0 to a single all-in-one board (display + touch
+The build collapsed in v0.3 to a single all-in-one board (display + touch
 + ESP32-S3 on one PCB), so the parts list is short and zero-soldering is
 trivial — there's literally one cable to plug in.
 

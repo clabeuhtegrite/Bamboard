@@ -5,7 +5,7 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
-## v1.2.0 — 2026-05
+## v0.5.0 — 2026-05
 
 Self-updating firmware. The device now pulls new firmware straight from
 this repo's GitHub Releases instead of a PC pushing it over the LAN. No
@@ -51,15 +51,15 @@ hardware change.
 - **Tags**: use plain `vMAJOR.MINOR.PATCH` — the numeric core is what the
   device compares.
 
-## v1.1.0 — 2026-05
+## v0.4.0 — 2026-05
 
-Polish pass on the v1.0 touch UI plus a slimmer second-gen case. No
+Polish pass on the v0.3 touch UI plus a slimmer second-gen case. No
 hardware changes — same Guition JC4827W543 BOM, same one-click flash
-tooling. v1.0 owners get a re-flash + a one-night reprint of the case.
+tooling. v0.3 owners get a re-flash + a one-night reprint of the case.
 
 ### Added
 
-- **Segmented speed chip on Live** — the v1.0 "Speed: Standard → Sport"
+- **Segmented speed chip on Live** — the v0.3 "Speed: Standard → Sport"
   button (cycle-on-tap) is replaced by a 4-segment Silent / Standard /
   Sport / Ludicrous chip. Active segment highlighted in accent; tap any
   segment to set that speed directly. No more cycling through three to
@@ -108,7 +108,7 @@ tooling. v1.0 owners get a re-flash + a one-night reprint of the case.
   state).
 - **Action button shape** moved to pill (R_PILL = 18 px) for primary
   CTAs to differentiate them from neutral chips.
-- **Case rebuilt for compactness** — `case/bamboard.scad` v1.1:
+- **Case rebuilt for compactness** — `case/bamboard.scad` v0.4:
   - PCB pocket clearance dropped 6 mm → 0.6 mm. Overall case 8 mm
     narrower, 6 mm shorter.
   - Walls trimmed 2.4 mm → 1.8 mm; top 2.0 mm → 1.6 mm.
@@ -134,7 +134,7 @@ tooling. v1.0 owners get a re-flash + a one-night reprint of the case.
   and swap. The board itself drops in unchanged; the four corner
   screws change from M3 × 8 mm to M3 × 6 mm.
 
-## v1.0.0 — 2026-05
+## v0.3.0 — 2026-05
 
 Major architectural pivot: the standalone ESP32-S3 DevKitC + ILI9488
 SPI + 3 button modules + WS2812 breakout build is replaced by a
@@ -204,7 +204,7 @@ touch on the same PCB). Zero soldering, zero wiring, BOM down to
 
 ### Migration notes
 
-If you've got the v0.x build running and want to switch to v1.0:
+If you've got the v0.x build running and want to switch to v0.3:
 
 1. Buy a Guition JC4827W543 (see `hardware/bom.md` for AliExpress
    search links). The DevKitC + ILI9488 SPI + buttons + LED parts

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Bamboard v1.1 History (stats + recent archives), 1:1 (480 x 272).
+  Bamboard v0.4 History (stats + recent archives), 1:1 (480 x 272).
 
   Layout (matches firmware/src/ui/screens/history.cpp):
     Header     : y =   0 ..  36

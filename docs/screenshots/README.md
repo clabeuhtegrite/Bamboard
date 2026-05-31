@@ -12,7 +12,7 @@ looks alive.
 | `printers_mock.svg`  | Multi-printer list, focused row highlighted | 2 |
 | `history_mock.svg`   | Stats KPIs + recent archives | 3 |
 | `settings_mock.svg`  | Diagnostics + brightness 1–5 + factory reset | 4 |
-| `device_render.svg`  | Hero render of the assembled v1.1 device — slim PETG case, integrated desk-stand tab, screen lit on the Live dashboard | — |
+| `device_render.svg`  | Hero render of the assembled v0.4 device — slim PETG case, integrated desk-stand tab, screen lit on the Live dashboard | — |
 
 ## Conventions
 
@@ -23,7 +23,7 @@ looks alive.
   active tab at y = 228.
 - Colours match `firmware/src/config.h` (`C_BG`, `C_PANEL`, `C_PANEL_HI`,
   `C_ACCENT`, `C_OK`, `C_WARN`, `C_ERR`, `C_TEXT`, `C_TEXT_DIM`).
-- Radii from the v1.1 theme: panels = 12 px, pills = 18 px, chips = 8 px.
+- Radii from the v0.4 theme: panels = 12 px, pills = 18 px, chips = 8 px.
 
 When you build the unit, drop real photos in here (phone camera at ~30°,
 or LVGL snapshot dump if you instrumented the firmware) and replace the

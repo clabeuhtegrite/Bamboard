@@ -1,5 +1,5 @@
 // =============================================================================
-// Bamboard enclosure (v1.1) — parametric OpenSCAD model
+// Bamboard enclosure (v0.4) — parametric OpenSCAD model
 // =============================================================================
 //
 // Two-part FDM-printable case for the Guition JC4827W543 all-in-one board
@@ -13,10 +13,10 @@
 //                 needed to angle the screen toward you
 //
 // The two halves screw together with **four M3 × 6 mm self-tapping
-// screws** (was M3 × 8 mm on v1.0 — the new walls are thinner so the
+// screws** (was M3 × 8 mm on v0.3 — the new walls are thinner so the
 // shorter screw seats fully without poking through).
 //
-// What changed since v1.0:
+// What changed since v0.3:
 //   - PCB pocket clearance dropped from 6 mm to 0.6 mm. The case is
 //     ~8 mm narrower and ~6 mm shorter overall.
 //   - Walls trimmed from 2.4 mm → 1.8 mm. Top thickness 2.0 mm → 1.6 mm.
@@ -53,7 +53,7 @@ $fs = 0.4;
 part = "front";   // "front" | "back" | "all"
 
 // ---------- Global wall geometry --------------------------------------------
-// Slimmer than v1.0. The PETG case is still rigid because we picked up
+// Slimmer than v0.3. The PETG case is still rigid because we picked up
 // stiffness from the chamfered front edge + the corner screw bosses.
 wall            = 1.8;
 top_thickness   = 1.6;
@@ -204,7 +204,7 @@ module front_shell() {
     }
 
     // Corner screw bosses (mate with the back shell). Smaller diameter
-    // than v1.0 to keep the inside roomy for the ESP module.
+    // than v0.3 to keep the inside roomy for the ESP module.
     for (sx = [-1, 1]) for (sy = [-1, 1])
         translate([
             sx * (outer_w/2 - wall - 3.5),
