@@ -1,23 +1,19 @@
 name: release
 
-# Build + publish a firmware release whenever a version tag is pushed, and
-# deploy the browser-based web installer to GitHub Pages.
+# Build + publish a firmware release whenever a version tag is pushed.
 #
-#   git tag v0.5.1 && git push origin v0.5.1
+#   git tag v0.6.1 && git push origin v0.6.1
 #
-# This compiles the firmware with the tag baked in as its version, then:
-#   - creates a GitHub Release carrying three assets:
-#       firmware.bin           the app image the device flashes over the air
-#       bamboard-factory.bin   bootloader + partitions + boot_app0 + app, the
-#                              full image the web installer / esptool writes at 0x0
-#       manifest.json          {version,url,sha256,size} the device reads for OTA
-#   - publishes the web installer (web/ + a same-origin copy of the factory bin
-#     + an ESP Web Tools manifest) to GitHub Pages, so the page at
-#     https://<owner>.github.io/<repo>/ always flashes the latest release.
+# Compiles the firmware with the tag baked in as its version, then creates a
+# GitHub Release carrying three assets:
+#   firmware.bin           the app image the device flashes over the air
+#   bamboard-factory.bin   bootloader + partitions + boot_app0 + app, the full
+#                          image the web installer / esptool writes at 0x0
+#   manifest.json          {version,url,sha256,size} the device reads for OTA
 #
-# GitHub release assets don't send CORS headers, so the factory bin can't be
-# fetched cross-origin by the browser — that's why it is bundled into the Pages
-# site rather than linked from the release.
+# The web installer (GitHub Pages) is deployed separately by pages.yml, which
+# pulls the factory bin from the latest release — so a firmware release and a
+# web-page tweak each redeploy the site without involving the other.
 
 on:
   push:
@@ -26,11 +22,6 @@ on:
 
 permissions:
   contents: write   # required for the release-creation step
-
-# Serialise Pages deployments; never cancel one mid-flight.
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   build-and-release:
@@ -64,8 +55,8 @@ jobs:
         id: ver
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"          # e.g. v0.5.1
-          FULL="${TAG#v}"                   # e.g. 0.5.1 (used in the manifests)
+          TAG="${GITHUB_REF_NAME}"          # e.g. v0.6.1
+          FULL="${TAG#v}"                   # e.g. 0.6.1 (used in the manifest)
           NUM="$(printf '%s' "$FULL" | sed -E 's/[-+].*$//')"  # numeric core only
           {
             echo "tag=$TAG"
@@ -137,47 +128,3 @@ jobs:
             dist/firmware.bin
             dist/bamboard-factory.bin
             dist/manifest.json
-
-      - name: Assemble Pages site
-        env:
-          FULL: ${{ steps.ver.outputs.full }}
-        run: |
-          set -euo pipefail
-          SITE=_site
-          mkdir -p "$SITE"
-          cp web/index.html "$SITE/index.html"
-          cp firmware/.pio/build/esp32-s3-devkitc-1/bamboard-factory.bin "$SITE/bamboard-factory.bin"
-          # Version-stamped ESP Web Tools manifest; the factory bin sits next to
-          # it (same origin), so its path is just the filename.
-          cat > "$SITE/manifest.json" <<EOF
-          {
-            "name": "Bamboard",
-            "version": "${FULL}",
-            "new_install_prompt_erase": false,
-            "builds": [
-              { "chipFamily": "ESP32-S3", "parts": [ { "path": "bamboard-factory.bin", "offset": 0 } ] }
-            ]
-          }
-          EOF
-          echo "----- web manifest.json -----"
-          cat "$SITE/manifest.json"
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-  deploy-pages:
-    needs: build-and-release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4

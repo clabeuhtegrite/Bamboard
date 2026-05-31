@@ -1,0 +1,87 @@
+name: pages
+
+# Deploy the browser-based web installer (web/) to GitHub Pages.
+#
+# Decoupled from release.yml so the two move independently:
+#   - editing the page (web/**) redeploys it using the LATEST release's
+#     firmware — no firmware rebuild, no new tag;
+#   - publishing a release redeploys it so the page picks up the new firmware.
+#
+# The factory image is pulled from the latest release and bundled into the
+# site, because GitHub release assets send no CORS headers — the browser can't
+# fetch the bin cross-origin, so it has to be served same-origin from Pages.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/pages.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two Pages deploys at once; don't cancel one mid-flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Assemble site (web/ + latest release's factory image)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp web/index.html _site/index.html
+
+          # Pull the factory image + version from the latest published release.
+          TAG="$(gh release view --repo "$REPO" --json tagName -q .tagName)"
+          FULL="${TAG#v}"
+          echo "latest release: $TAG (version $FULL)"
+          gh release download "$TAG" --repo "$REPO" \
+            --pattern bamboard-factory.bin --dir _site
+
+          # Version-stamped ESP Web Tools manifest; the factory bin sits next to
+          # it (same origin), so its path is just the filename.
+          cat > _site/manifest.json <<EOF
+          {
+            "name": "Bamboard",
+            "version": "${FULL}",
+            "new_install_prompt_erase": false,
+            "builds": [
+              { "chipFamily": "ESP32-S3", "parts": [ { "path": "bamboard-factory.bin", "offset": 0 } ] }
+            ]
+          }
+          EOF
+          echo "----- _site -----" && ls -l _site
+          echo "----- manifest.json -----" && cat _site/manifest.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build-site
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

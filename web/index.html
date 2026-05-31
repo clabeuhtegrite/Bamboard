@@ -24,7 +24,13 @@
       line-height: 1.55; display: flex; flex-direction: column; align-items: center;
       padding: 32px 20px 64px;
     }
-    main { width: 100%; max-width: 640px; }
+    main { width: 100%; max-width: 640px; position: relative; z-index: 1; }
+    /* soft teal glow behind the hero */
+    body::before {
+      content: ""; position: fixed; top: 0; left: 0; right: 0; height: 340px;
+      pointer-events: none; z-index: 0;
+      background: radial-gradient(60% 100% at 50% 0%, rgba(0, 183, 195, 0.14), transparent 72%);
+    }
     header { text-align: center; margin-bottom: 8px; }
     h1 { font-size: 2rem; margin: 0 0 4px; letter-spacing: -0.02em; }
     h1 .accent { color: var(--accent); }
@@ -35,14 +41,27 @@
       padding: 24px; margin: 16px 0;
     }
     .install { text-align: center; }
-    .ver { color: var(--dim); font-size: 0.9rem; margin-top: 14px; }
-    .ver code { color: var(--text); }
+    .card.install { border-color: var(--accent-dark); box-shadow: 0 0 44px rgba(0, 183, 195, 0.07); }
 
-    /* ESP Web Tools button styling via its CSS custom properties. */
+    /* ESP Web Tools button — teal CTA matching the firmware accent.
+       --esp-tools-button-color is the *background*, -text-color the label. */
     esp-web-install-button {
-      --esp-tools-button-color: var(--inv);
-      --esp-tools-button-background-color: var(--accent);
+      --esp-tools-button-color: var(--accent);
+      --esp-tools-button-text-color: var(--inv);
       --esp-tools-button-border-radius: 18px;
+    }
+
+    /* Version / chip badges — replaces the old inline <code> version line. */
+    .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px; font-size: 0.8rem;
+      background: var(--panel-hi); border: 1px solid var(--line); color: var(--dim);
+      border-radius: 8px; padding: 5px 11px;
+    }
+    .badge strong { color: var(--text); font-weight: 600; }
+    .badge .dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+      box-shadow: 0 0 0 3px rgba(57, 217, 138, 0.15);
     }
 
     ol { padding-left: 22px; } li { margin: 6px 0; }
@@ -77,7 +96,10 @@
           ⚠️ Web Serial needs a secure (https) page.
         </span>
       </esp-web-install-button>
-      <p class="ver">Installs Bamboard <code id="ver">latest</code> · ESP32-S3</p>
+      <div class="badges">
+        <span class="badge"><span class="dot"></span>Latest&nbsp;·&nbsp;<strong>v<span id="ver">…</span></strong></span>
+        <span class="badge">ESP32-S3</span>
+      </div>
     </div>
 
     <div class="card">
