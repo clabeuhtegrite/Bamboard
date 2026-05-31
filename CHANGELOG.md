@@ -5,6 +5,39 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.6.0 — 2026-06
+
+Browser-based first install. Flashing a fresh device now happens entirely on a
+web page — no PlatformIO, no CLI.
+
+### Added
+
+- **Web installer** (`web/`, published to GitHub Pages at
+  <https://clabeuhtegrite.github.io/Bamboard/>). An
+  [ESP Web Tools](https://esphome.github.io/esp-web-tools/) page flashes the
+  full firmware over Web Serial straight from the browser. It's rebuilt and
+  redeployed on every release, so it always installs the latest firmware.
+- **Factory image asset** — `release.yml` now also produces
+  `bamboard-factory.bin` (bootloader + partition table + boot_app0 + app,
+  merged with `esptool merge_bin`) and attaches it to the release. The web
+  installer serves it **same-origin** (GitHub release assets don't send CORS
+  headers, so the browser can't fetch the bin cross-origin); it's also the
+  file to flash by hand with esptool at `0x0`.
+
+### Removed
+
+- **The CLI flash scripts** (`scripts/flash-*.{bat,command,sh}`, `flash.py`,
+  `_common.py`). First install is the web page now; advanced users can still
+  flash `bamboard-factory.bin` with esptool (see [docs/flashing.md](docs/flashing.md)).
+
+### Notes
+
+- **Browser support:** Web Serial is **Chromium-desktop only** (Chrome / Edge /
+  Opera). Firefox, Safari and mobile browsers can't flash and fall back to
+  esptool.
+- OTA is unchanged: the device still pulls the app `firmware.bin` from the
+  latest release at boot.
+
 ## v0.5.0 — 2026-05
 
 Self-updating firmware. The device now pulls new firmware straight from

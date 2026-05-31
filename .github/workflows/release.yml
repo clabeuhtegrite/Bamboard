@@ -1,18 +1,23 @@
 name: release
 
-# Build + publish a firmware release whenever a version tag is pushed.
+# Build + publish a firmware release whenever a version tag is pushed, and
+# deploy the browser-based web installer to GitHub Pages.
 #
-#   git tag v0.5.0 && git push origin v0.5.0
+#   git tag v0.5.1 && git push origin v0.5.1
 #
-# This compiles the firmware with the tag baked in as its version, then
-# creates a GitHub Release carrying two assets:
-#   - firmware.bin    the image the device flashes over the air
-#   - manifest.json   {version,url,sha256,size} the device reads to decide
-#                     whether it needs to update
+# This compiles the firmware with the tag baked in as its version, then:
+#   - creates a GitHub Release carrying three assets:
+#       firmware.bin           the app image the device flashes over the air
+#       bamboard-factory.bin   bootloader + partitions + boot_app0 + app, the
+#                              full image the web installer / esptool writes at 0x0
+#       manifest.json          {version,url,sha256,size} the device reads for OTA
+#   - publishes the web installer (web/ + a same-origin copy of the factory bin
+#     + an ESP Web Tools manifest) to GitHub Pages, so the page at
+#     https://<owner>.github.io/<repo>/ always flashes the latest release.
 #
-# The device pulls https://github.com/<repo>/releases/latest/download/manifest.json
-# at boot (see firmware/src/net/github_ota.cpp), so "latest" always points at
-# the newest tag with no firmware change needed.
+# GitHub release assets don't send CORS headers, so the factory bin can't be
+# fetched cross-origin by the browser — that's why it is bundled into the Pages
+# site rather than linked from the release.
 
 on:
   push:
@@ -21,6 +26,11 @@ on:
 
 permissions:
   contents: write   # required for the release-creation step
+
+# Serialise Pages deployments; never cancel one mid-flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build-and-release:
@@ -43,15 +53,19 @@ jobs:
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
           restore-keys: pio-${{ runner.os }}-
 
-      - name: Install PlatformIO
-        run: pip install --upgrade platformio
+      - name: Install PlatformIO + esptool
+        # esptool is pinned to the 4.x line: its merge_bin sub-command and flags
+        # changed in 5.x, and we rely on the 4.x CLI below.
+        run: |
+          pip install --upgrade platformio
+          pip install "esptool>=4.7,<5"
 
       - name: Derive version from tag
         id: ver
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"          # e.g. v0.5.0
-          FULL="${TAG#v}"                   # e.g. 0.5.0 (used in the manifest)
+          TAG="${GITHUB_REF_NAME}"          # e.g. v0.5.1
+          FULL="${TAG#v}"                   # e.g. 0.5.1 (used in the manifests)
           NUM="$(printf '%s' "$FULL" | sed -E 's/[-+].*$//')"  # numeric core only
           {
             echo "tag=$TAG"
@@ -67,6 +81,27 @@ jobs:
           PLATFORMIO_BUILD_FLAGS: -DBAMBOARD_FW_VERSION=${{ steps.ver.outputs.num }}
         run: pio run -e esp32-s3-devkitc-1
 
+      - name: Merge factory image
+        working-directory: firmware
+        run: |
+          set -euo pipefail
+          BD=.pio/build/esp32-s3-devkitc-1
+          BOOT_APP0="$HOME/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin"
+          for f in "$BD/bootloader.bin" "$BD/partitions.bin" "$BD/firmware.bin" "$BOOT_APP0"; do
+            test -f "$f" || { echo "::error::missing $f"; exit 1; }
+          done
+          # Full-flash image for a fresh device: ESP32-S3 bootloader lives at 0x0
+          # (not 0x1000 like the classic ESP32). 'keep' preserves the flash
+          # mode/freq/size bytes the PlatformIO build already wrote.
+          python -m esptool --chip esp32s3 merge_bin \
+            -o "$BD/bamboard-factory.bin" \
+            --flash_mode keep --flash_freq keep --flash_size keep \
+            0x0     "$BD/bootloader.bin" \
+            0x8000  "$BD/partitions.bin" \
+            0xe000  "$BOOT_APP0" \
+            0x10000 "$BD/firmware.bin"
+          ls -l "$BD/bamboard-factory.bin"
+
       - name: Stage release assets
         env:
           REPO: ${{ github.repository }}
@@ -75,9 +110,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          BIN="firmware/.pio/build/esp32-s3-devkitc-1/firmware.bin"
-          test -f "$BIN" || { echo "::error::firmware.bin not found at $BIN"; exit 1; }
-          cp "$BIN" dist/firmware.bin
+          BD="firmware/.pio/build/esp32-s3-devkitc-1"
+          cp "$BD/firmware.bin"          dist/firmware.bin
+          cp "$BD/bamboard-factory.bin"  dist/bamboard-factory.bin
           SHA="$(sha256sum dist/firmware.bin | cut -d' ' -f1)"
           SIZE="$(stat -c%s dist/firmware.bin)"
           cat > dist/manifest.json <<EOF
@@ -100,4 +135,49 @@ jobs:
           generate_release_notes: true
           files: |
             dist/firmware.bin
+            dist/bamboard-factory.bin
             dist/manifest.json
+
+      - name: Assemble Pages site
+        env:
+          FULL: ${{ steps.ver.outputs.full }}
+        run: |
+          set -euo pipefail
+          SITE=_site
+          mkdir -p "$SITE"
+          cp web/index.html "$SITE/index.html"
+          cp firmware/.pio/build/esp32-s3-devkitc-1/bamboard-factory.bin "$SITE/bamboard-factory.bin"
+          # Version-stamped ESP Web Tools manifest; the factory bin sits next to
+          # it (same origin), so its path is just the filename.
+          cat > "$SITE/manifest.json" <<EOF
+          {
+            "name": "Bamboard",
+            "version": "${FULL}",
+            "new_install_prompt_erase": false,
+            "builds": [
+              { "chipFamily": "ESP32-S3", "parts": [ { "path": "bamboard-factory.bin", "offset": 0 } ] }
+            ]
+          }
+          EOF
+          echo "----- web manifest.json -----"
+          cat "$SITE/manifest.json"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy-pages:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
