@@ -244,7 +244,9 @@ def main() -> int:
     info("  3. The captive portal opens automatically — fill in your home")
     info("     Wi-Fi credentials, plus your Bambuddy URL and API key.")
     info("  4. Done. The device reboots into the live dashboard.")
-    info("After that, use scripts/update-* for subsequent flashes over the LAN.")
+    info("After that, updates are automatic: on every boot the device checks")
+    info("this repo's latest GitHub Release and self-flashes if it's newer —")
+    info("no PC, no LAN tooling. You only need this USB flash once.")
 
     if args.monitor:
         print()

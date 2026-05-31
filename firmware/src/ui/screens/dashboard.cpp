@@ -329,11 +329,11 @@ void update_dashboard(int printer_id) {
     // --- Contextual action row ---
     // Priority order: an active HMS error wins (Clear HMS pill), then
     // "finished but plate dirty" wins, then while-printing speed chip.
-    using PS = ::bambuddy::PrinterState;
-    bool can_speed = (sel->state == PS::Printing ||
-                      sel->state == PS::Paused   ||
-                      sel->state == PS::Prepare);
-    bool can_plate = (sel->state == PS::Finish || sel->state == PS::Failed);
+    using PState = ::bambuddy::PrinterState;
+    bool can_speed = (sel->state == PState::Printing ||
+                      sel->state == PState::Paused   ||
+                      sel->state == PState::Prepare);
+    bool can_plate = (sel->state == PState::Finish || sel->state == PState::Failed);
     bool can_hms   = hms_active;
 
     auto show = [](lv_obj_t* o, bool v) {
