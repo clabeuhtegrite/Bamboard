@@ -4,7 +4,7 @@
 // URL, API key, Wi-Fi credentials) is *not* stored here — it's provisioned at
 // runtime via the WiFiManager captive portal and saved in NVS (Preferences).
 //
-// v1.0+ targets the Guition JC4827W543 all-in-one board (ESP32-S3-WROOM-1
+// v0.3+ targets the Guition JC4827W543 all-in-one board (ESP32-S3-WROOM-1
 // with a 4.3" RGB-parallel IPS panel + GT911 capacitive touch on the same
 // PCB). The display + touch pinout lives in `hw/display.cpp` because it's
 // wide enough to deserve its own file.

@@ -1,4 +1,4 @@
-# Bamboard enclosure (v1.1)
+# Bamboard enclosure (v0.4)
 
 Compact two-part FDM-printable case for the Guition JC4827W543 board.
 Both parts print on a 0.4 mm nozzle in PLA or PETG (PETG preferred — the
@@ -11,12 +11,12 @@ weeks on a sunny desk).
 | `back_shell`   | USB-C cut-out, BOOT + RST button windows, microSD slot, vertical vent slots grouped over the ESP module, four corner screw posts. Integrated 15° desk-stand tab — no accessory needed.                                            | 1 |
 
 The shells screw together with **four M3 × 6 mm self-tapping screws**.
-(v1.0 used M3 × 8 mm — the new shells are thinner so the shorter screw
+(v0.3 used M3 × 8 mm — the new shells are thinner so the shorter screw
 seats fully without poking through.)
 
-## What changed since v1.0
+## What changed since v0.3
 
-| Dimension              | v1.0    | v1.1    |
+| Dimension              | v0.3    | v0.4    |
 |------------------------|---------|---------|
 | Outer width            | 122 mm  | 112 mm  |
 | Outer height           | 92 mm   | 82 mm   |

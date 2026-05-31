@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Bamboard v1.1 hero render.
+  Bamboard v0.4 hero render.
 
-  Photorealistic-leaning SVG product shot of the assembled v1.1 device:
+  Photorealistic-leaning SVG product shot of the assembled v0.4 device:
   Guition JC4827W543 (4.3" IPS 480x272 capacitive touch, ESP32-S3 +
   8 MB PSRAM, all on one PCB) sitting in the new compact PETG case
   with the chamfered front edge and the integrated 15° desk-stand
-  tab. Screen renders the v1.1 Live dashboard — Workshop X1C printing
+  tab. Screen renders the v0.4 Live dashboard — Workshop X1C printing
   a benchy at 62 %, segmented speed chip with "Standard" active.
 
   No raster assets; everything is layered SVG gradients + paths.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img">
-  <title>Bamboard v1.1 device in its 3D-printed case, screen lit, on a desk</title>
-  <desc>Studio render of the assembled Bamboard v1.1: light PETG enclosure with slim 3 mm bezel and a chamfered front edge, 4.3 inch IPS touch screen showing the Live dashboard, an integrated desk-stand tab tilting it back 15 degrees, and a USB-C cable trailing off the right side.</desc>
+  <title>Bamboard v0.4 device in its 3D-printed case, screen lit, on a desk</title>
+  <desc>Studio render of the assembled Bamboard v0.4: light PETG enclosure with slim 3 mm bezel and a chamfered front edge, 4.3 inch IPS touch screen showing the Live dashboard, an integrated desk-stand tab tilting it back 15 degrees, and a USB-C cable trailing off the right side.</desc>
 
   <defs>
     <!-- ===== Scene ===== -->
@@ -116,7 +116,7 @@
        Real device is 112 x 82 mm; rendered at 720 x 520 SVG-px
        (≈ 6.43 px/mm). Slim 3 mm bezel = 19.3 SVG-px around the
        active screen. Corner radius 18 px ≈ 2.8 mm — matches the
-       v1.1 outer rounding.
+       v0.4 outer rounding.
        ========================================================= -->
   <g transform="translate(240,130)">
 
