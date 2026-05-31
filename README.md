@@ -59,7 +59,7 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 
 ### Install & updates
 
-- **One-click USB flash** — `scripts/flash-windows.bat`, `scripts/flash-mac.command`, `scripts/flash-linux.sh`. Auto-detects the serial port via VID:PID scoring. Only needed for the very first install.
+- **Browser-based install** — flash the latest firmware straight from the [web installer](https://clabeuhtegrite.github.io/Bamboard/) in Chrome / Edge / Opera (no CLI, no toolchain). Only needed for the very first install — everything after lands over the air. Firefox / Safari / Linux users can flash `bamboard-factory.bin` from the latest release with `esptool` instead.
 - **Over-the-air updates from GitHub** — on every boot the device checks this repo's latest GitHub Release. If it carries a newer firmware than the one running, the device downloads and flashes it (with a full-screen progress overlay) before coming up — no PC, no LAN tooling, no being on the same network. If it's offline or already current, boot continues normally. Releases are built and published automatically by [`.github/workflows/release.yml`](.github/workflows/release.yml) on every pushed `v*` tag. See [docs/flashing.md](docs/flashing.md).
 
 ## Repo layout
@@ -75,8 +75,8 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 │   │   └── main.cpp Boot, Wi-Fi provisioning, FreeRTOS tasks, boot-time OTA
 │   ├── include/     lv_conf overrides
 │   └── platformio.ini
-├── .github/         CI: build + publish a release on every v* tag
-├── scripts/         One-click USB flash launchers (Windows/macOS/Linux)
+├── .github/         CI: build-check every push; publish release + web installer on v* tags
+├── web/             Browser-based flasher (ESP Web Tools → GitHub Pages)
 ├── hardware/        Bill of materials, wiring diagram
 ├── case/            Parametric OpenSCAD enclosure + STL exports
 └── docs/            Assembly, flashing, configuration guides
@@ -88,9 +88,10 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 2. Print the enclosure: `case/bamboard.scad` → export STL → slice → print PLA / PETG.
 3. Drop the Guition board into the front shell, clip the back shell on,
    drive four M3 × 8 mm screws. (No wiring — everything's on the one PCB.)
-4. Flash the firmware: plug the board in via USB-C, then double-click
-   `scripts/flash-windows.bat`, `scripts/flash-mac.command` or run
-   `scripts/flash-linux.sh`. See `docs/flashing.md` for details.
+4. Flash the firmware: plug the board in via USB-C, open the
+   [web installer](https://clabeuhtegrite.github.io/Bamboard/) in Chrome /
+   Edge / Opera and click **Connect**. See [docs/flashing.md](docs/flashing.md)
+   for details (and the esptool fallback for Firefox / Safari / Linux).
 5. First boot: device exposes a `Bamboard-setup` Wi-Fi AP, connect, fill
    in your Wi-Fi credentials and your Bambuddy URL + API key via the
    captive portal.
