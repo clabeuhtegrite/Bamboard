@@ -1,9 +1,9 @@
 # Screenshots
 
 1:1 SVG mockups of every Bamboard screen, at the native JC4827W543 panel
-resolution (**480 × 272**). They render exactly the same widgets the
-firmware builds at runtime, with placeholder data drawn from
-`sim/stubs/bambuddy_stubs.cpp` so every screen looks populated.
+resolution (**480 × 272**). They mirror the widgets the firmware builds at
+runtime, populated with representative placeholder data so every screen
+looks alive.
 
 | File                 | Screen        | Tab idx |
 |----------------------|---------------|---------|

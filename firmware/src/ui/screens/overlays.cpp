@@ -5,8 +5,8 @@
 //   - toast       : ephemeral confirmation strip at the bottom of the body
 //   - hms_flash   : full-screen red pulse when the focused printer has an
 //                   HMS error; tap anywhere to dismiss
-//   - ota_overlay : opaque progress UI while ArduinoOTA is receiving a
-//                   firmware image
+//   - ota_overlay : opaque progress UI while the boot-time GitHub OTA is
+//                   downloading + flashing a firmware image
 //
 // All three are siblings under lv_scr_act() and z-ordered by creation
 // time. Overlays that should sit on top of every screen are built last

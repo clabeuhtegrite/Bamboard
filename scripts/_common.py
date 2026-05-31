@@ -1,13 +1,13 @@
 """
 Shared helpers for the Bamboard launcher scripts.
 
-`ota.py` and `flash.py` each carry their own argument parsing and
-device-discovery logic but the surface stuff — banner, stage / info /
-fail output, locating ``pio``, quoting arguments for display — is
-identical. Centralised here so the two scripts can't drift out of sync.
+`flash.py` carries its own argument parsing and port-discovery logic, but
+the surface stuff — banner, stage / info / fail output, locating ``pio``,
+quoting arguments for display — is factored out here so future launchers
+can reuse it without copy-paste drift.
 
 Underscore prefix on the filename keeps this module from looking like a
-public entry point next to ``ota.py`` / ``flash.py``.
+public entry point next to ``flash.py``.
 """
 
 from __future__ import annotations

@@ -13,6 +13,26 @@
 
 #include <Arduino.h>
 
+// ---------- Firmware version --------------------------------------------
+//
+// The build injects the version as a *bare* token, e.g. -DBAMBOARD_FW_VERSION=1.2.0
+// (no quotes — a single pp-number, which the stringify macro turns into a
+// string literal). CI derives it from the pushed git tag. A local build with
+// no tag falls back to the dev sentinel below, which disables the boot-time
+// auto-update so a USB-flashed work-in-progress isn't immediately pulled back
+// to the latest published release.
+
+#define BB_STRINGIFY2(x) #x
+#define BB_STRINGIFY(x)  BB_STRINGIFY2(x)
+
+#ifdef BAMBOARD_FW_VERSION
+#  define BAMBOARD_VERSION        BB_STRINGIFY(BAMBOARD_FW_VERSION)
+#  define BAMBOARD_VERSION_IS_DEV 0
+#else
+#  define BAMBOARD_VERSION        "0.0.0-dev"
+#  define BAMBOARD_VERSION_IS_DEV 1
+#endif
+
 // ---------- Hardware ----------------------------------------------------
 
 namespace pins {
@@ -138,16 +158,33 @@ constexpr uint16_t HEADER_H  = 36;
 
 }  // namespace ui
 
-// ---------- ArduinoOTA --------------------------------------------------
+// ---------- OTA (GitHub Releases) ---------------------------------------
+//
+// Updates are pulled straight from this repo's GitHub Releases. At boot the
+// device fetches a small manifest from the stable "latest release" redirect,
+// compares its version against BAMBOARD_VERSION, and — if a newer release
+// exists — downloads and flashes the firmware .bin before normal operation
+// begins (the update is mandatory). The CI workflow in
+// .github/workflows/release.yml builds the .bin and publishes the manifest
+// on every pushed `v*` tag.
 
 namespace ota {
 
-constexpr const char* HOSTNAME = "bamboard";
+// Stable URL that always resolves to the newest release's manifest asset.
+// GitHub 302-redirects /releases/latest/download/<asset> to the versioned
+// asset, so this never has to change between releases.
+constexpr const char* MANIFEST_URL =
+    "https://github.com/clabeuhtegrite/Bamboard/releases/latest/download/manifest.json";
 
-#ifdef OTA_PASSWORD_OVERRIDE
-constexpr const char* PASSWORD = OTA_PASSWORD_OVERRIDE;
-#else
-constexpr const char* PASSWORD = "bamboard";
+// Give up the check after this long. An offline device — or a GitHub outage —
+// must still fall through to normal operation instead of hanging at boot.
+constexpr uint32_t CHECK_TIMEOUT_MS = 8000;
+
+// Master switch for the boot-time check. Shipped firmware leaves it on; a dev
+// build can pass -DBAMBOARD_OTA_AUTOCHECK=0 to opt out. Dev-sentinel builds
+// skip the check regardless (see BAMBOARD_VERSION_IS_DEV).
+#ifndef BAMBOARD_OTA_AUTOCHECK
+#  define BAMBOARD_OTA_AUTOCHECK 1
 #endif
 
 }  // namespace ota
