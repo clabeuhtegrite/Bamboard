@@ -11,15 +11,15 @@ storage). All compile-time tunables live in `firmware/src/config.h`.
 | `key` | Bambuddy API key, sent as `X-API-Key` header             |
 
 These are populated by the captive portal on first boot. To re-run the
-portal, hold the **PREV** button at power-on.
+portal, hold the side **BOOT** button at power-on.
 
 ## Compile-time tunables (`config.h`)
 
 ### Pin map
 
 If you change the wiring (e.g. on a different ESP32 board), edit the
-`pins` namespace. Mirror any GPIO changes in
-`firmware/include/User_Setup.h` for the display pins.
+`pins` namespace. The display + GT911 touch pin map lives at the top of
+`firmware/src/hw/display.cpp` (the LovyanGFX board class).
 
 ### Polling cadence
 
@@ -40,7 +40,24 @@ Bamboard's colour palette is in the `ui` namespace at the bottom of
 ### Auto-dim
 
 The screen dims (not off) after `display::DIM_AFTER_MS` of inactivity.
-Any button press wakes it. Set to `0` to disable.
+Any touch wakes it.
+
+### Scheduled reboot & clock
+
+The `schedule` namespace controls the daily auto-reboot that lets the
+boot-time OTA run unattended:
+
+| Constant | Default | Effect |
+|----------|---------|--------|
+| `DAILY_REBOOT_ENABLED` | `true` | Master switch for the daily reboot |
+| `DAILY_REBOOT_HOUR` | `0` | Local hour to reboot at (`0` = midnight) |
+| `TZ` | Europe/Paris | POSIX TZ string for local time — **change this for your locale** |
+| `NTP_SERVER1` / `NTP_SERVER2` | `pool.ntp.org` / `time.nist.gov` | SNTP sources |
+
+The clock is synced over SNTP once Wi-Fi is up; the reboot only fires once the
+clock is valid. On that reboot, the boot-time OTA check (the `ota` namespace)
+pulls and flashes any newer release — so the device stays current overnight
+without a prompt or a power-cycle.
 
 ## Bambuddy-side setup
 
