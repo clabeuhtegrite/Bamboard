@@ -30,18 +30,9 @@ case/exports/*.gcode
 case/exports/*.3mf
 case/exports/*.stl.bak
 
-# Secrets
-firmware/src/secrets.h
+# Local overrides
 *.local
-
-# Update-script local cache (host the user last reached)
-scripts/.bamboard-cache.json
 
 # Python bytecode from the launcher scripts
 scripts/__pycache__/
 *.pyc
-
-# Desktop LVGL sim build tree (default + the -DBAMBOARD_SIM_LIVE=ON one)
-sim/build/
-sim/build-*/
-sim/cmake-build-*/
