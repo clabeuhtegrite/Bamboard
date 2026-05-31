@@ -30,6 +30,11 @@
 String  g_cfg_bambuddy_url;
 String  g_cfg_api_key;
 uint8_t g_cfg_brightness_level = ::display::BL_LEVEL_DEFAULT;
+String  g_cfg_tz               = ::schedule::TZ;
+// 0..23 = reboot daily at that local hour; schedule::REBOOT_DISABLED = off.
+uint8_t g_cfg_reboot_hour      = ::schedule::DAILY_REBOOT_ENABLED
+                                     ? ::schedule::DAILY_REBOOT_HOUR
+                                     : ::schedule::REBOOT_DISABLED;
 
 // Public hook used by the Settings screen's brightness selector. Applies
 // the new level immediately and persists it to NVS so the next boot picks
@@ -52,6 +57,15 @@ static void load_prefs() {
         g_cfg_brightness_level > ::display::BL_LEVEL_MAX) {
         g_cfg_brightness_level = ::display::BL_LEVEL_DEFAULT;
     }
+    g_cfg_tz = s_prefs.getString("tz", ::schedule::TZ);
+    if (g_cfg_tz.length() == 0) g_cfg_tz = ::schedule::TZ;
+    g_cfg_reboot_hour = s_prefs.getUChar("reboot_h",
+        ::schedule::DAILY_REBOOT_ENABLED ? ::schedule::DAILY_REBOOT_HOUR
+                                         : ::schedule::REBOOT_DISABLED);
+    if (g_cfg_reboot_hour > 23 &&
+        g_cfg_reboot_hour != ::schedule::REBOOT_DISABLED) {
+        g_cfg_reboot_hour = ::schedule::REBOOT_DISABLED;
+    }
     s_prefs.end();
 }
 
@@ -60,6 +74,8 @@ static void save_prefs() {
     s_prefs.putString("url",      g_cfg_bambuddy_url);
     s_prefs.putString("key",      g_cfg_api_key);
     s_prefs.putUChar ("bl_level", g_cfg_brightness_level);
+    s_prefs.putString("tz",       g_cfg_tz);
+    s_prefs.putUChar ("reboot_h", g_cfg_reboot_hour);
     s_prefs.end();
 }
 
@@ -114,7 +130,7 @@ static void start_provisioning() {
         "    Bamboard-setup\n"
         "Password: bamboard\n\n"
         "Then open http://192.168.4.1 in a browser\n"
-        "and fill in your Wi-Fi + Bambuddy details.");
+        "and fill in Wi-Fi, Bambuddy + timezone details.");
     lv_obj_set_style_text_color(sub, lv_color_hex(::ui::C_TEXT), 0);
     lv_obj_set_style_text_font(sub, &lv_font_montserrat_20, 0);
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 0);
@@ -125,8 +141,30 @@ static void start_provisioning() {
         g_cfg_bambuddy_url.c_str(), 120);
     WiFiManagerParameter p_key("key", "Bambuddy API key",
         g_cfg_api_key.c_str(), 79);
+
+    // Timezone (POSIX TZ string — cryptic, so show ready-to-paste examples)
+    // and the daily-reboot hour (0-23, or blank to turn the reboot off).
+    WiFiManagerParameter p_tz_hint(
+        "<br/><p>Timezone is a POSIX TZ string. Examples &mdash; "
+        "Paris: <code>CET-1CEST,M3.5.0,M10.5.0/3</code> &middot; "
+        "London: <code>GMT0BST,M3.5.0/1,M10.5.0</code> &middot; "
+        "US&nbsp;East: <code>EST5EDT,M3.2.0,M11.1.0</code> &middot; "
+        "UTC: <code>UTC0</code></p>");
+    WiFiManagerParameter p_tz("tz", "Timezone (POSIX TZ string)",
+        g_cfg_tz.c_str(), 48);
+
+    char rbh_default[4] = "";
+    if (g_cfg_reboot_hour <= 23)
+        snprintf(rbh_default, sizeof(rbh_default), "%u",
+                 (unsigned)g_cfg_reboot_hour);
+    WiFiManagerParameter p_rbh("reboot_h",
+        "Daily reboot hour 0-23 (blank = off)", rbh_default, 4);
+
     s_wm.addParameter(&p_url);
     s_wm.addParameter(&p_key);
+    s_wm.addParameter(&p_tz_hint);
+    s_wm.addParameter(&p_tz);
+    s_wm.addParameter(&p_rbh);
 
     s_wm.setConfigPortalTimeout(provision::PORTAL_TIMEOUT_S);
     s_wm.setBreakAfterConfig(true);
@@ -139,6 +177,25 @@ static void start_provisioning() {
 
     g_cfg_bambuddy_url = p_url.getValue();
     g_cfg_api_key      = p_key.getValue();
+
+    g_cfg_tz = p_tz.getValue();
+    g_cfg_tz.trim();
+    if (g_cfg_tz.length() == 0) g_cfg_tz = ::schedule::TZ;
+
+    // Reboot hour: blank / non-numeric / out of range all mean "disabled".
+    String rbh = p_rbh.getValue();
+    rbh.trim();
+    bool numeric = rbh.length() > 0;
+    for (size_t i = 0; i < rbh.length(); ++i)
+        if (rbh[i] < '0' || rbh[i] > '9') numeric = false;
+    if (numeric) {
+        int h = rbh.toInt();
+        g_cfg_reboot_hour = (h >= 0 && h <= 23) ? (uint8_t)h
+                                                : ::schedule::REBOOT_DISABLED;
+    } else {
+        g_cfg_reboot_hour = ::schedule::REBOOT_DISABLED;
+    }
+
     save_prefs();
 
     bambuddy::g_client.set_credentials(g_cfg_bambuddy_url, g_cfg_api_key);
@@ -175,11 +232,11 @@ static void net_task(void*) {
         // unattended. getLocalTime() returns false until SNTP has synced, so
         // we simply don't reboot until the clock is valid. The MIN_UPTIME
         // guard stops a reboot that lands in the 00:00 minute from looping.
-        if (schedule::DAILY_REBOOT_ENABLED && now >= next_reboot_check_ms) {
+        if (g_cfg_reboot_hour <= 23 && now >= next_reboot_check_ms) {
             next_reboot_check_ms = now + schedule::CHECK_INTERVAL_MS;
             struct tm lt;
             if (now > schedule::MIN_UPTIME_MS && getLocalTime(&lt, 0) &&
-                lt.tm_hour == schedule::DAILY_REBOOT_HOUR && lt.tm_min == 0) {
+                lt.tm_hour == (int)g_cfg_reboot_hour && lt.tm_min == 0) {
                 log_w("Scheduled daily reboot at %02d:%02d local time",
                       lt.tm_hour, lt.tm_min);
                 delay(200);
@@ -364,7 +421,7 @@ void setup() {
     // Start SNTP so the daily scheduled reboot (net_task) can tell when it's
     // local midnight. Non-blocking: the first sync lands a few seconds later,
     // and the reboot check tolerates "clock not set yet".
-    configTzTime(schedule::TZ, schedule::NTP_SERVER1, schedule::NTP_SERVER2);
+    configTzTime(g_cfg_tz.c_str(), schedule::NTP_SERVER1, schedule::NTP_SERVER2);
 
     // Boot-time firmware update. The device pulls the latest release straight
     // from GitHub; if it's newer than what we're running, the update is

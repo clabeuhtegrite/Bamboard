@@ -5,6 +5,27 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.8.0 — 2026-06
+
+Timezone + reboot hour are now set in the captive portal, so one firmware build
+works for users in any timezone — no more editing `config.h` and re-flashing.
+
+### Added
+
+- **Timezone in the captive portal.** A `tz` field takes a POSIX TZ string
+  (the portal shows ready-to-paste examples for Paris / London / US East /
+  UTC). Stored in NVS and applied to `configTzTime()` at boot, so the daily
+  reboot fires at the *user's* local midnight.
+- **Reboot hour in the captive portal.** A `reboot_h` field sets the daily
+  reboot hour (`0`–`23`); leave it blank to disable the daily reboot entirely.
+
+### Changed
+
+- `schedule::TZ` / `DAILY_REBOOT_HOUR` / `DAILY_REBOOT_ENABLED` in `config.h`
+  are now just the **first-boot defaults** — the NVS values written by the
+  portal take precedence. Existing devices keep their current behaviour
+  (default Europe/Paris, 00:00) until the portal is re-run.
+
 ## v0.7.0 — 2026-06
 
 Unattended overnight updates. The device reboots itself once a day so the
