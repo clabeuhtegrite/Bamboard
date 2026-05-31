@@ -1,0 +1,13 @@
+{
+  "name": "Bamboard",
+  "version": "0.0.0-dev",
+  "new_install_prompt_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        { "path": "bamboard-factory.bin", "offset": 0 }
+      ]
+    }
+  ]
+}
