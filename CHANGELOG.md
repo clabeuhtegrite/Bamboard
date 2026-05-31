@@ -5,6 +5,28 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.7.0 — 2026-06
+
+Unattended overnight updates. The device reboots itself once a day so the
+boot-time GitHub OTA check applies new firmware without anyone touching it.
+
+### Added
+
+- **Daily auto-reboot.** The device syncs the clock over SNTP and reboots at
+  local midnight (`schedule::DAILY_REBOOT_HOUR`, default `0`). On the reboot
+  the existing boot-time OTA check pulls and flashes any newer release, so
+  updates land overnight — no on-device prompt, no power-cycle. Implemented in
+  `main.cpp` (SNTP via `configTzTime()` after Wi-Fi, reboot window checked in
+  `net_task`); tunables live in the new `schedule` namespace in `config.h`.
+
+### Notes
+
+- The boot-time OTA stays **automatic** (no prompt on the device) — the daily
+  reboot is simply what makes that check run regularly on an idle device.
+- Set the timezone with `schedule::TZ` (POSIX TZ string, default Europe/Paris).
+  The reboot won't fire until SNTP has synced the clock, and a guard stops the
+  midnight reboot from looping. Set `DAILY_REBOOT_ENABLED = false` to disable.
+
 ## v0.6.0 — 2026-06
 
 Browser-based first install. Flashing a fresh device now happens entirely on a

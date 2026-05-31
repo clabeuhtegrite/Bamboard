@@ -189,6 +189,36 @@ constexpr uint32_t CHECK_TIMEOUT_MS = 8000;
 
 }  // namespace ota
 
+// ---------- Scheduled daily reboot --------------------------------------
+//
+// The device reboots itself once a day so the boot-time GitHub OTA check
+// (see the `ota` namespace) runs unattended overnight — a new release lands
+// without anyone power-cycling the device or tapping a prompt. The wall clock
+// comes from SNTP; the reboot fires at local DAILY_REBOOT_HOUR:00.
+
+namespace schedule {
+
+constexpr bool     DAILY_REBOOT_ENABLED = true;
+constexpr uint8_t  DAILY_REBOOT_HOUR    = 0;     // 0 = local midnight
+
+// Ignore the reboot window until the device has been up this long, so a
+// reboot that lands inside the 00:00 minute can't immediately re-trigger
+// (anti-loop guard — the 00:00 minute is gone by the time this elapses).
+constexpr uint32_t MIN_UPTIME_MS = 120UL * 1000UL;
+
+// How often the net task compares the wall clock against the reboot window.
+constexpr uint32_t CHECK_INTERVAL_MS = 20UL * 1000UL;
+
+// POSIX TZ string for "local" time. Default Europe/Paris (CET/CEST, EU DST).
+// Change for your locale, e.g.:
+//   "GMT0BST,M3.5.0/1,M10.5.0"   London     "EST5EDT,M3.2.0,M11.1.0"  US Eastern
+//   "CST6CDT,M3.2.0,M11.1.0"     US Central "UTC0"                    plain UTC
+constexpr const char* TZ          = "CET-1CEST,M3.5.0,M10.5.0/3";
+constexpr const char* NTP_SERVER1 = "pool.ntp.org";
+constexpr const char* NTP_SERVER2 = "time.nist.gov";
+
+}  // namespace schedule
+
 // ---------- Wi-Fi provisioning ------------------------------------------
 
 namespace provision {
