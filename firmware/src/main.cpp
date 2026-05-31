@@ -1,14 +1,14 @@
 // Bamboard — main entry point.
 //
-// Boots the hardware (display, buttons, LED), brings up Wi-Fi via captive
-// portal if needed, and launches two tasks:
+// Boots the display, brings up Wi-Fi via the captive portal if needed,
+// optionally self-updates from GitHub Releases, then launches two tasks:
 //
-//   - UI task   (core 1): drives LVGL, button input, LED animation
-//   - Net task  (core 0): polls Bambuddy on a schedule
+//   - UI task   (core 1): drives LVGL, touch input, auto-dim backlight
+//   - Net task  (core 0): polls Bambuddy + pumps the WebSocket
 //
-// Persistent settings (Wi-Fi creds, Bambuddy URL, API key) live in NVS via
-// the Preferences API. A long-press on PREV at boot wipes them and re-opens
-// the captive portal.
+// Persistent settings (Wi-Fi creds, Bambuddy URL, API key, brightness) live
+// in NVS via the Preferences API. Holding the side BOOT button at power-up
+// wipes them and re-opens the captive portal.
 
 #include <Arduino.h>
 #include <Preferences.h>

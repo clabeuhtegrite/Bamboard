@@ -110,29 +110,29 @@ void clear_children(lv_obj_t* o) {
 // ---------- Printer-state cosmetics ----------------------------------------
 
 const char* state_name(::bambuddy::PrinterState s) {
-    using PS = ::bambuddy::PrinterState;
+    using PState = ::bambuddy::PrinterState;
     switch (s) {
-        case PS::Idle:     return "IDLE";
-        case PS::Prepare:  return "PREPARE";
-        case PS::Printing: return "PRINTING";
-        case PS::Paused:   return "PAUSED";
-        case PS::Finish:   return "FINISH";
-        case PS::Failed:   return "FAILED";
-        case PS::Offline:  return "OFFLINE";
-        case PS::Error:    return "ERROR";
+        case PState::Idle:     return "IDLE";
+        case PState::Prepare:  return "PREPARE";
+        case PState::Printing: return "PRINTING";
+        case PState::Paused:   return "PAUSED";
+        case PState::Finish:   return "FINISH";
+        case PState::Failed:   return "FAILED";
+        case PState::Offline:  return "OFFLINE";
+        case PState::Error:    return "ERROR";
         default:           return "?";
     }
 }
 
 uint32_t state_color(::bambuddy::PrinterState s) {
-    using PS = ::bambuddy::PrinterState;
+    using PState = ::bambuddy::PrinterState;
     switch (s) {
-        case PS::Printing: return ::ui::C_ACCENT;
-        case PS::Paused:   return ::ui::C_WARN;
-        case PS::Finish:   return ::ui::C_OK;
-        case PS::Failed:
-        case PS::Error:    return ::ui::C_ERR;
-        case PS::Offline:  return ::ui::C_TEXT_DIM;
+        case PState::Printing: return ::ui::C_ACCENT;
+        case PState::Paused:   return ::ui::C_WARN;
+        case PState::Finish:   return ::ui::C_OK;
+        case PState::Failed:
+        case PState::Error:    return ::ui::C_ERR;
+        case PState::Offline:  return ::ui::C_TEXT_DIM;
         default:           return ::ui::C_TEXT_DIM;
     }
 }
