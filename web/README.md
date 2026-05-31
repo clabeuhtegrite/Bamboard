@@ -16,20 +16,23 @@ firmware image over Web Serial. No CLI, no toolchain.
   version. It points at `bamboard-factory.bin` at offset `0x0`.
 - `bamboard-factory.bin` — *not committed.* The merged factory image
   (bootloader + partition table + boot_app0 + app) is produced by
-  `.github/workflows/release.yml` and dropped next to `manifest.json` in the
-  Pages artifact at deploy time, so it is served **same-origin** (GitHub
-  release assets don't send CORS headers, so the browser can't fetch the bin
+  `release.yml` as a release asset, then pulled into the Pages artifact by
+  `pages.yml` at deploy time so it is served **same-origin** (GitHub release
+  assets don't send CORS headers, so the browser can't fetch the bin
   cross-origin — it has to live on the Pages site).
 
 ## How it ships
 
-`release.yml` runs on every `v*` tag:
+Two workflows, decoupled:
 
-1. builds the firmware,
-2. `esptool merge_bin` → `bamboard-factory.bin`,
-3. publishes the GitHub Release (app `firmware.bin` for OTA + the factory bin),
-4. assembles this `web/` folder + the factory bin + a version-stamped
-   `manifest.json`, and deploys it to GitHub Pages.
+- **`release.yml`** (on every `v*` tag) builds the firmware, runs
+  `esptool merge_bin` → `bamboard-factory.bin`, and publishes the GitHub
+  Release (app `firmware.bin` for OTA + the factory bin + `manifest.json`).
+- **`pages.yml`** deploys this `web/` folder to GitHub Pages. It pulls the
+  factory bin + version from the **latest release** and bundles them into the
+  site. It runs on a release (`release: published`), on pushes that touch
+  `web/`, and on manual dispatch — so editing the page redeploys it without a
+  firmware rebuild, and cutting a release refreshes the firmware it offers.
 
 So the web installer always offers the firmware from the most recent release.
 
