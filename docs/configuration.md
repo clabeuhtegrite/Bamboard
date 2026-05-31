@@ -9,9 +9,12 @@ storage). All compile-time tunables live in `firmware/src/config.h`.
 |-----|------------------------------------------------------------|
 | `url` | Full Bambuddy base URL, including scheme and port (e.g. `http://192.168.1.42:8000`) |
 | `key` | Bambuddy API key, sent as `X-API-Key` header             |
+| `tz` | POSIX timezone string for the clock / daily reboot (e.g. `CET-1CEST,M3.5.0,M10.5.0/3`) |
+| `reboot_h` | Daily reboot hour in local time (`0`–`23`); `255` = disabled |
+| `bl_level` | Screen brightness 1–5 (set on the Settings screen, not the portal) |
 
-These are populated by the captive portal on first boot. To re-run the
-portal, hold the side **BOOT** button at power-on.
+`url`, `key`, `tz` and `reboot_h` are populated by the captive portal on first
+boot. To re-run the portal, hold the side **BOOT** button at power-on.
 
 ## Compile-time tunables (`config.h`)
 
@@ -44,17 +47,20 @@ Any touch wakes it.
 
 ### Scheduled reboot & clock
 
-The `schedule` namespace controls the daily auto-reboot that lets the
-boot-time OTA run unattended:
+The daily auto-reboot lets the boot-time OTA run unattended. The **timezone**
+and **reboot hour** are set in the captive portal (stored in NVS as `tz` /
+`reboot_h`, see above) — the `schedule` namespace in `config.h` only holds the
+first-boot defaults and the fixed pieces:
 
 | Constant | Default | Effect |
 |----------|---------|--------|
-| `DAILY_REBOOT_ENABLED` | `true` | Master switch for the daily reboot |
-| `DAILY_REBOOT_HOUR` | `0` | Local hour to reboot at (`0` = midnight) |
-| `TZ` | Europe/Paris | POSIX TZ string for local time — **change this for your locale** |
+| `DAILY_REBOOT_ENABLED` | `true` | First-boot default for whether the reboot is on |
+| `DAILY_REBOOT_HOUR` | `0` | First-boot default hour — the portal's `reboot_h` overrides it |
+| `TZ` | Europe/Paris | First-boot default timezone — the portal's `tz` overrides it |
 | `NTP_SERVER1` / `NTP_SERVER2` | `pool.ntp.org` / `time.nist.gov` | SNTP sources |
 
-The clock is synced over SNTP once Wi-Fi is up; the reboot only fires once the
+Leave the portal's reboot-hour field blank to disable the daily reboot. The
+clock is synced over SNTP once Wi-Fi is up; the reboot only fires once the
 clock is valid. On that reboot, the boot-time OTA check (the `ota` namespace)
 pulls and flashes any newer release — so the device stays current overnight
 without a prompt or a power-cycle.

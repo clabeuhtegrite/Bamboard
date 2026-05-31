@@ -70,11 +70,15 @@ On a fresh device with no saved settings:
 3. Connect any phone/laptop to it. Most OSes will open a captive portal
    automatically. If not, browse to `http://192.168.4.1`.
 4. Pick your home Wi-Fi network, enter the password, **and** fill in the
-   two custom fields:
+   custom fields:
    - **Bambuddy URL** — e.g. `http://192.168.1.42:8000`
    - **Bambuddy API key** — created in your Bambuddy install at Settings
      → API Keys → Create API Key, with at least `printers:read` and
      `statistics:read` permissions
+   - **Timezone** — a POSIX TZ string (the portal shows ready-to-paste
+     examples); sets the clock for the daily reboot. Defaults to Europe/Paris.
+   - **Daily reboot hour** — `0`–`23` local time, or leave blank to turn the
+     daily auto-reboot off.
 5. The device reboots and connects.
 
 ## Re-configuring later
