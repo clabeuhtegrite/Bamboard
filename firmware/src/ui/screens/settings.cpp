@@ -167,6 +167,15 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
     lv_obj_set_style_text_font(s_set_reset_lbl, &lv_font_montserrat_16, 0);
     lv_obj_center(s_set_reset_lbl);
 
+    // --- Firmware version line (just above the reset pill) --------------
+    // Lets the user confirm at a glance which build is running — handy after
+    // the boot-time OTA pulls a new release from GitHub.
+    lv_obj_t* ver = lv_label_create(s_set_root);
+    lv_label_set_text(ver, "Firmware " BAMBOARD_VERSION);
+    lv_obj_add_style(ver, &s_label_dim, 0);
+    lv_obj_set_style_text_font(ver, &lv_font_montserrat_14, 0);
+    lv_obj_align(ver, LV_ALIGN_BOTTOM_MID, 0, -56);
+
     return s_set_root;
 }
 
