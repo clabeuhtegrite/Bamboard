@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Bamboard v0.4 hero render.
+  Bamboard hero render.
 
-  Photorealistic-leaning SVG product shot of the assembled v0.4 device:
+  Photorealistic-leaning SVG product shot of the assembled device:
   Guition JC4827W543 (4.3" IPS 480x272 capacitive touch, ESP32-S3 +
-  8 MB PSRAM, all on one PCB) sitting in the new compact PETG case
+  8 MB PSRAM, all on one PCB) sitting in the compact PETG case
   with the chamfered front edge and the integrated 15° desk-stand
-  tab. Screen renders the v0.4 Live dashboard — Workshop X1C printing
-  a benchy at 62 %, segmented speed chip with "Standard" active.
+  tab. Screen renders the refreshed Live dashboard — Workshop X1C
+  printing a benchy at 62 %, brand wordmark header, link badge, and
+  the single print-speed button.
 
   No raster assets; everything is layered SVG gradients + paths.
 -->
@@ -74,6 +75,18 @@
       <stop offset="0%"   stop-color="#00b7c3"/>
       <stop offset="100%" stop-color="#39d98a"/>
     </linearGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#00C6D4"/><stop offset="1" stop-color="#008F9B"/>
+    </linearGradient>
+    <linearGradient id="uiPanel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2B313B"/><stop offset="1" stop-color="#222831"/>
+    </linearGradient>
+    <symbol id="ic-home" viewBox="0 0 24 24"><path d="M4 11.2 12 4l8 7.2M6 10v9h12v-9M10 19v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="ic-drop" viewBox="0 0 24 24"><path d="M12 3.2C12 3.2 5.5 10 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10 12 3.2 12 3.2Z" fill="currentColor"/></symbol>
+    <symbol id="ic-list" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 7h11M8 12h11M8 17h11"/><circle cx="4.2" cy="7" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.2" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.2" cy="17" r="1.1" fill="currentColor" stroke="none"/></g></symbol>
+    <symbol id="ic-loop" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="ic-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v3M12 18.4v3M21.4 12h-3M5.6 12h-3M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1M18.6 18.6l-2.1-2.1M7.5 7.5 5.4 5.4"/></g></symbol>
+    <symbol id="ic-wifi" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9a13 13 0 0 1 16 0"/><path d="M7 12.4a8.5 8.5 0 0 1 10 0"/><path d="M9.6 15.7a4.2 4.2 0 0 1 4.8 0"/></g><circle cx="12" cy="18.6" r="1.3" fill="currentColor"/></symbol>
 
     <!-- ===== USB-C cable ===== -->
     <linearGradient id="cable" x1="0" y1="0" x2="0" y2="1">
@@ -170,87 +183,84 @@
       <!-- Background (matches C_BG = 0x0E1116) -->
       <rect width="480" height="272" fill="#0E1116"/>
 
-      <!-- Header -->
+      <!-- Header — brand wordmark -->
       <rect x="0" y="0"  width="480" height="36" fill="#1A1F26"/>
       <rect x="0" y="35" width="480" height="1"  fill="#2F3742"/>
+      <rect x="12" y="13" width="10" height="10" rx="3" fill="url(#acc)"/>
       <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
-            x="12"  y="24" font-size="18" font-weight="700" fill="#00B7C3">Bamboard</text>
+            x="29" y="24" font-size="16" font-weight="700" fill="#E9EEF3">Bam<tspan fill="#00B7C3">board</tspan></text>
       <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
-            x="240" y="22" font-size="14" text-anchor="middle" fill="#E9EEF3">Workshop X1C</text>
-      <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
-            x="468" y="22" font-size="12" font-weight="600" text-anchor="end" fill="#39D98A">▲ 36 ms</text>
+            x="248" y="23" font-size="13" text-anchor="middle" fill="#8A95A4">Workshop X1C</text>
+      <g transform="translate(398,8)">
+        <rect width="70" height="20" rx="10" fill="#15271F" stroke="#2F3742"/>
+        <use href="#ic-wifi" x="7" y="3" width="14" height="14" style="color:#39D98A"/>
+        <text font-family="Inter, 'Segoe UI', system-ui, sans-serif" x="26" y="14" font-size="11" font-weight="600" fill="#39D98A">36 ms</text>
+      </g>
 
-      <!-- Progress arc -->
-      <g transform="translate(42,66)">
-        <circle r="27" fill="none" stroke="#252B34" stroke-width="6"/>
-        <circle r="27" fill="none" stroke="url(#arcGrad)" stroke-width="6"
-                stroke-linecap="round"
-                stroke-dasharray="105.1 169.6"
-                transform="rotate(-90)"/>
+      <!-- Hero: progress ring + status -->
+      <g transform="translate(54,80)">
+        <circle r="30" fill="none" stroke="#252B34" stroke-width="7"/>
+        <circle r="30" fill="none" stroke="url(#arcGrad)" stroke-width="7"
+                stroke-linecap="round" stroke-dasharray="116.9 188.5" transform="rotate(-90)"/>
         <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
-              font-size="13" font-weight="700" fill="#E9EEF3"
+              font-size="20" font-weight="700" fill="#E9EEF3"
               text-anchor="middle" dominant-baseline="central">62%</text>
       </g>
-
-      <!-- State / ETA / file / layer -->
+      <g transform="translate(100,50)" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+        <rect width="104" height="26" rx="13" fill="#0E2A2E" stroke="#017782"/>
+        <circle cx="15" cy="13" r="4" fill="url(#acc)"/>
+        <text x="28" y="18" font-size="14" font-weight="700" fill="#2BE0EC">PRINTING</text>
+      </g>
       <g font-family="Inter, 'Segoe UI', system-ui, sans-serif">
-        <text x="88"  y="54" font-size="18" font-weight="700" fill="#00B7C3">PRINTING</text>
-        <text x="468" y="54" font-size="14" font-weight="600" text-anchor="end" fill="#E9EEF3">ETA 1h12</text>
-        <text x="88"  y="74" font-size="11" fill="#8A95A4">benchy_v2_pla.3mf</text>
-        <text x="468" y="74" font-size="11" text-anchor="end" fill="#8A95A4">layer 164 / 267</text>
+        <text x="468" y="60" font-size="16" font-weight="700" text-anchor="end" fill="#E9EEF3">ETA 1h12</text>
+        <text x="101" y="98" font-size="12" fill="#8A95A4">benchy_v2_pla.3mf</text>
+        <text x="468" y="98" font-size="12" text-anchor="end" fill="#8A95A4">layer 164 / 267</text>
       </g>
 
-      <!-- Temperature cells -->
+      <!-- Temperature cells — 3 equal 146 px -->
       <g font-family="Inter, 'Segoe UI', system-ui, sans-serif">
-        <g transform="translate(12,100)">
-          <rect width="142" height="36" rx="12" fill="#252B34" stroke="#2F3742"/>
-          <text x="10"  y="13" font-size="9"  font-weight="700" letter-spacing="1" fill="#8A95A4">NOZZLE</text>
-          <text x="132" y="25" font-size="14" font-weight="700" text-anchor="end" fill="#E9EEF3">220 °C</text>
+        <g transform="translate(12,124)">
+          <rect width="146" height="40" rx="12" fill="url(#uiPanel)" stroke="#2F3742"/>
+          <text x="12"  y="16" font-size="9" font-weight="700" letter-spacing="1.2" fill="#8A95A4">NOZZLE</text>
+          <text x="134" y="30" font-size="16" font-weight="700" text-anchor="end" fill="#E9EEF3">220°</text>
         </g>
-        <g transform="translate(162,100)">
-          <rect width="142" height="36" rx="12" fill="#252B34" stroke="#2F3742"/>
-          <text x="10"  y="13" font-size="9"  font-weight="700" letter-spacing="1" fill="#8A95A4">BED</text>
-          <text x="132" y="25" font-size="14" font-weight="700" text-anchor="end" fill="#E9EEF3">60 °C</text>
+        <g transform="translate(167,124)">
+          <rect width="146" height="40" rx="12" fill="url(#uiPanel)" stroke="#2F3742"/>
+          <text x="12"  y="16" font-size="9" font-weight="700" letter-spacing="1.2" fill="#8A95A4">BED</text>
+          <text x="134" y="30" font-size="16" font-weight="700" text-anchor="end" fill="#E9EEF3">60°</text>
         </g>
-        <g transform="translate(312,100)">
-          <rect width="156" height="36" rx="12" fill="#252B34" stroke="#2F3742"/>
-          <text x="10"  y="13" font-size="9"  font-weight="700" letter-spacing="1" fill="#8A95A4">CHAMBER</text>
-          <text x="146" y="25" font-size="14" font-weight="700" text-anchor="end" fill="#E9EEF3">35 °C</text>
+        <g transform="translate(322,124)">
+          <rect width="146" height="40" rx="12" fill="url(#uiPanel)" stroke="#2F3742"/>
+          <text x="12"  y="16" font-size="9" font-weight="700" letter-spacing="1.2" fill="#8A95A4">CHAMBER</text>
+          <text x="134" y="30" font-size="16" font-weight="700" text-anchor="end" fill="#E9EEF3">35°</text>
         </g>
       </g>
 
-      <!-- Segmented speed chip -->
+      <!-- Print-speed row — single button (opens a 4-item menu on tap) -->
       <text font-family="Inter, 'Segoe UI', system-ui, sans-serif"
-            x="16" y="160" font-size="9" font-weight="700" letter-spacing="1" fill="#8A95A4">SPEED</text>
-      <g transform="translate(12,164)" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
-        <rect width="456" height="44" rx="18" fill="#252B34" stroke="#2F3742"/>
-        <g transform="translate(3,3)">
-          <rect x="0"   y="0" width="112" height="38" rx="8" fill="#252B34"/>
-          <text x="56"  y="24" font-size="13" text-anchor="middle" fill="#8A95A4">Silent</text>
-          <rect x="112" y="0" width="112" height="38" rx="8" fill="#00B7C3"/>
-          <text x="168" y="24" font-size="13" font-weight="600" text-anchor="middle" fill="#0E1116">Standard</text>
-          <rect x="224" y="0" width="112" height="38" rx="8" fill="#252B34"/>
-          <text x="280" y="24" font-size="13" text-anchor="middle" fill="#8A95A4">Sport</text>
-          <rect x="336" y="0" width="112" height="38" rx="8" fill="#252B34"/>
-          <text x="392" y="24" font-size="13" text-anchor="middle" fill="#8A95A4">Ludicrous</text>
-        </g>
+            x="16" y="201" font-size="13" fill="#8A95A4">Print speed</text>
+      <g transform="translate(286,178)" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+        <rect width="182" height="38" rx="16" fill="url(#uiPanel)" stroke="#2F3742"/>
+        <text x="18" y="24" font-size="14" font-weight="600" fill="#E9EEF3">Standard</text>
+        <path d="M150 16 l7 7 l7 -7" fill="none" stroke="#8A95A4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
 
       <!-- Tab bar -->
       <rect x="0" y="228" width="480" height="44" fill="#1A1F26"/>
       <rect x="0" y="228" width="480" height="1"  fill="#2F3742"/>
-      <rect x="12" y="228" width="72" height="3" rx="2" fill="#00B7C3"/>
+      <rect x="2" y="229" width="92" height="43" fill="#0E2A2E" opacity="0.55"/>
+      <rect x="12" y="228" width="72" height="3" rx="2" fill="url(#acc)"/>
       <g font-family="Inter, 'Segoe UI', system-ui, sans-serif" text-anchor="middle">
-        <text x="48"  y="248" font-size="14" fill="#00B7C3">⌂</text>
-        <text x="48"  y="265" font-size="10" fill="#00B7C3">Live</text>
-        <text x="144" y="248" font-size="14" fill="#8A95A4">▦</text>
-        <text x="144" y="265" font-size="10" fill="#8A95A4">AMS</text>
-        <text x="240" y="248" font-size="14" fill="#8A95A4">≡</text>
-        <text x="240" y="265" font-size="10" fill="#8A95A4">Printers</text>
-        <text x="336" y="248" font-size="14" fill="#8A95A4">⟲</text>
-        <text x="336" y="265" font-size="10" fill="#8A95A4">History</text>
-        <text x="432" y="248" font-size="14" fill="#8A95A4">⚙</text>
-        <text x="432" y="265" font-size="10" fill="#8A95A4">Settings</text>
+        <use href="#ic-home" x="38" y="234" width="20" height="20" style="color:#00B7C3"/>
+        <text x="48"  y="266" font-size="10" fill="#00B7C3">Live</text>
+        <use href="#ic-drop" x="134" y="234" width="20" height="20" style="color:#8A95A4"/>
+        <text x="144" y="266" font-size="10" fill="#8A95A4">AMS</text>
+        <use href="#ic-list" x="230" y="234" width="20" height="20" style="color:#8A95A4"/>
+        <text x="240" y="266" font-size="10" fill="#8A95A4">Printers</text>
+        <use href="#ic-loop" x="326" y="234" width="20" height="20" style="color:#8A95A4"/>
+        <text x="336" y="266" font-size="10" fill="#8A95A4">History</text>
+        <use href="#ic-gear" x="422" y="234" width="20" height="20" style="color:#8A95A4"/>
+        <text x="432" y="266" font-size="10" fill="#8A95A4">Settings</text>
       </g>
     </g>
 
