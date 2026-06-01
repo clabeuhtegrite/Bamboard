@@ -67,7 +67,7 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*WIFI_RSSI*/     {"Wi-Fi RSSI", "Wi-Fi RSSI", "Wi-Fi RSSI", "Wi-Fi RSSI", "Wi-Fi RSSI"},
     /*UPTIME*/        {"Uptime", "Tiempo activo", "Temps actif", "Tempo ativo", "Laufzeit"},
     /*FACTORY_RESET*/ {"Factory reset", "Restablecer", "Réinit. usine", "Repor fábrica", "Zurücksetzen"},
-    /*CONFIRM_RESET*/ {"Tap again to confirm", "Toca otra vez", "Touchez encore", "Toque novamente", "Nochmal tippen"},
+    /*CONFIRM_RESET*/ {"Tap again to confirm (3 s)", "Toca otra vez (3 s)", "Touchez encore (3 s)", "Toque novamente (3 s)", "Nochmal tippen (3 s)"},
     /*LANGUAGE*/      {"Language", "Idioma", "Langue", "Idioma", "Sprache"},
     // -- overlays --
     /*UPDATING_FW*/   {"Updating firmware", "Actualizando firmware", "Mise à jour du firmware", "A atualizar firmware", "Firmware-Update"},
@@ -78,6 +78,19 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*TAP_DISMISS*/   {"Tap anywhere to dismiss", "Toca para descartar", "Touchez pour fermer", "Toque para fechar", "Zum Schließen tippen"},
     // -- header --
     /*OFFLINE_SHORT*/ {"offline", "sin conexión", "hors ligne", "offline", "offline"},
+    // -- misc placeholders / status --
+    /*LAYER*/         {"layer", "capa", "couche", "camada", "Schicht"},
+    /*NO_FILE*/       {"no file", "sin archivo", "aucun fichier", "sem ficheiro", "keine Datei"},
+    /*IDLE_PAREN*/    {"(idle)", "(inactivo)", "(inactif)", "(inativo)", "(bereit)"},
+    /*NO_PRINTERS_FOUND*/ {
+        "No printers found in Bambuddy.\nAdd one in the Bambuddy web UI first.",
+        "No hay impresoras en Bambuddy.\nAñade una en la interfaz de Bambuddy.",
+        "Aucune imprimante dans Bambuddy.\nAjoutez-en une dans l'interface Bambuddy.",
+        "Sem impressoras no Bambuddy.\nAdicione uma na interface do Bambuddy.",
+        "Keine Drucker in Bambuddy.\nFügen Sie einen in der Bambuddy-Oberfläche hinzu."},
+    /*RESETTING*/     {"Resetting…", "Restableciendo…", "Réinitialisation…", "A repor…", "Zurücksetzen…"},
+    /*NOT_CONFIGURED*/{"(not configured)", "(sin configurar)", "(non configuré)", "(não configurado)", "(nicht konfiguriert)"},
+    /*DRYING_STARTED*/{"Drying 60 min @ 55 °C", "Secando 60 min @ 55 °C", "Séchage 60 min @ 55 °C", "Secagem 60 min @ 55 °C", "Trocknen 60 min @ 55 °C"},
 };
 
 static_assert(sizeof(T) / sizeof(T[0]) == (size_t)Str::_COUNT,

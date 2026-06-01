@@ -216,14 +216,15 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_obj_set_style_text_color(s_dash_eta_lbl, lv_color_hex(::ui::C_TEXT), 0);
 
     s_dash_file_lbl = lv_label_create(s_dash_root);
-    lv_label_set_text(s_dash_file_lbl, "no file");
+    lv_label_set_text(s_dash_file_lbl, i18n::tr(i18n::Str::NO_FILE));
     lv_obj_set_width(s_dash_file_lbl, 220);
     lv_label_set_long_mode(s_dash_file_lbl, LV_LABEL_LONG_DOT);
     lv_obj_set_pos(s_dash_file_lbl, 88, 26);
     lv_obj_add_style(s_dash_file_lbl, &s_label_dim, 0);
 
     s_dash_layer_lbl = lv_label_create(s_dash_root);
-    lv_label_set_text(s_dash_layer_lbl, "layer --/--");
+    lv_label_set_text(s_dash_layer_lbl,
+                      (String(i18n::tr(i18n::Str::LAYER)) + " --/--").c_str());
     lv_obj_set_pos(s_dash_layer_lbl, 320, 26);
     lv_obj_add_style(s_dash_layer_lbl, &s_label_dim, 0);
 
@@ -296,7 +297,8 @@ void update_dashboard(int printer_id) {
                                  lv_color_hex(state_color(sel->state)), 0);
 
     lv_label_set_text(s_dash_file_lbl,
-                       sel->filename.length() ? sel->filename.c_str() : "(idle)");
+                       sel->filename.length() ? sel->filename.c_str()
+                                              : i18n::tr(i18n::Str::IDLE_PAREN));
 
     lv_arc_set_value(s_dash_progress_arc, sel->progress);
     char pbuf[8];
@@ -308,10 +310,10 @@ void update_dashboard(int printer_id) {
 
     char lay[24];
     if (sel->total_layers > 0)
-        snprintf(lay, sizeof(lay), "layer %u/%u",
+        snprintf(lay, sizeof(lay), "%s %u/%u", i18n::tr(i18n::Str::LAYER),
                  (unsigned)sel->current_layer, (unsigned)sel->total_layers);
     else
-        snprintf(lay, sizeof(lay), "layer —");
+        snprintf(lay, sizeof(lay), "%s —", i18n::tr(i18n::Str::LAYER));
     lv_label_set_text(s_dash_layer_lbl, lay);
 
     bool hms_active = sel->hms.length() && sel->hms != "ok";

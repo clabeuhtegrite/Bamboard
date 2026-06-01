@@ -114,7 +114,7 @@ static void ams_dry_clicked(lv_event_t*) {
                    lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
     } else {
         ok = ::bambuddy::g_client.start_ams_drying(id, unit, 60, 55);
-        show_toast(ok ? "Drying 60 min @ 55 °C"
+        show_toast(ok ? i18n::tr(i18n::Str::DRYING_STARTED)
                       : i18n::tr(i18n::Str::START_DRYING_FAILED),
                    lv_color_hex(ok ? ::ui::C_WARN : ::ui::C_ERR));
     }

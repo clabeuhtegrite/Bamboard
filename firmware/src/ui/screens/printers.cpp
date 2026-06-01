@@ -49,9 +49,7 @@ void update_printers(int focused_id) {
 
     if (n == 0) {
         lv_obj_t* lbl = lv_label_create(s_pr_list);
-        lv_label_set_text(lbl,
-            "No printers found in Bambuddy.\n"
-            "Add one in the Bambuddy web UI first.");
+        lv_label_set_text(lbl, i18n::tr(i18n::Str::NO_PRINTERS_FOUND));
         lv_obj_add_style(lbl, &s_label_dim, 0);
         return;
     }

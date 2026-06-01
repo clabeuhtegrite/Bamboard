@@ -65,12 +65,12 @@ static void set_reset_clicked(lv_event_t*) {
     if (s_set_reset_armed_at != 0 &&
         (now - s_set_reset_armed_at) < 3000) {
         // Second tap within 3 s — go.
-        show_toast("Resetting…", lv_color_hex(::ui::C_WARN));
+        show_toast(i18n::tr(i18n::Str::RESETTING), lv_color_hex(::ui::C_WARN));
         ::factory_reset();
     } else {
         // First tap — arm.
         s_set_reset_armed_at = now;
-        lv_label_set_text(s_set_reset_lbl, "Tap again to confirm (3 s)");
+        lv_label_set_text(s_set_reset_lbl, i18n::tr(i18n::Str::CONFIRM_RESET));
         lv_obj_set_style_bg_color(s_set_reset_btn,
                                    lv_color_hex(::ui::C_ERR), 0);
     }
@@ -187,7 +187,7 @@ void update_settings() {
     maybe_hide_toast();
     lv_label_set_text(s_set_url, ::g_cfg_bambuddy_url.length()
                                       ? ::g_cfg_bambuddy_url.c_str()
-                                      : "(not configured)");
+                                      : i18n::tr(i18n::Str::NOT_CONFIGURED));
     lv_label_set_text(s_set_ip,   WiFi.localIP().toString().c_str());
     char r[16];
     snprintf(r, sizeof(r), "%d dBm", WiFi.RSSI());

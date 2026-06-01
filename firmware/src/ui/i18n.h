@@ -46,6 +46,9 @@ enum class Str : uint16_t {
     TAP_DISMISS,
     // header
     OFFLINE_SHORT,
+    // misc placeholders / status text
+    LAYER, NO_FILE, IDLE_PAREN, NO_PRINTERS_FOUND, RESETTING, NOT_CONFIGURED,
+    DRYING_STARTED,
     _COUNT
 };
 
