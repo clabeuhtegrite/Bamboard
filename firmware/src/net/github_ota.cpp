@@ -16,44 +16,9 @@ namespace ota {
 // function pointer here so that captureless lambda can reach it.
 static void (*s_on_progress)(uint8_t) = nullptr;
 
-// ---------------------------------------------------------------------------
-// Version comparison
-// ---------------------------------------------------------------------------
-
-// Parse up to three numeric components out of "v1.2.3-rc1" → {1,2,3}. Anything
-// after a '-' or '+' (pre-release / build metadata) is ignored, which keeps
-// the comparison total even for tags CI couldn't reduce to a clean triple.
-static void parse_semver(const char* s, long out[3]) {
-    out[0] = out[1] = out[2] = 0;
-    if (!s) return;
-    if (*s == 'v' || *s == 'V') ++s;
-
-    int idx = 0;
-    while (*s && idx < 3) {
-        if (*s >= '0' && *s <= '9') {
-            long v = 0;
-            while (*s >= '0' && *s <= '9') {
-                v = v * 10 + (*s - '0');
-                ++s;
-            }
-            out[idx++] = v;
-        } else if (*s == '.') {
-            ++s;
-        } else {
-            break;  // '-', '+', or junk — stop here
-        }
-    }
-}
-
-int semver_cmp(const char* a, const char* b) {
-    long va[3], vb[3];
-    parse_semver(a, va);
-    parse_semver(b, vb);
-    for (int i = 0; i < 3; ++i) {
-        if (va[i] != vb[i]) return va[i] < vb[i] ? -1 : 1;
-    }
-    return 0;
-}
+// Version comparison (semver_cmp) now lives in net/semver.cpp so it can be
+// unit-tested without this file's HTTP / Update dependencies; it's declared via
+// github_ota.h, which includes semver.h.
 
 // ---------------------------------------------------------------------------
 // Manifest fetch

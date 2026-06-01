@@ -16,6 +16,8 @@
 
 #include <Arduino.h>
 
+#include "semver.h"   // semver_cmp() lives here so it's unit-testable on the host
+
 namespace ota {
 
 enum class CheckResult : uint8_t {
@@ -31,10 +33,5 @@ enum class CheckResult : uint8_t {
 // Either callback may be null.
 CheckResult check_and_update(void (*on_start)() = nullptr,
                              void (*on_progress)(uint8_t) = nullptr);
-
-// Compares two dotted versions ("1.2.3"). A leading 'v' and any pre-release
-// suffix after '-' or '+' are ignored. Returns >0 if a is newer than b,
-// 0 if equal, <0 if a is older.
-int semver_cmp(const char* a, const char* b);
 
 }  // namespace ota

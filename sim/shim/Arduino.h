@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cctype>
 #include <ctime>
 #include <string>
 
@@ -68,6 +69,7 @@ class String {
         size_t b = s_.find_last_not_of(" \t\r\n");
         s_ = (a == std::string::npos) ? "" : s_.substr(a, b - a + 1);
     }
+    void toLowerCase() { for (auto& c : s_) c = (char)tolower((unsigned char)c); }
     long toInt() const { return strtol(s_.c_str(), nullptr, 10); }
 
     bool operator==(const char* o) const { return s_ == (o ? o : ""); }
