@@ -42,6 +42,13 @@ class String {
     String& operator+=(const String& o) { s_ += o.s_; return *this; }
     String& operator+=(const char* o) { s_ += (o ? o : ""); return *this; }
 
+    // concat() overloads — ArduinoJson's Arduino-String writer needs these.
+    String& concat(const String& o) { s_ += o.s_; return *this; }
+    String& concat(const char* p) { s_ += (p ? p : ""); return *this; }
+    String& concat(const char* p, size_t n) { s_.append(p, n); return *this; }
+    String& concat(char c) { s_ += c; return *this; }
+    bool reserve(size_t n) { s_.reserve(n); return true; }
+
     bool startsWith(const char* p) const { return s_.rfind(p, 0) == 0; }
     bool endsWith(const char* p) const {
         std::string q(p ? p : ""); if (q.size() > s_.size()) return false;
@@ -81,6 +88,22 @@ inline String operator+(const String& a, int b)           { String r(a); r += St
 inline String operator+(const String& a, unsigned b)      { String r(a); r += String(b); return r; }
 inline String operator+(const String& a, unsigned long b) { String r(a); r += String(b); return r; }
 inline String operator+(const String& a, char b)          { String r(a); r += String(b); return r; }
+
+// ---- Print / Printable (ArduinoJson references these in its Arduino path) --
+class Print {
+   public:
+    virtual ~Print() {}
+    virtual size_t write(uint8_t) = 0;
+    virtual size_t write(const uint8_t* b, size_t n) {
+        size_t i = 0; for (; i < n; ++i) write(b[i]); return i;
+    }
+    size_t print(const char* s) { size_t n = 0; while (s && *s) { write((uint8_t)*s++); ++n; } return n; }
+};
+class Printable {
+   public:
+    virtual ~Printable() {}
+    virtual size_t printTo(Print&) const = 0;
+};
 
 // ---- ESP info object -------------------------------------------------------
 struct EspClass {
