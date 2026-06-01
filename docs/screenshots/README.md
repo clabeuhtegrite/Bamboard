@@ -1,30 +1,34 @@
 # Screenshots
 
-1:1 SVG mockups of every Bamboard screen, at the native JC4827W543 panel
-resolution (**480 × 272**). They mirror the widgets the firmware builds at
-runtime, populated with representative placeholder data so every screen
-looks alive.
+Real 480 × 272 captures of every Bamboard screen, rendered by the host simulator
+(`sim/`) against **live Bambuddy data** and dumped to PNG — the same CI harness
+that validates the UI on every change. These are the actual widgets the firmware
+builds at runtime, not mockups.
 
-| File                 | Screen        | Tab idx |
-|----------------------|---------------|---------|
-| `dashboard_mock.svg` | Live dashboard (default screen, segmented speed chip visible) | 0 |
-| `ams_mock.svg`       | AMS overview with prev/next chevrons + slot row | 1 |
-| `printers_mock.svg`  | Multi-printer list, focused row highlighted | 2 |
-| `history_mock.svg`   | Stats KPIs + recent archives | 3 |
-| `settings_mock.svg`  | Diagnostics + brightness 1–5 + factory reset | 4 |
-| `device_render.svg`  | Hero render of the assembled v0.4 device — slim PETG case, integrated desk-stand tab, screen lit on the Live dashboard | — |
+| File                | Screen                                                                  | Tab idx |
+|---------------------|-------------------------------------------------------------------------|---------|
+| `live.png`          | Live dashboard — temps, progress, ETA, camera thumbnail; Pause/Stop + light while printing | 0 |
+| `ams.png`           | AMS overview — outlined slots, clear-filament checkerboard, prev/next chevrons, Dry pill | 1 |
+| `printers.png`      | Multi-printer list, focused row highlighted                             | 2 |
+| `queue.png`         | Print queue — Bambuddy's pending jobs, in order                         | 3 |
+| `history.png`       | Stats KPIs + recent archives                                            | 4 |
+| `settings.png`      | Diagnostics (incl. Bambuddy server version) + brightness 1–5 + factory reset | 5 |
+| `camera.png`        | Full-screen printer-camera viewer (tap the Live progress ring / thumbnail) | — |
+| `device_render.svg` | Hero render of the assembled device — slim PETG case, integrated desk-stand tab | — |
 
-## Conventions
+The pre-v0.16 hand-drawn `*_mock.svg` mockups have been replaced by these real
+renders.
 
-- Canvas: `viewBox="0 0 480 272"` — matches the real panel.
-- Header: y = 0 .. 36 (with a 1 px hairline at y = 35).
+## Panel layout
+
+- Canvas: 480 × 272 — the native JC4827W543 panel.
+- Header: y = 0 .. 36 (1 px hairline at y = 35).
 - Body: y = 36 .. 228 (192 px tall).
-- Tab bar: y = 228 .. 272 (44 px), with a 3 px accent strip above the
-  active tab at y = 228.
-- Colours match `firmware/src/config.h` (`C_BG`, `C_PANEL`, `C_PANEL_HI`,
-  `C_ACCENT`, `C_OK`, `C_WARN`, `C_ERR`, `C_TEXT`, `C_TEXT_DIM`).
-- Radii from the v0.4 theme: panels = 12 px, pills = 18 px, chips = 8 px.
+- Tab bar: y = 228 .. 272 (44 px), **six** tabs, 3 px accent strip above the active one.
+- Colours / radii come from `firmware/src/config.h` (`C_*`, `R_PANEL` / `R_PILL` / `R_CHIP`).
 
-When you build the unit, drop real photos in here (phone camera at ~30°,
-or LVGL snapshot dump if you instrumented the firmware) and replace the
-README references in the project root.
+## Regenerating
+
+Trigger the **sim** workflow (or build `sim/` locally with the `BAMBUDDY_URL` /
+`BAMBUDDY_API_KEY` / `CF_ACCESS_*` env vars set) and copy the PNGs from the
+`sim-screens` artifact over the ones here.

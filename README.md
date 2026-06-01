@@ -15,18 +15,28 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 
 ![Bamboard assembled](docs/screenshots/device_render.svg)
 
-| Live | AMS | Printers | History | Settings |
-|------|-----|----------|---------|----------|
-| ![Live](docs/screenshots/dashboard_mock.svg) | ![AMS](docs/screenshots/ams_mock.svg) | ![Printers](docs/screenshots/printers_mock.svg) | ![History](docs/screenshots/history_mock.svg) | ![Settings](docs/screenshots/settings_mock.svg) |
+| Live | AMS | Printers |
+|------|-----|----------|
+| ![Live](docs/screenshots/live.png) | ![AMS](docs/screenshots/ams.png) | ![Printers](docs/screenshots/printers.png) |
+| **Queue** | **History** | **Settings** |
+| ![Queue](docs/screenshots/queue.png) | ![History](docs/screenshots/history.png) | ![Settings](docs/screenshots/settings.png) |
 
-> 1:1 SVG mockups of the **touch UI** at the real 480 × 272 panel
-> resolution. Every screen carries the **Bamboard** wordmark header (with
-> the focused printer and a Wi-Fi link badge) and a permanent bottom tab
-> bar whose active screen lights up — icon, label and a 3 px accent strip.
-> On Live a single **print-speed** button opens a four-way speed menu, on
-> AMS the chevrons flank the unit label and each slot is a colour-swatch
-> card (clear filament shown as a checkerboard, dark filament outlined),
-> and on Settings a 1–5 segmented selector controls the panel brightness.
+> Real 480 × 272 screen captures rendered by the host simulator on live Bambuddy
+> data — the same harness CI runs on every change. Every screen carries the
+> **Bamboard** wordmark header (focused printer + Wi-Fi link badge) and a
+> permanent **six-tab** bar whose active tab lights up (icon, label, a 3 px accent
+> strip). On **Live**, while a print runs, inline **Pause / Resume** and **Stop**
+> controls plus a **chamber-light** toggle sit next to the print-speed button,
+> above a fan-speed readout and a tappable camera thumbnail; **AMS** outlines every
+> slot and checkerboards clear filament, with a per-filament **Dry** pill on
+> heater units; **Queue** lists Bambuddy's pending jobs; **Settings** shows the
+> Bambuddy server version beside the device diagnostics and a 1–5 brightness
+> selector. (The Live shot above is a *finished* print — the Pause/Stop controls
+> appear only while one is running.)
+
+Tap the progress ring (or the Live thumbnail) to open the printer **camera** full-screen:
+
+![Camera](docs/screenshots/camera.png)
 
 ## Features
 
