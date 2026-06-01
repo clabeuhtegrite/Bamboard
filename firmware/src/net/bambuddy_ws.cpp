@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 
 #include "bambuddy_client.h"
+#include "psram_json.h"
 
 namespace bambuddy {
 
@@ -102,7 +103,7 @@ void WsClient::handle_event(WStype_t type, uint8_t* payload, size_t length) {
 }
 
 void WsClient::handle_text(uint8_t* payload, size_t length) {
-    JsonDocument doc;
+    JsonDocument doc(&psram_json_allocator());
     DeserializationError err = deserializeJson(doc, payload, length);
     if (err) {
         log_w("WS json parse: %s", err.c_str());

@@ -14,6 +14,8 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
+#include <esp_system.h>   // esp_reset_reason() for boot diagnostics
+#include <esp_task_wdt.h> // task watchdog on the UI task
 #include <lvgl.h>
 #include <time.h>
 
@@ -90,8 +92,12 @@ static void save_prefs() {
 void save_brightness_level(uint8_t level) {
     if (level < ::display::BL_LEVEL_MIN) level = ::display::BL_LEVEL_MIN;
     if (level > ::display::BL_LEVEL_MAX) level = ::display::BL_LEVEL_MAX;
-    g_cfg_brightness_level = level;
+    // Always apply the backlight, but only touch NVS when the level actually
+    // changed — re-tapping the current level (or the per-tick re-sync in the
+    // Settings screen) shouldn't burn a flash write.
     hw::g_display.set_brightness_level(level);
+    if (level == g_cfg_brightness_level) return;
+    g_cfg_brightness_level = level;
     s_prefs.begin("bamboard", false);
     s_prefs.putUChar("bl_level", level);
     s_prefs.end();
@@ -272,6 +278,14 @@ static void net_task(void*) {
             uint32_t lat = 0;
             bool ok = bambuddy::g_client.ping_health(&lat);
             ui::screens::header_set_online(ok, lat);
+            // Health-cadence device diagnostics over serial (heap is the one to
+            // watch for leaks/fragmentation; ws=0 means we're on the REST
+            // safety net rather than live push).
+            log_i("diag: heap=%uK psram=%uK ws=%d rssi=%d online=%d lat=%ums",
+                  (unsigned)(ESP.getFreeHeap()  / 1024),
+                  (unsigned)(ESP.getFreePsram() / 1024),
+                  (int)bambuddy::g_ws.is_connected(), (int)WiFi.RSSI(),
+                  (int)ok, (unsigned)lat);
             next_health_ms = now + bambuddy::POLL_HEALTH_MS;
         }
 
@@ -321,7 +335,13 @@ static void net_task(void*) {
 static void ui_task(void*) {
     uint32_t last_refresh       = 0;
     uint32_t last_touch_seen_ms = millis();
+    // Watch the UI task: a frozen screen is the worst failure for a desk
+    // monitor, and this loop never blocks (LVGL tick + an 8 ms delay), so it
+    // can't false-trip the way the HTTP-bound net task would. If LVGL ever
+    // deadlocks, the task WDT panics and the device reboots into a fresh UI.
+    esp_task_wdt_add(nullptr);
     for (;;) {
+        esp_task_wdt_reset();
         // LVGL pumps both the display flush and the touch input device.
         // The touch driver bumps `consume_touch_activity()` whenever the
         // GT911 reports a press; we use that to reset the auto-dim timer.
@@ -396,10 +416,29 @@ static void run_boot_update() {
 // setup / loop
 // ---------------------------------------------------------------------------
 
+// Human-readable reset cause — logged at boot so a field unit's reboot history
+// is diagnosable over serial (panic / brownout / watchdog vs a clean restart).
+static const char* reset_reason_str(esp_reset_reason_t r) {
+    switch (r) {
+        case ESP_RST_POWERON:  return "power-on";
+        case ESP_RST_EXT:      return "external";
+        case ESP_RST_SW:       return "software";       // our ESP.restart()
+        case ESP_RST_PANIC:    return "panic";
+        case ESP_RST_INT_WDT:  return "int-wdt";
+        case ESP_RST_TASK_WDT: return "task-wdt";
+        case ESP_RST_WDT:      return "other-wdt";
+        case ESP_RST_DEEPSLEEP:return "deep-sleep";
+        case ESP_RST_BROWNOUT: return "brownout";
+        case ESP_RST_SDIO:     return "sdio";
+        default:               return "unknown";
+    }
+}
+
 void setup() {
     Serial.begin(115200);
     delay(50);
-    log_i("Bamboard booting");
+    log_i("Bamboard %s booting — reset cause: %s",
+          BAMBOARD_VERSION, reset_reason_str(esp_reset_reason()));
 
     if (!hw::g_display.begin()) {
         // Fall back to a minimal serial-only mode; the user will see no
@@ -472,6 +511,14 @@ void setup() {
 
     bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key);
     bambuddy::g_ws.begin    (g_cfg_bambuddy_url);  // /ws is unauthenticated
+
+    // Arm the task watchdog (10 s, panic+reboot on timeout) before the UI task
+    // subscribes itself. Best-effort: if the Arduino runtime already initialised
+    // the TWDT this is a no-op and the existing timeout stands — the UI loop
+    // feeds it every few ms either way, so it only fires on a real hang. The
+    // net task is intentionally NOT watched (its HTTP calls block for seconds
+    // by design).
+    esp_task_wdt_init(10, true);
 
     // Tasks: net on core 0, UI on core 1.
     xTaskCreatePinnedToCore(net_task, "net", 8192, nullptr, 1, nullptr, 0);

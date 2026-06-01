@@ -4,6 +4,7 @@
 #include <WiFi.h>
 
 #include "../config.h"
+#include "psram_json.h"   // JSON docs allocate from PSRAM, not scarce DRAM
 
 namespace bambuddy {
 
@@ -149,7 +150,7 @@ bool Client::fetch_printers() {
     // /printers/ only carries identity fields (id / name / model / serial)
     // — the runtime state lives on /printers/{id}/status, fetched
     // separately by net_task.
-    JsonDocument doc;
+    JsonDocument doc(&psram_json_allocator());
     if (!do_get("/api/v1/printers/", doc)) return false;
     if (!doc.is<JsonArray>()) {
         last_error_ = "printers: expected array";
@@ -173,7 +174,7 @@ bool Client::fetch_printers() {
 
 bool Client::fetch_printer_status(int printer_id) {
     String path = String("/api/v1/printers/") + printer_id + "/status";
-    JsonDocument doc;
+    JsonDocument doc(&psram_json_allocator());
     if (!do_get(path, doc)) return false;
     return apply_status_payload(printer_id, doc.as<JsonVariantConst>());
 }
@@ -279,7 +280,7 @@ bool Client::fetch_statistics() {
     // replaces total_print_time, total_filament_grams replaces
     // total_filament_used, and success_rate isn't returned (we compute
     // it from the counts).
-    JsonDocument doc;
+    JsonDocument doc(&psram_json_allocator());
     if (!do_get("/api/v1/archives/stats", doc)) return false;
     xSemaphoreTake(mtx_, portMAX_DELAY);
     stats_.total_prints      = doc["total_prints"]      | 0;
@@ -302,7 +303,7 @@ bool Client::fetch_recent_archives(uint8_t limit) {
     // (falling back to print_time_seconds if the run wasn't tracked),
     // filament_used → filament_used_grams.
     String path = String("/api/v1/archives/slim?limit=") + limit;
-    JsonDocument doc;
+    JsonDocument doc(&psram_json_allocator());
     if (!do_get(path, doc)) return false;
     if (!doc.is<JsonArray>()) {
         last_error_ = "archives/slim: expected array";
@@ -327,7 +328,7 @@ bool Client::fetch_recent_archives(uint8_t limit) {
 
 bool Client::ping_health(uint32_t* latency_ms_out) {
     uint32_t t0 = millis();
-    JsonDocument doc;
+    JsonDocument doc(&psram_json_allocator());
     bool ok = do_get("/health", doc);
     if (latency_ms_out) *latency_ms_out = millis() - t0;
     return ok;

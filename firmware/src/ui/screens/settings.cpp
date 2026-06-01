@@ -208,10 +208,12 @@ void update_settings() {
     snprintf(r, sizeof(r), "%d dBm", WiFi.RSSI());
     lv_label_set_text(s_set_rssi, r);
     uint32_t up = millis() / 1000;
-    char u[24];
-    snprintf(u, sizeof(u), "%uh %02um %02us",
+    char u[44];
+    // Uptime + free heap on one line — the cheapest on-screen health signal
+    // (a steadily shrinking heap points at a leak/fragmentation).
+    snprintf(u, sizeof(u), "%uh %02um %02us \xE2\x80\xA2 %uK free",
              (unsigned)(up / 3600), (unsigned)((up % 3600) / 60),
-             (unsigned)(up % 60));
+             (unsigned)(up % 60), (unsigned)(ESP.getFreeHeap() / 1024));
     lv_label_set_text(s_set_uptime, u);
 
     // Keep the segmented brightness control in sync with the live value
