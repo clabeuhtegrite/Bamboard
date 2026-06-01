@@ -31,5 +31,11 @@ case/exports/*.gcode
 case/exports/*.3mf
 case/exports/*.stl.bak
 
+# Generated at build time — root-CA bundle for https cert validation, written by
+# scripts/gen_ca_bundle.sh in CI (never committed; *.bin already covers the .bin).
+firmware/data/cert/
+firmware/cacert.pem
+firmware/gen_crt_bundle.py
+
 # Local overrides
 *.local

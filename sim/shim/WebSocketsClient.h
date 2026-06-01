@@ -19,6 +19,7 @@ class WebSocketsClient {
     void beginSSL(const char*, uint16_t, const char*) {}
     void disconnect() {}
     void setReconnectInterval(uint32_t) {}
+    void setExtraHeaders(const char* = nullptr) {}
     void loop() {}
     bool sendTXT(const char*) { return true; }
     bool sendTXT(const String&) { return true; }

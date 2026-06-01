@@ -11,9 +11,12 @@
 
 #define HTTP_CODE_OK 200
 
+class WiFiClientSecure;   // https begin() overload — the sim ignores the client
+
 class HTTPClient {
    public:
     bool   begin(const String& url);
+    bool   begin(WiFiClientSecure& client, const String& url);
     void   addHeader(const String& key, const String& value);
     void   setTimeout(uint32_t) {}
     void   setConnectTimeout(uint32_t) {}

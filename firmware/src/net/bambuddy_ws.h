@@ -28,15 +28,18 @@ namespace bambuddy {
 
 class WsClient {
    public:
-    // Bambuddy's /ws endpoint is unauthenticated (see the upstream
-    // websocket route), so we deliberately take no API key here — the REST
-    // client owns the key. begin()/set_credentials() keep a url-only
-    // signature so a future authenticated handshake is an additive change.
-    void begin(const String& base_url);
+    // Bambuddy's /ws is unauthenticated itself, but when Bambuddy sits behind
+    // Cloudflare Access the handshake must still carry the service token or CF
+    // rejects it before it reaches Bambuddy. cf_id/cf_secret ride the handshake
+    // as extra headers (empty on a plain LAN ws:// deployment). The REST client
+    // still owns the API key.
+    void begin(const String& base_url,
+               const String& cf_id = "", const String& cf_secret = "");
 
-    // Re-bind to a (possibly new) Bambuddy URL. Tears the current socket
-    // down if the host changed; same host stays connected.
-    void set_credentials(const String& base_url);
+    // Re-bind to a (possibly new) Bambuddy URL / CF token. Tears the current
+    // socket down if the target changed; same target stays connected.
+    void set_credentials(const String& base_url,
+                         const String& cf_id = "", const String& cf_secret = "");
 
     // Drive the underlying WebSocketsClient FSM + app-level keepalive.
     // Must be called frequently from the network task (≥ once / second).
@@ -56,6 +59,12 @@ class WsClient {
     bool     configured_ = false;
     bool     connected_  = false;
     uint32_t last_ping_ms_ = 0;
+    // Cloudflare Access service token, pre-formatted as a handshake header block
+    // ("CF-Access-Client-Id: …\r\nCF-Access-Client-Secret: …"). Held as a member
+    // because WebSocketsClient::setExtraHeaders() stores the pointer, not a copy.
+    String   cf_id_;
+    String   cf_secret_;
+    String   extra_headers_;
 };
 
 extern WsClient g_ws;

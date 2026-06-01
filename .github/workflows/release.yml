@@ -67,6 +67,10 @@ jobs:
             echo "num=$NUM"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Generate root-CA bundle (https cert validation)
+        working-directory: firmware
+        run: bash scripts/gen_ca_bundle.sh
+
       - name: Build firmware
         working-directory: firmware
         env:

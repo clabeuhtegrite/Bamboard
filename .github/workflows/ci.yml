@@ -46,6 +46,10 @@ jobs:
           pip install --upgrade platformio
           pip install "esptool>=4.7,<5"
 
+      - name: Generate root-CA bundle (https cert validation)
+        working-directory: firmware
+        run: bash scripts/gen_ca_bundle.sh
+
       - name: Build firmware
         working-directory: firmware
         run: pio run -e esp32-s3-devkitc-1

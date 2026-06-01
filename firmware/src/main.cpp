@@ -41,6 +41,10 @@ uint8_t g_cfg_reboot_hour      = ::schedule::DAILY_REBOOT_ENABLED
                                      ? ::schedule::DAILY_REBOOT_HOUR
                                      : ::schedule::REBOOT_DISABLED;
 uint8_t g_cfg_lang             = (uint8_t)::i18n::Lang::EN;  // UI language index
+// Optional Cloudflare Access service token — only used (and only collected by
+// the captive portal) when the Bambuddy URL is https://. Empty on a LAN/http box.
+String  g_cfg_cf_id;
+String  g_cfg_cf_secret;
 
 // Public hook used by the Settings screen's brightness selector. Applies
 // the new level immediately and persists it to NVS so the next boot picks
@@ -76,6 +80,8 @@ static void load_prefs() {
     if (g_cfg_lang >= (uint8_t)::i18n::Lang::COUNT) {
         g_cfg_lang = (uint8_t)::i18n::Lang::EN;
     }
+    g_cfg_cf_id     = s_prefs.getString("cf_id", "");
+    g_cfg_cf_secret = s_prefs.getString("cf_secret", "");
     s_prefs.end();
 }
 
@@ -87,6 +93,8 @@ static void save_prefs() {
     s_prefs.putString("tz",       g_cfg_tz);
     s_prefs.putUChar ("reboot_h", g_cfg_reboot_hour);
     s_prefs.putUChar ("lang",     g_cfg_lang);
+    s_prefs.putString("cf_id",     g_cfg_cf_id);
+    s_prefs.putString("cf_secret", g_cfg_cf_secret);
     s_prefs.end();
 }
 
@@ -129,6 +137,92 @@ void factory_reset() {
 
 static WiFiManager s_wm;
 
+// --- Bambuddy host validation ----------------------------------------------
+// http  → must be a private IPv4 or an mDNS *.local name (LAN only; the API key
+//         travels in clear). https → any IPv4 or a hostname/domain. An optional
+//         :port is allowed either way. Enforced server-side after the portal saves.
+
+static bool digits_only(const String& s) {
+    if (s.length() == 0) return false;
+    for (size_t i = 0; i < s.length(); ++i)
+        if (s[i] < '0' || s[i] > '9') return false;
+    return true;
+}
+
+static bool parse_ipv4(const String& h, int oct[4]) {
+    int parts = 0, start = 0;
+    const int n = h.length();
+    for (int i = 0; i <= n; ++i) {
+        if (i == n || h[i] == '.') {
+            String p = h.substring(start, i);
+            if (parts >= 4 || !digits_only(p) || p.length() > 3) return false;
+            int v = p.toInt();
+            if (v < 0 || v > 255) return false;
+            oct[parts++] = v;
+            start = i + 1;
+        } else if (h[i] < '0' || h[i] > '9') {
+            return false;
+        }
+    }
+    return parts == 4;
+}
+
+static bool is_ipv4(const String& h) { int o[4]; return parse_ipv4(h, o); }
+
+static bool is_private_ipv4(const String& h) {
+    int o[4];
+    if (!parse_ipv4(h, o)) return false;
+    if (o[0] == 10) return true;                              // 10.0.0.0/8
+    if (o[0] == 192 && o[1] == 168) return true;              // 192.168.0.0/16
+    if (o[0] == 172 && o[1] >= 16 && o[1] <= 31) return true; // 172.16.0.0/12
+    if (o[0] == 127) return true;                             // loopback
+    return false;
+}
+
+static bool is_mdns_local(const String& h) {
+    String l = h; l.toLowerCase();
+    return l.length() > 6 && l.endsWith(".local");
+}
+
+// RFC-1123-ish hostname: dot-separated labels of [A-Za-z0-9-], 1..63 chars each,
+// not starting/ending with '-'.
+static bool is_hostname(const String& h) {
+    if (h.length() == 0 || h.length() > 253) return false;
+    int start = 0;
+    const int n = h.length();
+    for (int i = 0; i <= n; ++i) {
+        if (i == n || h[i] == '.') {
+            int len = i - start;
+            if (len == 0 || len > 63) return false;
+            if (h[start] == '-' || h[i - 1] == '-') return false;
+            start = i + 1;
+        } else {
+            char c = h[i];
+            bool ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+                      (c >= '0' && c <= '9') || c == '-';
+            if (!ok) return false;
+        }
+    }
+    return true;
+}
+
+// Split "host[:port]" → host + port ("" when absent). IPv6 literals unsupported.
+static void split_host_port(const String& in, String& host, String& port) {
+    int c = in.indexOf(':');
+    if (c >= 0 && in.indexOf(':', c + 1) < 0) {   // exactly one ':'
+        host = in.substring(0, c);
+        port = in.substring(c + 1);
+    } else {
+        host = in;
+        port = "";
+    }
+}
+
+static bool host_valid_for_scheme(const String& host, bool https) {
+    if (https) return is_ipv4(host) || is_hostname(host);
+    return is_private_ipv4(host) || is_mdns_local(host);
+}
+
 static void start_provisioning() {
     // Show a friendly screen while we run the captive portal.
     lv_obj_t* scr = lv_scr_act();
@@ -152,11 +246,36 @@ static void start_provisioning() {
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 0);
     lv_timer_handler();
 
-    WiFiManagerParameter p_url("url",
-        "Bambuddy URL (e.g. http://192.168.1.42:8000)",
-        g_cfg_bambuddy_url.c_str(), 120);
+    // Pre-fill: split the stored full URL back into scheme (checkbox) + host.
+    bool pre_https = g_cfg_bambuddy_url.startsWith("https://");
+    String pre_host = g_cfg_bambuddy_url;
+    if      (pre_host.startsWith("https://")) pre_host = pre_host.substring(8);
+    else if (pre_host.startsWith("http://"))  pre_host = pre_host.substring(7);
+    while (pre_host.endsWith("/")) pre_host.remove(pre_host.length() - 1);
+
+    WiFiManagerParameter p_host_hint(
+        "<br/><p><b>Bambuddy host.</b> HTTP (LAN): a private IP "
+        "(<code>192.168.x.y</code>, <code>10.x</code>, <code>172.16-31.x</code>) "
+        "or an <code>*.local</code> name. HTTPS: a domain or IP. Optional "
+        "<code>:port</code>; don't include <code>http(s)://</code>.</p>");
+    WiFiManagerParameter p_host("host", "Bambuddy host (IP / .local / domain)",
+        pre_host.c_str(), 120);
+    WiFiManagerParameter p_https("https",
+        "Use HTTPS (enables a domain + Cloudflare Access)", "T", 2,
+        pre_https ? "type=\"checkbox\" checked" : "type=\"checkbox\"");
     WiFiManagerParameter p_key("key", "Bambuddy API key",
         g_cfg_api_key.c_str(), 79);
+
+    // Cloudflare Access service token — only meaningful (and only saved) when
+    // HTTPS is on; the script below reveals these two rows only then.
+    WiFiManagerParameter p_cf_hint(
+        "<p id=\"cf_hint\"><b>Cloudflare Access</b> (optional, HTTPS only): paste a "
+        "service token to reach a Bambuddy published behind CF Access. Leave blank "
+        "for a plain HTTPS endpoint.</p>");
+    WiFiManagerParameter p_cf_id("cf_id", "CF-Access-Client-Id",
+        g_cfg_cf_id.c_str(), 80);
+    WiFiManagerParameter p_cf_secret("cf_secret", "CF-Access-Client-Secret",
+        g_cfg_cf_secret.c_str(), 96, "type=\"password\"");
 
     // Timezone (POSIX TZ string — cryptic, so show ready-to-paste examples)
     // and the daily-reboot hour (0-23, or blank to turn the reboot off).
@@ -185,13 +304,32 @@ static void start_provisioning() {
     WiFiManagerParameter p_lang("lang", "Language (en/es/fr/pt/de)",
         ::i18n::lang_code(g_cfg_lang), 4);
 
-    s_wm.addParameter(&p_url);
+    // Show/hide the Cloudflare rows from the HTTPS checkbox. Added last so every
+    // referenced input already exists when this inline script runs.
+    WiFiManagerParameter p_js(
+        "<script>(function(){"
+        "function row(id,on){var e=document.getElementById(id);if(!e)return;"
+        "e.style.display=on?'':'none';"
+        "var l=document.querySelector('label[for=\"'+id+'\"]');if(l)l.style.display=on?'':'none';}"
+        "function sync(){var c=document.getElementById('https');var on=!!(c&&c.checked);"
+        "row('cf_id',on);row('cf_secret',on);"
+        "var h=document.getElementById('cf_hint');if(h)h.style.display=on?'':'none';}"
+        "var c=document.getElementById('https');if(c)c.addEventListener('change',sync);"
+        "sync();})();</script>");
+
+    s_wm.addParameter(&p_host_hint);
+    s_wm.addParameter(&p_host);
+    s_wm.addParameter(&p_https);
     s_wm.addParameter(&p_key);
+    s_wm.addParameter(&p_cf_hint);
+    s_wm.addParameter(&p_cf_id);
+    s_wm.addParameter(&p_cf_secret);
     s_wm.addParameter(&p_tz_hint);
     s_wm.addParameter(&p_tz);
     s_wm.addParameter(&p_rbh);
     s_wm.addParameter(&p_lang_hint);
     s_wm.addParameter(&p_lang);
+    s_wm.addParameter(&p_js);
 
     s_wm.setConfigPortalTimeout(provision::PORTAL_TIMEOUT_S);
     s_wm.setBreakAfterConfig(true);
@@ -202,8 +340,41 @@ static void start_provisioning() {
         ESP.restart();
     }
 
-    g_cfg_bambuddy_url = p_url.getValue();
+    // --- read back + validate -------------------------------------------------
+    bool use_https = p_https.getValue()[0] != '\0';
+
+    String raw = p_host.getValue();
+    raw.trim();
+    if      (raw.startsWith("https://")) raw = raw.substring(8);
+    else if (raw.startsWith("http://"))  raw = raw.substring(7);
+    while (raw.endsWith("/")) raw.remove(raw.length() - 1);
+
+    String vhost, vport;
+    split_host_port(raw, vhost, vport);
+    bool host_ok = host_valid_for_scheme(vhost, use_https) &&
+                   (vport.length() == 0 ||
+                    (digits_only(vport) && vport.toInt() >= 1 && vport.toInt() <= 65535));
+    if (!host_ok) {
+        log_w("Bambuddy host '%s' invalid for %s; reopening portal",
+              raw.c_str(), use_https ? "https" : "http");
+        delay(500);
+        ESP.restart();   // nothing saved → the portal runs again on reboot
+    }
+
+    g_cfg_bambuddy_url = String(use_https ? "https://" : "http://") + raw;
     g_cfg_api_key      = p_key.getValue();
+
+    // The CF service token only applies to https; drop it on http so a stale
+    // token can't linger and leak onto a plain-text connection.
+    if (use_https) {
+        g_cfg_cf_id     = p_cf_id.getValue();
+        g_cfg_cf_secret = p_cf_secret.getValue();
+        g_cfg_cf_id.trim();
+        g_cfg_cf_secret.trim();
+    } else {
+        g_cfg_cf_id     = "";
+        g_cfg_cf_secret = "";
+    }
 
     g_cfg_tz = p_tz.getValue();
     g_cfg_tz.trim();
@@ -229,8 +400,10 @@ static void start_provisioning() {
 
     save_prefs();
 
-    bambuddy::g_client.set_credentials(g_cfg_bambuddy_url, g_cfg_api_key);
-    bambuddy::g_ws.set_credentials    (g_cfg_bambuddy_url);  // /ws is unauthenticated
+    bambuddy::g_client.set_credentials(g_cfg_bambuddy_url, g_cfg_api_key,
+                                       g_cfg_cf_id, g_cfg_cf_secret);
+    bambuddy::g_ws.set_credentials    (g_cfg_bambuddy_url,
+                                       g_cfg_cf_id, g_cfg_cf_secret);
     delay(300);
     ESP.restart();   // clean restart with the new config
 }
@@ -544,8 +717,9 @@ void setup() {
     }
 #endif
 
-    bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key);
-    bambuddy::g_ws.begin    (g_cfg_bambuddy_url);  // /ws is unauthenticated
+    bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key,
+                             g_cfg_cf_id, g_cfg_cf_secret);
+    bambuddy::g_ws.begin    (g_cfg_bambuddy_url, g_cfg_cf_id, g_cfg_cf_secret);
 
     // Arm the task watchdog (10 s, panic+reboot on timeout) before the UI task
     // subscribes itself. Best-effort: if the Arduino runtime already initialised

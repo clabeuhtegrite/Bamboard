@@ -10,6 +10,7 @@
 #include <cstdlib>
 
 #include "../../firmware/src/hw/display.h"
+#include "../../firmware/src/net/ca_bundle.h"   // CA-bundle symbol (stub below)
 
 #ifdef SIM_HAVE_CURL
 #include <curl/curl.h>
@@ -48,6 +49,9 @@ void factory_reset() {}
 
 // ---- HTTPClient over libcurl ----------------------------------------------
 bool HTTPClient::begin(const String& url) { url_ = url.std_str(); hdrs_.clear(); size_ = -1; code_ = 0; return true; }
+// Device https path is begin(secureClient, url); the sim ignores the client and
+// lets libcurl handle TLS over the system trust store, so this just forwards.
+bool HTTPClient::begin(WiFiClientSecure&, const String& url) { return begin(url); }
 void HTTPClient::addHeader(const String& k, const String& v) { hdrs_.emplace_back(k.std_str(), v.std_str()); }
 int  HTTPClient::getSize() { return (int)size_; }
 bool HTTPClient::connected() { return stream_.connected(); }
@@ -113,3 +117,9 @@ int HTTPClient::perform(const char*, const std::string&) { code_ = -1; return -1
 int HTTPClient::GET()                         { return perform("GET", ""); }
 int HTTPClient::POST(const String& body)      { return perform("POST", body.std_str()); }
 int HTTPClient::POST(uint8_t* body, size_t n) { return perform("POST", std::string((char*)body, body ? n : 0)); }
+
+// CA-bundle linker-symbol stub. On device the bundle is embedded via
+// board_build.embed_files; the sim can't embed a file and validates TLS over
+// libcurl's system trust store, so a 1-byte placeholder satisfies the linker
+// (the firmware hands it to the no-op WiFiClientSecure::setCACertBundle).
+const uint8_t ca_bundle_start[1] = {0};
