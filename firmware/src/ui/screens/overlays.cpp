@@ -417,9 +417,16 @@ void camera_decode_frame(const uint8_t* jpeg, size_t len) {
 }
 
 // Show the decoded frame in `img` so it FILLS the boxw x boxh area ("cover"):
-// zoom by the LARGER of the two axis ratios and let the parent clip the
-// overflow — rather than the smaller ratio ("contain"), which would letterbox
-// the frame inside black bars. Shared by the viewer and the dashboard thumb.
+// zoom by the LARGER of the two axis ratios so the frame covers the box, and
+// let the parent clip the overflow — rather than the smaller ratio ("contain"),
+// which would letterbox the frame inside black bars. Shared by the full-screen
+// viewer and the dashboard thumbnail.
+//
+// The zoom pivots about the image CENTRE and the (source-sized) object is
+// centred in its parent, so the scaled frame stays centred whether it is
+// up-scaled (viewer) or down-scaled (thumbnail). A top-left pivot only fills
+// when up-scaling; on the thumbnail — always a down-scale — it left the
+// bottom-right corner unpainted.
 static void cam_show_cover(lv_obj_t* img, uint16_t srcw, uint16_t srch,
                            uint16_t boxw, uint16_t boxh) {
     if (!img || !srcw || !srch) return;
@@ -428,9 +435,9 @@ static void cam_show_cover(lv_obj_t* img, uint16_t srcw, uint16_t srch,
     uint16_t z  = zw > zh ? zw : zh;   // cover — fill, crop the overflow
     if (z == 0) z = 1;
     lv_img_set_src(img, &s_cam_dsc);
-    lv_img_set_pivot(img, 0, 0);
+    lv_img_set_pivot(img, srcw / 2, srch / 2);
     lv_img_set_zoom(img, z);
-    lv_obj_set_size(img, (uint32_t)srcw * z / 256u, (uint32_t)srch * z / 256u);
+    lv_obj_set_size(img, srcw, srch);
     lv_obj_center(img);
     lv_obj_invalidate(img);
 }
