@@ -65,6 +65,10 @@ void      camera_overlay_close();
 bool      camera_overlay_is_open();
 void      camera_decode_frame(const uint8_t* jpeg, size_t len);  // net task
 void      camera_apply();                                        // UI task
+// Optional inline thumbnail of the same frame (the Live dashboard registers
+// one). camera_has_frame() is true once a frame has actually decoded.
+void      camera_attach_thumbnail(lv_obj_t* img, uint16_t w, uint16_t h);
+bool      camera_has_frame();
 
 // Shared header (title + connectivity indicator). Used by the carousel.
 // header_set_online() is safe to call from any task — it parks the new

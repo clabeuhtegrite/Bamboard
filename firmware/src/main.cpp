@@ -330,10 +330,17 @@ static void net_task(void*) {
             next_recent_ms = now + bambuddy::POLL_STATS_MS;
         }
 
-        // Camera: only while the snapshot overlay is open. Fetch + decode are
-        // both heavy (HTTP + JPEG), so they live here on the net task; the UI
-        // task just blits the decoded frame. ~0.5 fps is plenty for a monitor.
-        if (ui::screens::camera_overlay_is_open() && now >= next_cam_ms) {
+        // Camera: while the full-screen viewer is open, OR the Live screen is up
+        // (to feed the inline thumbnail). One snapshot every 5 s — gentle for a
+        // desk monitor. Fetch + decode are heavy (HTTP + JPEG) so they live here
+        // on the net task; the UI task just blits the frame. A run of failures
+        // (Bambuddy with no camera) backs the thumbnail polling off; opening the
+        // full-screen viewer resets it and always retries.
+        static uint8_t cam_fail = 0;
+        if (ui::screens::camera_overlay_is_open()) cam_fail = 0;
+        bool want_cam = ui::screens::camera_overlay_is_open() ||
+                        (ui::g_ui.current() == ui::Screen::Dashboard && cam_fail < 3);
+        if (want_cam && now >= next_cam_ms) {
             int id = ui::g_ui.selected_printer_id();
             if (id >= 0) {
                 uint8_t* jpeg = nullptr;
@@ -341,9 +348,12 @@ static void net_task(void*) {
                 if (bambuddy::g_client.fetch_camera_jpeg(id, &jpeg, &jlen)) {
                     ui::screens::camera_decode_frame(jpeg, jlen);
                     heap_caps_free(jpeg);
+                    cam_fail = 0;
+                } else if (cam_fail < 255) {
+                    cam_fail++;
                 }
             }
-            next_cam_ms = now + 2000;
+            next_cam_ms = now + 5000;
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));

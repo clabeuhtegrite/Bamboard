@@ -30,6 +30,8 @@ static lv_obj_t* s_dash_t_noz        = nullptr;
 static lv_obj_t* s_dash_t_bed        = nullptr;
 static lv_obj_t* s_dash_t_cham       = nullptr;
 static lv_obj_t* s_dash_hms          = nullptr;
+static lv_obj_t* s_dash_cam_box      = nullptr;   // inline camera thumbnail (Live)
+static lv_obj_t* s_dash_cam_img      = nullptr;
 
 // Action row (contextual, mutually exclusive). While printing: a "speed"
 // caption + a single button that opens a modal 4-item picker. When finished:
@@ -312,6 +314,32 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_obj_set_pos(s_dash_layer_lbl, 320, 32);
     lv_obj_add_style(s_dash_layer_lbl, &s_label_dim, 0);
 
+    // Inline camera thumbnail — sits in the top-row gap between the state pill
+    // and the ETA. Revealed (and the file label narrowed) only once a real frame
+    // has decoded, so a Bambuddy without a camera shows nothing odd. Tap it to
+    // open the full-screen viewer; the live frame is published by camera_apply().
+    s_dash_cam_box = lv_obj_create(s_dash_root);
+    lv_obj_remove_style_all(s_dash_cam_box);
+    lv_obj_set_size(s_dash_cam_box, 100, 54);
+    lv_obj_set_pos(s_dash_cam_box, 214, 3);
+    lv_obj_set_style_bg_color(s_dash_cam_box, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(s_dash_cam_box, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(s_dash_cam_box, ::ui::R_CHIP, 0);
+    lv_obj_set_style_border_color(s_dash_cam_box, lv_color_hex(::ui::C_PANEL_LINE), 0);
+    lv_obj_set_style_border_width(s_dash_cam_box, 1, 0);
+    lv_obj_set_style_border_opa(s_dash_cam_box, LV_OPA_COVER, 0);
+    lv_obj_set_style_clip_corner(s_dash_cam_box, true, 0);
+    lv_obj_clear_flag(s_dash_cam_box, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(s_dash_cam_box, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_dash_cam_box, dash_arc_clicked, LV_EVENT_CLICKED, nullptr);
+
+    s_dash_cam_img = lv_img_create(s_dash_cam_box);
+    lv_obj_center(s_dash_cam_img);
+    lv_obj_clear_flag(s_dash_cam_img, LV_OBJ_FLAG_CLICKABLE);
+    camera_attach_thumbnail(s_dash_cam_img, 98, 52);
+
+    lv_obj_add_flag(s_dash_cam_box, LV_OBJ_FLAG_HIDDEN);
+
     // --- Temp row ---
     // Three equal-width cells (146 px) at a uniform 12 px gutter / 9 px gap.
     s_dash_t_noz  = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::NOZZLE),   12, 146);
@@ -372,6 +400,7 @@ void update_dashboard(int printer_id) {
         lv_obj_set_style_bg_color(s_dash_state_dot, lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_label_set_text(s_dash_file_lbl, i18n::tr(i18n::Str::ADD_IN_BAMBUDDY));
         lv_label_set_text(s_dash_hms, "");   // clear any stale HMS line on printer dropout
+        lv_obj_add_flag(s_dash_cam_box, LV_OBJ_FLAG_HIDDEN);
         header_set_printer_name("");
         speed_menu_close();
         lv_obj_add_flag(s_dash_speed_lbl_cap, LV_OBJ_FLAG_HIDDEN);
@@ -395,6 +424,14 @@ void update_dashboard(int printer_id) {
     lv_label_set_text(s_dash_file_lbl,
                        sel->filename.length() ? sel->filename.c_str()
                                               : i18n::tr(i18n::Str::IDLE_PAREN));
+
+    // Inline camera thumbnail: reveal it (and narrow the file label so they
+    // don't collide) only once a frame has actually decoded — otherwise the
+    // dashboard is exactly as before (Bambuddy with no camera shows nothing).
+    bool cam = camera_has_frame();
+    if (cam) lv_obj_clear_flag(s_dash_cam_box, LV_OBJ_FLAG_HIDDEN);
+    else     lv_obj_add_flag  (s_dash_cam_box, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_width(s_dash_file_lbl, cam ? 118 : 220);
 
     lv_arc_set_value(s_dash_progress_arc, sel->progress);
     char pbuf[8];

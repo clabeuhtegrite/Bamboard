@@ -307,6 +307,14 @@ static SemaphoreHandle_t s_cam_mtx = nullptr;
 static volatile bool s_cam_open  = false;
 static volatile bool s_cam_dirty = false;
 static uint16_t s_cam_w = 0, s_cam_h = 0;
+// Optional inline thumbnail (the Live dashboard registers one). It shows the
+// same decoded frame, contain-fit into a small box. s_cam_have_frame gates the
+// dashboard's reveal so the box stays hidden until a real frame has arrived
+// (e.g. a Bambuddy with no camera never shows an empty box).
+static lv_obj_t* s_cam_thumb       = nullptr;
+static uint16_t  s_cam_thumb_w     = 0;
+static uint16_t  s_cam_thumb_h     = 0;
+static volatile bool s_cam_have_frame = false;
 
 static const uint16_t CAM_W_MAX = 480;
 static const uint16_t CAM_H_MAX = 232;   // body height between header and tab bar
@@ -397,6 +405,7 @@ void camera_decode_frame(const uint8_t* jpeg, size_t len) {
     TJpgDec.setJpgScale(scale);
     TJpgDec.drawJpg(0, 0, jpeg, len);   // → cam_tjpg_cb fills s_cam_pix
     s_cam_dirty = true;
+    s_cam_have_frame = true;
     xSemaphoreGive(s_cam_mtx);
 }
 
@@ -418,6 +427,32 @@ void camera_apply() {
     lv_obj_set_size(s_cam_img, w, h);
     lv_obj_center(s_cam_img);
     lv_obj_invalidate(s_cam_img);
+
+    // Inline dashboard thumbnail (if attached): same frame, contain-fit + centred.
+    if (s_cam_thumb && s_cam_thumb_w && s_cam_thumb_h) {
+        uint16_t zw = (uint32_t)s_cam_thumb_w * 256u / w;
+        uint16_t zh = (uint32_t)s_cam_thumb_h * 256u / h;
+        uint16_t z  = zw < zh ? zw : zh;        // contain — no crop
+        if (z == 0) z = 1;
+        lv_img_set_src(s_cam_thumb, &s_cam_dsc);
+        lv_img_set_pivot(s_cam_thumb, 0, 0);
+        lv_img_set_zoom(s_cam_thumb, z);
+        lv_obj_set_size(s_cam_thumb, (uint32_t)w * z / 256u, (uint32_t)h * z / 256u);
+        lv_obj_center(s_cam_thumb);
+        lv_obj_invalidate(s_cam_thumb);
+    }
 }
+
+// Register an lv_img (owned by another screen) to receive the decoded frame as
+// a contain-fit thumbnail of at most w x h. camera_apply() updates it.
+void camera_attach_thumbnail(lv_obj_t* img, uint16_t w, uint16_t h) {
+    s_cam_thumb   = img;
+    s_cam_thumb_w = w;
+    s_cam_thumb_h = h;
+}
+
+// True once at least one camera frame has been decoded — the dashboard uses
+// this to reveal its thumbnail only when the camera actually works.
+bool camera_has_frame() { return s_cam_have_frame; }
 
 }  // namespace ui::screens
