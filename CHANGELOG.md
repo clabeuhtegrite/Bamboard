@@ -5,6 +5,41 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.17.0 — 2026-06
+
+More of Bambuddy's API brought to the device: control a running print, toggle
+the chamber light, read the fans, see the print queue, and check the Bambuddy
+server version — all on real data the simulator renders in CI.
+
+### Added
+
+- **Pause / Resume / Stop a print from Live.** The action row gains **Pause**
+  (flips to **Resume** while paused) and **Stop** whenever a print is running.
+  Stop is **two-tap** (toast-confirmed) so a stray touch can't abort a job.
+  (POST `/printers/{id}/print/{pause,resume,stop}`.)
+- **Chamber-light toggle** on Live — a pill that turns the printer's chamber
+  light on/off (amber when lit). POST `/printers/{id}/chamber-light?on=`.
+- **Fan readout.** When no HMS error is showing, the Live status line reports the
+  part-cooling / auxiliary / chamber fan speeds Bambuddy already includes in
+  `/status` — no extra request.
+- **Print-queue screen.** A new **Queue** tab lists the jobs Bambuddy still has
+  pending, in order (job name + target printer), from GET `/queue` (refreshed
+  every 15 s). The tab bar is now six tabs.
+- **Bambuddy server version + uptime** on Settings, from GET `/system/info`,
+  beside the device's own diagnostics.
+
+### Notes
+
+- The control actions (pause/resume/stop, light) need an API key with
+  `printers:control`; read-only keys still get the queue, fan readout and server
+  version. The print-speed button drops its small "SPEED" caption to make room
+  for pause/stop (it still shows the current mode).
+- **Hardware-only:** the actual MQTT effect of pause/stop/light on the printer is
+  confirmed on a real device; CI validates compilation + the rendered layout
+  (the sim exercises the REST paths and renders every screen, incl. the queue).
+- Fan-speed values are shown as the integer Bambuddy reports; the exact scale is
+  pinned down on real hardware.
+
 ## v0.16.0 — 2026-06
 
 Configurable connection: keep talking to Bambuddy over plain HTTP on the LAN, or

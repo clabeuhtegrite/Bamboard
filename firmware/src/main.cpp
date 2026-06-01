@@ -420,6 +420,8 @@ static void net_task(void*) {
     uint32_t next_health_ms       = 0;
     uint32_t next_reboot_check_ms = 0;
     uint32_t next_cam_ms          = 0;
+    uint32_t next_queue_ms        = 0;
+    uint32_t next_sysinfo_ms      = 0;
 
     for (;;) {
         uint32_t now = millis();
@@ -501,6 +503,16 @@ static void net_task(void*) {
         if (now >= next_recent_ms) {
             bambuddy::g_client.fetch_recent_archives(bambuddy::MAX_RECENT_ARCHIVES);
             next_recent_ms = now + bambuddy::POLL_STATS_MS;
+        }
+
+        if (now >= next_queue_ms) {
+            bambuddy::g_client.fetch_queue();
+            next_queue_ms = now + bambuddy::POLL_QUEUE_MS;
+        }
+
+        if (now >= next_sysinfo_ms) {
+            bambuddy::g_client.fetch_system_info();
+            next_sysinfo_ms = now + bambuddy::POLL_SYSINFO_MS;
         }
 
         // Camera: while the full-screen viewer is open, OR the Live screen is up

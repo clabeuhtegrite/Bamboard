@@ -288,6 +288,14 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
         p.filename    = fn;
         p.speed_level = doc["speed_level"] | 2;
 
+        // Chamber light + fan speeds (int; -1 = unknown). Bambuddy /status keys:
+        // chamber_light (bool), cooling_fan_speed (part), big_fan1_speed (aux),
+        // big_fan2_speed (chamber/exhaust).
+        p.chamber_light = doc["chamber_light"] | false;
+        p.fan_cooling   = (int16_t)(doc["cooling_fan_speed"] | -1);
+        p.fan_aux       = (int16_t)(doc["big_fan1_speed"]    | -1);
+        p.fan_chamber   = (int16_t)(doc["big_fan2_speed"]    | -1);
+
         // --- AMS ---
         p.ams_exists = doc["ams_exists"] | false;
         p.ams_count  = 0;
@@ -386,6 +394,43 @@ bool Client::fetch_recent_archives(uint8_t limit) {
         a.duration_s  = dur;
         a.filament_g  = obj["filament_used_grams"] | 0.0f;
     }
+    xSemaphoreGive(mtx_);
+    return true;
+}
+
+bool Client::fetch_queue() {
+    // The queue endpoint also carries completed/cancelled history; a desk
+    // monitor only cares about what's still waiting, so keep "pending" items.
+    JsonDocument doc(&psram_json_allocator());
+    if (!do_get("/api/v1/queue", doc)) return false;
+    if (!doc.is<JsonArray>()) {
+        last_error_ = "queue: expected array";
+        return false;
+    }
+    JsonArray arr = doc.as<JsonArray>();
+    xSemaphoreTake(mtx_, portMAX_DELAY);
+    queue_count_ = 0;
+    for (JsonObject obj : arr) {
+        const char* st = obj["status"] | "";
+        if (strcmp(st, "pending") != 0) continue;
+        if (queue_count_ >= MAX_QUEUE_ITEMS) break;
+        QueueItem& q = queue_[queue_count_++];
+        q.name       = (const char*)(obj["archive_name"] | "");
+        if (q.name.length() == 0) q.name = "(file)";
+        q.status     = st;
+        q.printer_id = obj["printer_id"] | -1;
+        q.position   = obj["position"]   | 0;
+    }
+    xSemaphoreGive(mtx_);
+    return true;
+}
+
+bool Client::fetch_system_info() {
+    JsonDocument doc(&psram_json_allocator());
+    if (!do_get("/api/v1/system/info", doc)) return false;
+    xSemaphoreTake(mtx_, portMAX_DELAY);
+    sysinfo_.version = (const char*)(doc["app"]["version"]              | "");
+    sysinfo_.uptime  = (const char*)(doc["system"]["uptime_formatted"] | "");
     xSemaphoreGive(mtx_);
     return true;
 }
@@ -508,6 +553,25 @@ bool Client::clear_plate(int printer_id) {
     return do_post(String("/api/v1/printers/") + printer_id + "/clear-plate", "", nullptr);
 }
 
+bool Client::pause_print(int printer_id) {
+    return do_post(String("/api/v1/printers/") + printer_id + "/print/pause", "", nullptr);
+}
+
+bool Client::resume_print(int printer_id) {
+    return do_post(String("/api/v1/printers/") + printer_id + "/print/resume", "", nullptr);
+}
+
+bool Client::stop_print(int printer_id) {
+    return do_post(String("/api/v1/printers/") + printer_id + "/print/stop", "", nullptr);
+}
+
+bool Client::set_chamber_light(int printer_id, bool on) {
+    // Bambuddy takes on/off as a required query param, not a JSON body.
+    String path = String("/api/v1/printers/") + printer_id +
+                  "/chamber-light?on=" + (on ? "true" : "false");
+    return do_post(path, "", nullptr);
+}
+
 bool Client::start_ams_drying(int printer_id, uint8_t unit_id,
                                uint16_t minutes, uint8_t temp_c) {
     // Bambuddy's real route — params are query string, not JSON body.
@@ -546,6 +610,20 @@ void Client::snapshot_recent(Archive* out, uint8_t& count) const {
     count = recent_count_;
     for (uint8_t i = 0; i < recent_count_; ++i) out[i] = recent_[i];
     xSemaphoreGive(mtx_);
+}
+
+void Client::snapshot_queue(QueueItem* out, uint8_t& count) const {
+    xSemaphoreTake(mtx_, portMAX_DELAY);
+    count = queue_count_;
+    for (uint8_t i = 0; i < queue_count_; ++i) out[i] = queue_[i];
+    xSemaphoreGive(mtx_);
+}
+
+SystemInfo Client::snapshot_system_info() const {
+    xSemaphoreTake(mtx_, portMAX_DELAY);
+    SystemInfo s = sysinfo_;
+    xSemaphoreGive(mtx_);
+    return s;
 }
 
 bool Client::last_error(String& out) const {

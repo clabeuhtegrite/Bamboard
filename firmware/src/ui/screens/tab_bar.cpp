@@ -19,7 +19,8 @@ static lv_obj_t* s_tab_indicat[(uint8_t)Screen::_Count] = {};
 static uint8_t   s_tab_active = 0;
 
 static const char* k_tab_icons[(uint8_t)Screen::_Count] = {
-    LV_SYMBOL_HOME, LV_SYMBOL_TINT, LV_SYMBOL_LIST, LV_SYMBOL_LOOP, LV_SYMBOL_SETTINGS,
+    LV_SYMBOL_HOME, LV_SYMBOL_TINT, LV_SYMBOL_LIST, LV_SYMBOL_DOWNLOAD,
+    LV_SYMBOL_LOOP, LV_SYMBOL_SETTINGS,
 };
 
 // Tab labels are produced at the point of use (not as a static array) because
@@ -30,8 +31,9 @@ static const char* tab_label(uint8_t i) {
         case 0:  return i18n::tr(i18n::Str::TAB_LIVE);
         case 1:  return "AMS";
         case 2:  return i18n::tr(i18n::Str::TAB_PRINTERS);
-        case 3:  return i18n::tr(i18n::Str::TAB_HISTORY);
-        case 4:  return i18n::tr(i18n::Str::TAB_SETTINGS);
+        case 3:  return i18n::tr(i18n::Str::TAB_QUEUE);
+        case 4:  return i18n::tr(i18n::Str::TAB_HISTORY);
+        case 5:  return i18n::tr(i18n::Str::TAB_SETTINGS);
         default: return "";
     }
 }

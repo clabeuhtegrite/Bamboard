@@ -13,6 +13,7 @@ static const char* const T[][(int)Lang::COUNT] = {
     // -- tabs / titles --
     /*TAB_LIVE*/      {"Live", "En vivo", "Direct", "Ao vivo", "Live"},
     /*TAB_PRINTERS*/  {"Printers", "Impresoras", "Imprimantes", "Impressoras", "Drucker"},
+    /*TAB_QUEUE*/     {"Queue", "Cola", "File", "Fila", "Liste"},
     /*TAB_HISTORY*/   {"History", "Historial", "Historique", "Histórico", "Verlauf"},
     /*TAB_SETTINGS*/  {"Settings", "Ajustes", "Réglages", "Definições", "Einstellungen"},
     // -- printer states --
@@ -36,6 +37,11 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*CLEAR_PLATE*/   {"Clear plate", "Vaciar placa", "Vider plateau", "Limpar mesa", "Platte leeren"},
     /*CLEAR_HMS*/     {"Clear HMS", "Borrar HMS", "Effacer HMS", "Limpar HMS", "HMS löschen"},
     /*HMS_PREFIX*/    {"HMS: ", "HMS: ", "HMS: ", "HMS: ", "HMS: "},
+    // -- print controls --
+    /*PAUSE*/         {"Pause", "Pausar", "Pause", "Pausar", "Pause"},
+    /*RESUME*/        {"Resume", "Reanudar", "Reprendre", "Retomar", "Fortsetzen"},
+    /*CONFIRM_STOP*/  {"Tap again to stop (3 s)", "Toca otra vez (3 s)", "Touchez encore (3 s)", "Toque novamente (3 s)", "Nochmal zum Stoppen (3 s)"},
+    /*LIGHT*/         {"Light", "Luz", "Lumière", "Luz", "Licht"},
     // -- toasts --
     /*PLATE_CLEARED*/        {"Plate cleared", "Placa vaciada", "Plateau vidé", "Mesa limpa", "Platte geleert"},
     /*CLEAR_PLATE_FAILED*/   {"Clear plate failed", "Error al vaciar", "Échec vidage plateau", "Falha ao limpar", "Leeren fehlgeschlagen"},
@@ -45,6 +51,7 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*DRYING_STOPPED*/       {"Drying stopped", "Secado detenido", "Séchage arrêté", "Secagem parada", "Trocknen gestoppt"},
     /*START_DRYING_FAILED*/  {"Start drying failed", "Error al iniciar secado", "Échec démarrage séchage", "Falha ao secar", "Trocknen-Start fehlgeschlagen"},
     /*STOP_DRYING_FAILED*/   {"Stop drying failed", "Error al detener secado", "Échec arrêt séchage", "Falha ao parar", "Trocknen-Stopp fehlgeschlagen"},
+    /*CONTROL_FAILED*/       {"Command failed", "Error de comando", "Échec de la commande", "Falha no comando", "Befehl fehlgeschlagen"},
     // -- AMS --
     /*DRY*/           {"Dry", "Secar", "Sécher", "Secar", "Trocknen"},
     /*STOP*/          {"Stop", "Parar", "Arrêter", "Parar", "Stopp"},
@@ -65,6 +72,7 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*LOCAL_IP*/      {"Local IP", "IP local", "IP locale", "IP local", "Lokale IP"},
     /*WIFI_RSSI*/     {"Wi-Fi RSSI", "Wi-Fi RSSI", "Wi-Fi RSSI", "Wi-Fi RSSI", "Wi-Fi RSSI"},
     /*UPTIME*/        {"Uptime", "Tiempo activo", "Temps actif", "Tempo ativo", "Laufzeit"},
+    /*SERVER*/        {"Server", "Servidor", "Serveur", "Servidor", "Server"},
     /*FACTORY_RESET*/ {"Factory reset", "Restablecer", "Réinit. usine", "Repor fábrica", "Zurücksetzen"},
     /*CONFIRM_RESET*/ {"Tap again to confirm (3 s)", "Toca otra vez (3 s)", "Touchez encore (3 s)", "Toque novamente (3 s)", "Nochmal tippen (3 s)"},
     /*LANGUAGE*/      {"Language", "Idioma", "Langue", "Idioma", "Sprache"},
@@ -90,6 +98,8 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*RESETTING*/     {"Resetting…", "Restableciendo…", "Réinitialisation…", "A repor…", "Zurücksetzen…"},
     /*NOT_CONFIGURED*/{"(not configured)", "(sin configurar)", "(non configuré)", "(não configurado)", "(nicht konfiguriert)"},
     /*DRYING_STARTED*/{"Drying %s @ %d °C", "Secando %s @ %d °C", "Séchage %s @ %d °C", "Secagem %s @ %d °C", "Trocknen %s @ %d °C"},
+    /*QUEUE_EMPTY*/   {"Queue is empty.", "La cola está vacía.", "La file est vide.", "A fila está vazia.", "Warteschlange leer."},
+    /*QUEUE_POS*/     {"#%d", "#%d", "#%d", "#%d", "#%d"},
 };
 
 static_assert(sizeof(T) / sizeof(T[0]) == (size_t)Str::_COUNT,

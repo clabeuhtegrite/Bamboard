@@ -129,6 +129,8 @@ int main(int argc, char** argv) {
         for (uint8_t i = 0; i < n; ++i) bambuddy::g_client.fetch_printer_status(ps[i].id);
         bambuddy::g_client.fetch_statistics();
         bambuddy::g_client.fetch_recent_archives(bambuddy::MAX_RECENT_ARCHIVES);
+        bambuddy::g_client.fetch_queue();
+        bambuddy::g_client.fetch_system_info();
         if (n > 0) ui::g_ui.set_selected_printer(ps[0].id);
     } else {
         fprintf(stderr, "[sim] no BAMBUDDY_URL — rendering empty states\n");
@@ -160,6 +162,7 @@ int main(int argc, char** argv) {
         {ui::Screen::Dashboard, "dashboard"},
         {ui::Screen::Ams,       "ams"},
         {ui::Screen::Printers,  "printers"},
+        {ui::Screen::Queue,     "queue"},
         {ui::Screen::History,   "history"},
         {ui::Screen::Settings,  "settings"},
     };

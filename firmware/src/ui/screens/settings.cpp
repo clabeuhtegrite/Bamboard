@@ -14,6 +14,8 @@
 
 #include <WiFi.h>
 
+#include "../../net/bambuddy_client.h"
+
 extern String  g_cfg_bambuddy_url;
 extern uint8_t g_cfg_brightness_level;
 extern void    save_brightness_level(uint8_t level);
@@ -26,6 +28,7 @@ static lv_obj_t* s_set_url           = nullptr;
 static lv_obj_t* s_set_ip            = nullptr;
 static lv_obj_t* s_set_rssi          = nullptr;
 static lv_obj_t* s_set_uptime        = nullptr;
+static lv_obj_t* s_set_server        = nullptr;
 static lv_obj_t* s_set_bright_bar    = nullptr;
 static lv_obj_t* s_set_bright_seg[5] = {};
 static lv_obj_t* s_set_reset_btn     = nullptr;
@@ -111,10 +114,11 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
         return vl;
     };
 
-    s_set_url    = make_row("Bambuddy",    2);
-    s_set_ip     = make_row(i18n::tr(i18n::Str::LOCAL_IP),   22);
-    s_set_rssi   = make_row(i18n::tr(i18n::Str::WIFI_RSSI), 42);
-    s_set_uptime = make_row(i18n::tr(i18n::Str::UPTIME),     62);
+    s_set_url    = make_row("Bambuddy",  1);
+    s_set_ip     = make_row(i18n::tr(i18n::Str::LOCAL_IP),  17);
+    s_set_rssi   = make_row(i18n::tr(i18n::Str::WIFI_RSSI), 33);
+    s_set_uptime = make_row(i18n::tr(i18n::Str::UPTIME),    49);
+    s_set_server = make_row(i18n::tr(i18n::Str::SERVER),    65);
 
     // --- Brightness 1..5 selector ---------------------------------------
     // Identical visual language to the speed chip on Live so the user
@@ -215,6 +219,17 @@ void update_settings() {
              (unsigned)(up / 3600), (unsigned)((up % 3600) / 60),
              (unsigned)(up % 60), (unsigned)(ESP.getFreeHeap() / 1024));
     lv_label_set_text(s_set_uptime, u);
+
+    // Bambuddy server version + uptime (GET /system/info). Empty until the first
+    // fetch lands → show a dash. "\xC2\xB7" is a UTF-8 middot separator.
+    bambuddy::SystemInfo si = bambuddy::g_client.snapshot_system_info();
+    if (si.version.length()) {
+        String sv = "v" + si.version;
+        if (si.uptime.length()) sv += " \xC2\xB7 " + si.uptime;
+        lv_label_set_text(s_set_server, sv.c_str());
+    } else {
+        lv_label_set_text(s_set_server, "-");
+    }
 
     // Keep the segmented brightness control in sync with the live value
     // (the captive portal could rewrite it; we never do that today, but
