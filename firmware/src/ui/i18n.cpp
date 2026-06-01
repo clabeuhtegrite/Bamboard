@@ -90,7 +90,7 @@ static const char* const T[][(int)Lang::COUNT] = {
         "Keine Drucker in Bambuddy.\nFügen Sie einen in der Bambuddy-Oberfläche hinzu."},
     /*RESETTING*/     {"Resetting…", "Restableciendo…", "Réinitialisation…", "A repor…", "Zurücksetzen…"},
     /*NOT_CONFIGURED*/{"(not configured)", "(sin configurar)", "(non configuré)", "(não configurado)", "(nicht konfiguriert)"},
-    /*DRYING_STARTED*/{"Drying 60 min @ 55 °C", "Secando 60 min @ 55 °C", "Séchage 60 min @ 55 °C", "Secagem 60 min @ 55 °C", "Trocknen 60 min @ 55 °C"},
+    /*DRYING_STARTED*/{"Drying %s @ %d °C", "Secando %s @ %d °C", "Séchage %s @ %d °C", "Secagem %s @ %d °C", "Trocknen %s @ %d °C"},
 };
 
 static_assert(sizeof(T) / sizeof(T[0]) == (size_t)Str::_COUNT,
