@@ -44,7 +44,9 @@
 #define LV_USE_SLIDER   0
 #define LV_USE_SWITCH   0
 #define LV_USE_TABLE    0
-#define LV_USE_TEXTAREA 0
+/* TEXTAREA on: LVGL's bundled extra widgets (keyboard/spinbox) hard-require it
+ * to compile even though Bamboard never instantiates them. No render impact. */
+#define LV_USE_TEXTAREA 1
 
 #define LV_USE_FLEX 1
 #define LV_USE_GRID 1

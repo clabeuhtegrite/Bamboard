@@ -21,9 +21,11 @@ include(FetchContent)
 FetchContent_Declare(lvgl
   GIT_REPOSITORY https://github.com/lvgl/lvgl.git
   GIT_TAG        v8.3.11)
-# Point LVGL at our host lv_conf.h.
+# Point LVGL at our host lv_conf.h (absolute path; propagates to consumers via
+# the lvgl target's PUBLIC compile definitions).
 set(LV_CONF_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lv_conf.h CACHE STRING "" FORCE)
-set(LV_CONF_INCLUDE_SIMPLE ON CACHE BOOL "" FORCE)
+set(LV_CONF_BUILD_DISABLE_EXAMPLES ON CACHE BOOL "" FORCE)
+set(LV_CONF_BUILD_DISABLE_DEMOS ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(lvgl)
 
 # --- ArduinoJson 7 (same major as the firmware) ---
@@ -67,7 +69,11 @@ target_include_directories(bamboard_sim BEFORE PRIVATE
 )
 target_compile_definitions(bamboard_sim PRIVATE
   BAMBOARD_SIM=1
-  LV_CONF_INCLUDE_SIMPLE=1
+  # Make ArduinoJson take its Arduino path so it accepts our String + Stream
+  # shims (HTTPClient::getStream()); disable the bits we don't provide.
+  ARDUINO=10812
+  ARDUINOJSON_ENABLE_ARDUINO_PRINT=0
+  ARDUINOJSON_ENABLE_PROGMEM=0
 )
 target_link_libraries(bamboard_sim PRIVATE lvgl ArduinoJson)
 
