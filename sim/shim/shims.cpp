@@ -6,6 +6,7 @@
 #include <TJpg_Decoder.h>
 
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 
 #include "../../firmware/src/hw/display.h"
@@ -92,7 +93,14 @@ int HTTPClient::perform(const char* method, const std::string& body) {
     curl_easy_getinfo(c, CURLINFO_RESPONSE_CODE, &http_code);
     if (hl) curl_slist_free_all(hl);
     curl_easy_cleanup(c);
-    if (rc != CURLE_OK) { code_ = -1; return -1; }
+    if (rc != CURLE_OK) {
+        // Surface the transport-level reason (timeout / connect refused / TLS …)
+        // so a failed fetch in CI is diagnosable instead of a bare "-1".
+        fprintf(stderr, "[sim] curl %s %s -> %s\n", method, url_.c_str(),
+                curl_easy_strerror(rc));
+        code_ = -1;
+        return -1;
+    }
     stream_.sim_reset(resp);
     size_ = (long)resp.size();
     code_ = (int)http_code;
