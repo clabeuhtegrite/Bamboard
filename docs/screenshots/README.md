@@ -31,4 +31,6 @@ renders.
 
 Trigger the **sim** workflow (or build `sim/` locally with the `BAMBUDDY_URL` /
 `BAMBUDDY_API_KEY` / `CF_ACCESS_*` env vars set) and copy the PNGs from the
-`sim-screens` artifact over the ones here.
+`sim-screens` artifact over the ones here. The sim writes the Live screen as
+`dashboard.png` — copy that over `live.png`; the other names match 1:1, and the
+artifact's `hms_overlay.png` isn't used here.
