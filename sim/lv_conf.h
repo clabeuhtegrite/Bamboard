@@ -51,6 +51,26 @@
 #define LV_USE_FLEX 1
 #define LV_USE_GRID 1
 
+/* Extra widgets — Bamboard uses none of them. Disable so LVGL doesn't pull in
+ * deps we turned off (e.g. calendar's header-dropdown needs lv_dropdown). */
+#define LV_USE_ANIMIMG    0
+#define LV_USE_CALENDAR   0
+#define LV_USE_CHART      0
+#define LV_USE_COLORWHEEL 0
+#define LV_USE_IMGBTN     0
+#define LV_USE_KEYBOARD   0
+#define LV_USE_LED        0
+#define LV_USE_LIST       0
+#define LV_USE_MENU       0
+#define LV_USE_METER      0
+#define LV_USE_MSGBOX     0
+#define LV_USE_SPAN       0
+#define LV_USE_SPINBOX    0
+#define LV_USE_SPINNER    0
+#define LV_USE_TABVIEW    0
+#define LV_USE_TILEVIEW   0
+#define LV_USE_WIN        0
+
 /* Fonts: provide a built-in default; the UI overrides with bb_font_* anyway. */
 #define LV_FONT_MONTSERRAT_8  0
 #define LV_FONT_MONTSERRAT_14 1
