@@ -23,6 +23,8 @@
 #include "net/bambuddy_ws.h"
 #include "png.h"
 
+#include <HTTPClient.h>   // raw request for the Cloudflare-Access diagnostic
+
 static const int W = ::display::WIDTH;
 static const int H = ::display::HEIGHT;
 
@@ -88,6 +90,17 @@ int main(int argc, char** argv) {
         bambuddy::g_client.begin(surl, skey);
         bambuddy::g_ws.begin(surl);
         fprintf(stderr, "[sim] fetching from %s\n", url);
+        // Raw diagnostic: who sends the 403 — Cloudflare Access or the origin?
+        // Print the response body so the page identifies itself.
+        {
+            HTTPClient raw;
+            raw.begin(String(url) + "/health");
+            int rc = raw.GET();
+            String body = raw.getString();
+            fprintf(stderr, "[sim] RAW /health: code=%d len=%d\n[sim] body: %.250s\n",
+                    rc, (int)body.length(), body.c_str());
+            raw.end();
+        }
         uint32_t lat = 0;
         bool h = bambuddy::g_client.ping_health(&lat);
         fprintf(stderr, "[sim] /health: %s (%u ms)\n", h ? "ok" : "FAIL", (unsigned)lat);
