@@ -5,6 +5,18 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.15.3 — 2026-06
+
+### Fixed
+
+- **The Live camera thumbnail didn't fully fill its box.** v0.15.2's cover
+  scaling zoomed about a top-left pivot, which fills correctly only when
+  *up-scaling* (the full-screen viewer). The thumbnail always *down-scales* the
+  frame, and there the top-left pivot left the bottom-right corner unpainted
+  (a black wedge). The cover helper now zooms about the image centre and centres
+  the frame, so it fills the box for both up- and down-scaling. The full-screen
+  viewer (already correct) is unchanged.
+
 ## v0.15.2 — 2026-06
 
 ### Changed
