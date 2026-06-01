@@ -117,7 +117,10 @@ extern EspClass ESP;
 
 // ---- SNTP-ish helpers used by the UI --------------------------------------
 inline bool getLocalTime(struct tm* info, uint32_t = 0) {
-    time_t t = time(nullptr);
+    // Pinned wall clock so time-derived UI (the dashboard's wall-clock ETA,
+    // uptime) renders reproducibly for the host sim's golden-image fixtures.
+    // CI runs in UTC, so this maps to a fixed local time there.
+    time_t t = 1781000000;   // fixed: 2026-06-09 ~16:53 UTC
     localtime_r(&t, info);
     return true;
 }

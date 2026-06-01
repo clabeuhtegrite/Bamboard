@@ -23,6 +23,8 @@
 #include "net/bambuddy_ws.h"
 #include "png.h"
 
+#include <ArduinoJson.h>   // build synthetic /status payloads for the fixtures
+
 #include <HTTPClient.h>   // raw request for the Cloudflare-Access diagnostic
 #include <esp_heap_caps.h>   // free the camera-JPEG buffer
 
@@ -63,6 +65,63 @@ static void pump(int frames) {
     }
 }
 
+// Push a synthetic /status payload through the REAL handler (the same one the
+// WebSocket push path calls). apply_status_payload creates the printer on first
+// sight, so no network / fetch is needed.
+static void fixture_apply(int id, const char* json) {
+    JsonDocument d;
+    DeserializationError e = deserializeJson(d, json);
+    if (e) { fprintf(stderr, "[sim] fixture parse error: %s\n", e.c_str()); return; }
+    bambuddy::g_client.apply_status_payload(id, d.as<JsonVariantConst>());
+}
+
+// Deterministic synthetic states (no network, no secrets) so CI can validate —
+// and pixel-diff against committed baselines — the printing / multi-AMS / HMS
+// UI that the live data may never happen to show. getLocalTime() is pinned in
+// the shim so the wall-clock ETA renders reproducibly.
+static void render_fixtures(const std::string& out) {
+    static const char* PRINTING =
+        "{\"name\":\"Workshop X1C\",\"model\":\"X1C\",\"state\":\"printing\","
+        "\"progress\":62,\"remaining_time\":4320,\"layer_num\":164,\"total_layers\":267,"
+        "\"subtask_name\":\"benchy_v2_pla.3mf\","
+        "\"temperatures\":{\"nozzle\":220,\"bed\":60,\"chamber\":38},"
+        "\"speed_level\":2,\"chamber_light\":true,"
+        "\"cooling_fan_speed\":100,\"big_fan1_speed\":40,\"big_fan2_speed\":0,"
+        "\"hms_errors\":[]}";
+    static const char* MULTI_AMS =
+        "{\"name\":\"Workshop X1C\",\"model\":\"X1C\",\"state\":\"printing\","
+        "\"progress\":62,\"remaining_time\":4320,"
+        "\"temperatures\":{\"nozzle\":220,\"bed\":60,\"chamber\":38},"
+        "\"ams_exists\":true,\"ams\":["
+          "{\"id\":0,\"is_ams_ht\":false,\"humidity\":25,\"temp\":31,\"dry_time\":0,\"tray\":["
+            "{\"id\":0,\"tray_color\":\"FFFFFFFF\",\"tray_type\":\"PLA\",\"remain\":100},"
+            "{\"id\":1,\"tray_color\":\"000000FF\",\"tray_type\":\"PLA\",\"remain\":63},"
+            "{\"id\":2,\"tray_color\":\"\",\"tray_type\":\"\",\"remain\":0},"
+            "{\"id\":3,\"tray_color\":\"00000000\",\"tray_type\":\"PETG\",\"remain\":100}]},"
+          "{\"id\":1,\"is_ams_ht\":true,\"humidity\":18,\"temp\":48,\"dry_time\":135,\"tray\":["
+            "{\"id\":0,\"tray_color\":\"FF6A00FF\",\"tray_type\":\"ABS\",\"remain\":80}]}]}";
+    static const char* HMS =
+        "{\"name\":\"Workshop X1C\",\"model\":\"X1C\",\"state\":\"failed\",\"progress\":42,"
+        "\"temperatures\":{\"nozzle\":218,\"bed\":60,\"chamber\":40},"
+        "\"hms_errors\":[{\"code\":\"0300_0100\",\"severity\":\"fatal\"}]}";
+
+    const int ID = 1;
+    ui::g_ui.set_selected_printer(ID);
+
+    fixture_apply(ID, PRINTING);                 // Live while printing
+    ui::g_ui.go_to(ui::Screen::Dashboard); pump(30); dump_png(out, "fx_live_printing");
+
+    ui::g_ui.go_to(ui::Screen::Printers);  pump(30); dump_png(out, "fx_printers");
+
+    fixture_apply(ID, MULTI_AMS);                // unit 1: 4 slots (white / black / empty / clear PETG)
+    ui::g_ui.go_to(ui::Screen::Ams);       pump(30); dump_png(out, "fx_ams_multi");
+    ui::screens::ams_cycle_unit(+1);             // unit 2: AMS-HT with a live drying countdown
+    pump(30); dump_png(out, "fx_ams_dry");
+
+    fixture_apply(ID, HMS);                       // HMS full-screen flash
+    ui::g_ui.go_to(ui::Screen::Dashboard); pump(30); dump_png(out, "fx_hms");
+}
+
 int main(int argc, char** argv) {
     std::string out = getenv("SIM_OUT") ? getenv("SIM_OUT") : "sim_out";
     mkdir(out.c_str(), 0755);
@@ -82,6 +141,14 @@ int main(int argc, char** argv) {
     const char* lang = getenv("BAMBOARD_LANG");
     int li = lang ? ::i18n::lang_from_code(lang) : 0;
     ::i18n::set_language(li >= 0 ? (uint8_t)li : 0);
+
+    // Deterministic fixture renders for visual-regression — no network, no
+    // secrets. Skips the live fetch entirely so it runs on every PR.
+    if (getenv("SIM_FIXTURES_ONLY")) {
+        ui::g_ui.begin();
+        render_fixtures(out);
+        return 0;
+    }
 
     // Real Bambuddy data (no fabricated values).
     const char* url = getenv("BAMBUDDY_URL");

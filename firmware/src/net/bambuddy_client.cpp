@@ -273,11 +273,24 @@ static float pick_float(JsonVariantConst v, const char* a, const char* b) {
 bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
     if (doc.isNull()) return false;
     xSemaphoreTake(mtx_, portMAX_DELAY);
-    bool found = false;
-    for (uint8_t i = 0; i < printer_count_; ++i) {
-        if (printers_[i].id != printer_id) continue;
-        found = true;
-        Printer& p       = printers_[i];
+    // Find the printer; if a status arrives for one not yet listed (a WebSocket
+    // push before the first /printers fetch, or a host-test fixture), create it
+    // so the update isn't dropped.
+    Printer* pp = nullptr;
+    for (uint8_t i = 0; i < printer_count_; ++i)
+        if (printers_[i].id == printer_id) { pp = &printers_[i]; break; }
+    if (!pp) {
+        if (printer_count_ >= MAX_PRINTERS) { xSemaphoreGive(mtx_); return false; }
+        pp = &printers_[printer_count_++];
+        *pp = Printer{};
+        pp->id = printer_id;
+        // Identity normally comes from /printers/; accept it from the payload on
+        // the create path only, so an established printer's name isn't churned.
+        const char* nm = doc["name"]  | "";  if (*nm) pp->name  = nm;
+        const char* md = doc["model"] | "";  if (*md) pp->model = md;
+    }
+    {
+        Printer& p       = *pp;
         p.state          = parse_state(doc["state"] | "");
         // progress can be null (idle printer); ArduinoJson's `| 0` default
         // handles that for us, but the actual field is a float on the wire.
@@ -381,10 +394,9 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
                 }
             }
         }
-        break;
     }
     xSemaphoreGive(mtx_);
-    return found;
+    return true;
 }
 
 bool Client::fetch_statistics() {
