@@ -17,6 +17,7 @@ firmware/.vscode/
 
 # OS
 .DS_Store
+**/.DS_Store
 Thumbs.db
 
 # Build artefacts
