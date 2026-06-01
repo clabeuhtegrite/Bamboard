@@ -45,7 +45,6 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*DRYING_STOPPED*/       {"Drying stopped", "Secado detenido", "Séchage arrêté", "Secagem parada", "Trocknen gestoppt"},
     /*START_DRYING_FAILED*/  {"Start drying failed", "Error al iniciar secado", "Échec démarrage séchage", "Falha ao secar", "Trocknen-Start fehlgeschlagen"},
     /*STOP_DRYING_FAILED*/   {"Stop drying failed", "Error al detener secado", "Échec arrêt séchage", "Falha ao parar", "Trocknen-Stopp fehlgeschlagen"},
-    /*BRIGHTNESS_TOAST_FMT*/ {"Brightness %u / 5", "Brillo %u / 5", "Luminosité %u / 5", "Brilho %u / 5", "Helligkeit %u / 5"},
     // -- AMS --
     /*DRY*/           {"Dry", "Secar", "Sécher", "Secar", "Trocknen"},
     /*STOP*/          {"Stop", "Parar", "Arrêter", "Parar", "Stopp"},

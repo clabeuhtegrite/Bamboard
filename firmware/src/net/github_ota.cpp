@@ -132,6 +132,19 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
         return CheckResult::UpToDate;
     }
 
+    // Require a published MD5 before committing to a flash. The manifest and the
+    // binary both arrive over a setInsecure() TLS channel (see fetch_manifest),
+    // so the MD5 — bound into Update.end() below — is the only thing standing
+    // between us and an attacker-substituted image. No md5 ⇒ refuse, don't trust
+    // the channel. (release.yml always publishes one; this guards a tampered or
+    // legacy manifest.) Checked here, before on_start(), so we never pop the
+    // update overlay for an image we won't flash.
+    if (expected_md5.length() != 32) {
+        log_e("OTA: newer release %s but md5 missing/invalid (len %u) — refusing to flash",
+              latest.c_str(), (unsigned)expected_md5.length());
+        return CheckResult::Failed;
+    }
+
     // A newer release exists → mandatory update.
     log_i("OTA: newer release %s — downloading %s", latest.c_str(), bin_url.c_str());
     if (on_start) on_start();
@@ -143,19 +156,12 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
         }
     });
 
-    // Bind the expected MD5 (when published in the manifest) so Update.end()
+    // Bind the expected MD5 (validated to be 32 hex chars above) so Update.end()
     // rejects a corrupted or tampered binary at the flash layer instead of
     // boot-looping into a half-written app slot. httpUpdate calls
     // Update.begin()/write()/end() internally; setMD5 sets a target hash the
     // end() step compares against the running MD5 of every byte written.
-    if (expected_md5.length() == 32) {
-        Update.setMD5(expected_md5.c_str());
-    } else if (expected_md5.length() > 0) {
-        log_w("OTA: manifest md5 has unexpected length %u — skipping check",
-              (unsigned)expected_md5.length());
-    } else {
-        log_w("OTA: no md5 in manifest — integrity not verified");
-    }
+    Update.setMD5(expected_md5.c_str());
 
     WiFiClientSecure client;
     client.setInsecure();

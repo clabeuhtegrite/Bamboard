@@ -269,8 +269,9 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
                 u = AmsUnit{};
                 u.id         = ams_obj["id"]        | -1;
                 u.is_ht      = ams_obj["is_ams_ht"] | false;
-                if (ams_obj["humidity"].is<int>()) u.humidity = (int16_t)ams_obj["humidity"].as<int>();
-                else                                u.humidity = -1;
+                // Coerce int / float / numeric-string; missing or null → -1
+                // (unknown). The old is<int>() check dropped float-encoded values.
+                u.humidity = (int16_t)(ams_obj["humidity"] | -1);
                 u.temp         = ams_obj["temp"]     | 0.0f;
                 u.dry_time_min = ams_obj["dry_time"] | 0u;
                 u.present      = true;
@@ -288,9 +289,13 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
                         s.remain    = tr["remain"] | 0;
                         // Bambu's RFID carries the filament's recommended drying
                         // profile (drying_temp °C, drying_time h); the UI uses it
-                        // to set a per-filament dry cycle.
-                        s.dry_temp_c = (uint8_t)(tr["drying_temp"] | 0);
-                        s.dry_time_h = (uint8_t)(tr["drying_time"] | 0);
+                        // to set a per-filament dry cycle. Clamp before the uint8
+                        // cast so an out-of-range/garbage value can't wrap mod 256
+                        // into a bogus setpoint we'd push back to the printer.
+                        int dtemp = tr["drying_temp"] | 0;
+                        int dtime = tr["drying_time"] | 0;
+                        s.dry_temp_c = (uint8_t)(dtemp < 0 ? 0 : dtemp > 120 ? 120 : dtemp);
+                        s.dry_time_h = (uint8_t)(dtime < 0 ? 0 : dtime > 48  ? 48  : dtime);
                         s.present   = (s.type[0] != '\0') || (s.color_rgb != 0) ||
                                       (s.remain > 0) || s.translucent;
                     }
@@ -401,7 +406,13 @@ bool Client::fetch_camera_jpeg(int printer_id, uint8_t** out_buf, size_t* out_le
             if (r > 0) { got += r; t0 = millis(); }
         } else {
             if (clen > 0 && got >= (size_t)clen) break;
-            if (millis() - t0 > ::bambuddy::READ_TIMEOUT_MS) break;
+            // Once bytes have started arriving, a short idle gap means the frame
+            // is complete. A chunked response (clen < 0) has no length to hit, so
+            // without this the loop would spin until the full read timeout
+            // (~seconds) on every frame — throttling the viewer and hogging the
+            // net task. Before the first byte, allow the full read budget.
+            uint32_t idle_budget = (got > 0) ? 250u : (uint32_t)::bambuddy::READ_TIMEOUT_MS;
+            if (millis() - t0 > idle_budget) break;
             delay(2);
         }
         if (clen > 0 && got >= (size_t)clen) break;

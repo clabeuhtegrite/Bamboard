@@ -503,10 +503,17 @@ void setup() {
         lv_timer_handler();
     }
     if (WiFi.status() != WL_CONNECTED) {
-        log_w("Wi-Fi connect failed; opening portal");
-        start_provisioning();
+        // Creds exist but the AP is unreachable (router reboot / ISP outage).
+        // Don't loop the captive portal + reboot — boot into the normal UI in an
+        // offline state and let auto-reconnect + net_task recover when Wi-Fi
+        // returns. Hold BOOT at power-up to force re-provisioning if the stored
+        // creds themselves are wrong.
+        log_w("Wi-Fi connect failed; booting offline (auto-reconnect armed). "
+              "Hold BOOT at power-up to re-provision.");
+        WiFi.setAutoReconnect(true);
+    } else {
+        log_i("Wi-Fi up: %s", WiFi.localIP().toString().c_str());
     }
-    log_i("Wi-Fi up: %s", WiFi.localIP().toString().c_str());
 
     // Start SNTP so the daily scheduled reboot (net_task) can tell when it's
     // local midnight. Non-blocking: the first sync lands a few seconds later,
@@ -538,10 +545,12 @@ void setup() {
     // by design).
     esp_task_wdt_init(10, true);
 
-    // Tasks: net on core 0, UI on core 1. The net task carries a larger stack
-    // because it now also runs the TJpgDec JPEG decode for camera snapshots
-    // (≈3.5 KB workspace) on top of the TLS-capable HTTP/WS clients.
-    xTaskCreatePinnedToCore(net_task, "net", 12288, nullptr, 1, nullptr, 0);
+    // Tasks: net on core 0, UI on core 1. The net task needs a generous stack:
+    // a single call frame can stack the mbedTLS handshake (several KB) + an
+    // ArduinoJson parse + the TJpgDec JPEG decode for camera snapshots
+    // (≈3.5 KB workspace). 12 KB was tight on the camera-over-TLS path; 16 KB
+    // buys margin (internal RAM is plentiful on the S3).
+    xTaskCreatePinnedToCore(net_task, "net", 16384, nullptr, 1, nullptr, 0);
     xTaskCreatePinnedToCore(ui_task,  "ui",  6144,  nullptr, 2, nullptr, 1);
 }
 
