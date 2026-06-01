@@ -24,6 +24,7 @@
 #include "png.h"
 
 #include <HTTPClient.h>   // raw request for the Cloudflare-Access diagnostic
+#include <esp_heap_caps.h>   // free the camera-JPEG buffer
 
 static const int W = ::display::WIDTH;
 static const int H = ::display::HEIGHT;
@@ -135,6 +136,26 @@ int main(int argc, char** argv) {
 
     ui::g_ui.begin();
 
+    // Camera: pull one real snapshot from the printer (via Bambuddy) and decode
+    // it through the now-real TJpg_Decoder shim, so the Live thumbnail and the
+    // full-screen viewer render the actual frame instead of empty chrome. The
+    // overlay built by begin() above owns the decode buffer.
+    {
+        bambuddy::Printer cps[8]; uint8_t cn = 0;
+        bambuddy::g_client.snapshot_printers(cps, cn);
+        if (cn > 0) {
+            uint8_t* jpeg = nullptr; size_t jlen = 0;
+            if (bambuddy::g_client.fetch_camera_jpeg(cps[0].id, &jpeg, &jlen)) {
+                fprintf(stderr, "[sim] camera: %u bytes -> decode\n", (unsigned)jlen);
+                ui::screens::camera_decode_frame(jpeg, jlen);
+                heap_caps_free(jpeg);
+            } else {
+                String e; bambuddy::g_client.last_error(e);
+                fprintf(stderr, "[sim] camera: no frame (%s)\n", e.c_str());
+            }
+        }
+    }
+
     struct { ui::Screen s; const char* name; } screens[] = {
         {ui::Screen::Dashboard, "dashboard"},
         {ui::Screen::Ams,       "ams"},
@@ -157,5 +178,12 @@ int main(int argc, char** argv) {
     ui::g_ui.go_to(ui::Screen::Dashboard);
     pump(10);
     dump_png(out, "hms_overlay");
+
+    // Full-screen camera viewer — shows the decoded frame if the fetch above
+    // succeeded, otherwise its empty chrome.
+    ui::g_ui.go_to(ui::Screen::Dashboard);
+    ui::screens::camera_overlay_open();
+    pump(10);
+    dump_png(out, "camera");
     return 0;
 }

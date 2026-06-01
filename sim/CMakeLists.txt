@@ -34,6 +34,17 @@ FetchContent_Declare(ArduinoJson
   GIT_TAG        v7.1.0)
 FetchContent_MakeAvailable(ArduinoJson)
 
+# --- stb_image (single-header JPEG decoder) ---
+# Header-only with no CMake project, so populate (don't add_subdirectory). It
+# backs the TJpg_Decoder host shim so the sim can decode the real printer camera.
+FetchContent_Declare(stb
+  GIT_REPOSITORY https://github.com/nothings/stb.git
+  GIT_TAG        31c1ad37456438565541f4919958214b6e762fb4)  # pinned 2026-04-15
+FetchContent_GetProperties(stb)
+if(NOT stb_POPULATED)
+  FetchContent_Populate(stb)
+endif()
+
 set(FW ${CMAKE_CURRENT_SOURCE_DIR}/../firmware/src)
 
 # Real firmware sources we want to validate (UI + REST client + fonts + i18n).
@@ -66,6 +77,7 @@ target_include_directories(bamboard_sim BEFORE PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/shim
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${FW}
+  ${stb_SOURCE_DIR}
 )
 target_compile_definitions(bamboard_sim PRIVATE
   BAMBOARD_SIM=1
