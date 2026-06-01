@@ -61,6 +61,7 @@ void Manager::begin() {
     screens::build_toast(s_root);
     screens::build_hms_flash(s_root);
     screens::build_ota_overlay(s_root);
+    screens::build_camera_overlay(s_root);
 
     // The tab bar lives on top of every screen and stays clickable, so
     // build it last (LVGL z-orders by creation order within a parent).
@@ -103,6 +104,9 @@ void Manager::refresh() {
     // Sync any net-task-side header updates (connectivity readout) onto the
     // UI task, where the LVGL widget actually lives.
     screens::header_apply();
+
+    // Publish the latest decoded camera frame (decoded on the net task).
+    screens::camera_apply();
 
     // Auto-pick the first printer the first time we know about one.
     ::bambuddy::Printer ps[8];
@@ -170,8 +174,9 @@ void Manager::show_toast(const char* text, lv_color_t colour) {
 // --- swipe gesture ---------------------------------------------------------
 
 static void screen_gesture_cb(lv_event_t* e) {
-    if (screens::ota_is_active())       return;
+    if (screens::ota_is_active())        return;
     if (screens::hms_flash_is_visible()) return;
+    if (screens::camera_overlay_is_open()) return;
 
     lv_indev_t* indev = lv_indev_get_act();
     if (!indev) return;

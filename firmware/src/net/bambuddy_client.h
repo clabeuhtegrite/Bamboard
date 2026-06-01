@@ -127,6 +127,11 @@ class Client {
     bool fetch_recent_archives(uint8_t limit);     // → recent_
     bool ping_health(uint32_t* latency_ms_out);
 
+    // Fetch the latest camera JPEG for a printer into a freshly-allocated PSRAM
+    // buffer (caller owns it: free with heap_caps_free). Returns false on any
+    // network error or if the response is empty/oversized. Binary, not JSON.
+    bool fetch_camera_jpeg(int printer_id, uint8_t** out_buf, size_t* out_len);
+
     // --- Write operations (require printers:control on the API key) ---
     bool refresh_status(int printer_id);
     bool set_print_speed(int printer_id, uint8_t mode);  // 1..4

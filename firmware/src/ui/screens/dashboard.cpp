@@ -110,6 +110,9 @@ static void btn_hms_clicked(lv_event_t*) {
                lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
 }
 
+// Tapping the progress ring opens the full-screen camera snapshot overlay.
+static void dash_arc_clicked(lv_event_t*) { camera_overlay_open(); }
+
 // Single primary-action pill (used for Clear plate / Clear HMS).
 static lv_obj_t* make_action_btn(lv_obj_t* parent, int x, int y, int w,
                                   const char* text,
@@ -250,7 +253,9 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
                                 lv_color_hex(::ui::C_PANEL_HI), LV_PART_MAIN);
     lv_obj_set_style_arc_color(s_dash_progress_arc,
                                 lv_color_hex(::ui::C_ACCENT), LV_PART_INDICATOR);
-    lv_obj_clear_flag(s_dash_progress_arc, LV_OBJ_FLAG_CLICKABLE);
+    // Tap the ring → full-screen camera snapshot.
+    lv_obj_add_flag(s_dash_progress_arc, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_dash_progress_arc, dash_arc_clicked, LV_EVENT_CLICKED, nullptr);
 
     s_dash_progress_lbl = lv_label_create(s_dash_progress_arc);
     lv_label_set_text(s_dash_progress_lbl, "--%");
