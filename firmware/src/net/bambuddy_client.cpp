@@ -20,6 +20,17 @@ static uint32_t parse_tray_color(const char* hex) {
     return (uint32_t)strtoul(buf, nullptr, 16);
 }
 
+// Alpha byte of an 8-hex RRGGBBAA tray colour. Bambu reports clear / translucent
+// filament with a low (usually 00) alpha while solid colours use FF — so the UI
+// can tell "transparent PETG" apart from "black PLA" (both arrive as RGB 000000)
+// and draw a checkerboard for the see-through one. 6-hex colours carry no alpha
+// channel and are treated as opaque.
+static uint8_t parse_tray_alpha(const char* hex) {
+    if (!hex || strlen(hex) < 8) return 0xFF;
+    char buf[3] = { hex[6], hex[7], '\0' };
+    return (uint8_t)strtoul(buf, nullptr, 16);
+}
+
 static void copy_short(char* dst, size_t cap, const char* src) {
     if (!dst || cap == 0) return;
     if (!src) { dst[0] = '\0'; return; }
@@ -271,10 +282,12 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
                         AmsSlot& s = u.slots[u.slot_count++];
                         s.id        = tr["id"] | 0;
                         const char* col = tr["tray_color"] | "";
-                        s.color_rgb = parse_tray_color(col);
+                        s.color_rgb   = parse_tray_color(col);
+                        s.translucent = parse_tray_alpha(col) < 0x80;
                         copy_short(s.type, sizeof(s.type), tr["tray_type"] | "");
                         s.remain    = tr["remain"] | 0;
-                        s.present   = (s.type[0] != '\0') || (s.color_rgb != 0) || (s.remain > 0);
+                        s.present   = (s.type[0] != '\0') || (s.color_rgb != 0) ||
+                                      (s.remain > 0) || s.translucent;
                     }
                 }
             }
