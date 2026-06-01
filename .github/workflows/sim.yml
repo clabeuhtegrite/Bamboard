@@ -1,0 +1,46 @@
+name: sim
+
+# Host simulator — Claude's visual-validation harness. Builds the REAL firmware
+# UI against host shims, renders each screen to a PNG, and uploads the PNGs as
+# an artifact. With the Bambuddy + Cloudflare-Access secrets set it renders on
+# REAL data; without them it renders the empty states (still validates layout).
+#
+# Triggers on push to the sim branch / main and on manual dispatch — NOT on
+# pull_request, so fork PRs can never read the secrets.
+
+on:
+  push:
+    branches: [main, feat/host-sim]
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential libcurl4-openssl-dev
+
+      - name: Configure
+        run: cmake -S sim -B sim/build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build sim/build -j
+
+      - name: Render screens (real Bambuddy data when secrets are set)
+        env:
+          BAMBUDDY_URL:            ${{ secrets.BAMBUDDY_URL }}
+          BAMBUDDY_API_KEY:        ${{ secrets.BAMBUDDY_API_KEY }}
+          CF_ACCESS_CLIENT_ID:     ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          BAMBOARD_LANG: en
+          SIM_OUT: sim_out
+        run: ./sim/build/bamboard_sim || true
+
+      - name: Upload screen renders
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-screens
+          path: sim_out/*.png
+          if-no-files-found: warn
