@@ -600,6 +600,7 @@ void update_dashboard(int printer_id) {
                       sel->state == PState::Prepare);
     bool can_plate = (sel->state == PState::Finish || sel->state == PState::Failed);
     bool can_hms   = hms_active;
+    bool can_ctrl  = (sel->state == PState::Printing || sel->state == PState::Paused);
 
     auto show = [](lv_obj_t* o, bool v) {
         if (!o) return;
