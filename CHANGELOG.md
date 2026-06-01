@@ -5,6 +5,26 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.18.1 — 2026-06
+
+### Fixed
+
+- **A printer status that arrives before the printer is listed is no longer
+  dropped.** `apply_status_payload` only updated an already-known printer, so a
+  WebSocket `printer_status` push landing before the first `/printers` fetch (a
+  brief boot window) was discarded. It now creates the entry on first sight,
+  taking the name / model from the payload when present.
+
+### Internal
+
+- **Host visual-regression harness.** The simulator can render deterministic
+  synthetic states — printing, a 2-unit AMS (incl. AMS-HT drying), and an HMS
+  flash — via `SIM_FIXTURES_ONLY`, and a CI job byte-compares them against
+  committed baselines on every PR (no network, no secrets). This also exercises
+  `apply_status_payload` (the WebSocket push path's handler) on states the live
+  data may never show. The shim's wall clock is pinned so time-derived UI
+  renders reproducibly.
+
 ## v0.18.0 — 2026-06
 
 A feature round from the post-audit idea list: more at-a-glance status, a

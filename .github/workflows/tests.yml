@@ -36,3 +36,42 @@ jobs:
             --suppress=unmatchedSuppression \
             -i firmware/src/ui/fonts \
             firmware/src
+
+  # Golden-image visual regression: the sim renders deterministic synthetic
+  # states (printing / multi-AMS / HMS) with no network or secrets, and we
+  # byte-compare them against committed baselines. Catches unintended UI changes
+  # on every PR. (The live, real-data renders stay in sim.yml.)
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential libcurl4-openssl-dev
+      - name: Build sim
+        run: |
+          cmake -S sim -B sim/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build sim/build -j
+      - name: Render fixtures (deterministic — no network, no secrets)
+        run: SIM_FIXTURES_ONLY=1 SIM_OUT=fx_out ./sim/build/bamboard_sim
+      - name: Compare against committed baselines (or seed them)
+        run: |
+          if ls tests/fixtures_baseline/fx_*.png >/dev/null 2>&1; then
+            fail=0
+            for b in tests/fixtures_baseline/fx_*.png; do
+              n=$(basename "$b")
+              if ! cmp -s "$b" "fx_out/$n"; then
+                echo "::error::visual regression in $n (differs from baseline)"; fail=1
+              fi
+            done
+            exit $fail
+          else
+            echo "::warning::no baselines in tests/fixtures_baseline — download the"
+            echo "fixture-renders artifact and commit them to seed the baseline."
+          fi
+      - name: Upload fixture renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-renders
+          path: fx_out/*.png
+          if-no-files-found: warn
