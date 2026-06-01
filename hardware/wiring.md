@@ -39,11 +39,13 @@ USB-C from any reasonable 5 V / 1 A source. Total draw is ~250 mA peak
 - [ ] The board's BOOT button is reachable from the outside of the case
       (the parametric SCAD model leaves it exposed by default).
 
-## Factory reset (wipe Wi-Fi + Bambuddy creds)
+## Factory reset (wipe all persisted settings)
 
 Hold the **BOOT** button on the side of the PCB while the device powers
 on. The firmware sees the GPIO 0 line pulled low at boot and clears NVS
-before re-opening the captive portal.
+before re-opening the captive portal. This wipes everything stored on the
+device — Wi-Fi + Bambuddy creds, timezone, daily-reboot hour, brightness
+and interface language — not just the network credentials.
 
 The old "hold PREV at boot" trick is gone with the rest of the
 standalone buttons — same idea, different physical input.

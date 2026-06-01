@@ -49,7 +49,7 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
   - when finished → `Clear plate` pill;
   - while an HMS error is active → red `Clear HMS` pill (takes priority over the other two).
 - **Brightness 1–5** — segmented selector on Settings. Persisted to NVS and applied at boot. The auto-dim wake target follows the chosen level instead of always ramping to full.
-- **Factory reset** — Settings → "Factory reset" → tap a second time within 3 s to confirm. Wipes Wi-Fi + Bambuddy creds and reboots into the captive portal.
+- **Factory reset** — Settings → "Factory reset" → tap a second time within 3 s to confirm. Wipes **all** persisted settings (Wi-Fi + Bambuddy creds, timezone, daily-reboot hour, brightness and interface language) and reboots into the captive portal.
 
 ### Connectivity
 
