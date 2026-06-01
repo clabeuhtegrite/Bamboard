@@ -28,11 +28,15 @@ namespace bambuddy {
 
 class WsClient {
    public:
-    void begin(const String& base_url, const String& api_key);
+    // Bambuddy's /ws endpoint is unauthenticated (see the upstream
+    // websocket route), so we deliberately take no API key here — the REST
+    // client owns the key. begin()/set_credentials() keep a url-only
+    // signature so a future authenticated handshake is an additive change.
+    void begin(const String& base_url);
 
     // Re-bind to a (possibly new) Bambuddy URL. Tears the current socket
     // down if the host changed; same host stays connected.
-    void set_credentials(const String& base_url, const String& api_key);
+    void set_credentials(const String& base_url);
 
     // Drive the underlying WebSocketsClient FSM + app-level keepalive.
     // Must be called frequently from the network task (≥ once / second).
@@ -49,7 +53,6 @@ class WsClient {
     String   host_;
     uint16_t port_      = 0;
     bool     secure_    = false;
-    String   api_key_;          // currently unused (server doesn't auth)
     bool     configured_ = false;
     bool     connected_  = false;
     uint32_t last_ping_ms_ = 0;

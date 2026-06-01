@@ -105,9 +105,10 @@ static void clear_all_prefs() {
 }
 
 // Public hook used by the Settings screen's "Factory reset" touch button
-// (declared `extern void factory_reset();` in screens.cpp). Wipes NVS the
-// same way "hold BOOT at boot" does, then reboots — on the next start,
-// the captive portal flow runs again.
+// (declared `extern void factory_reset();` in screens.cpp). Wipes the entire
+// NVS namespace the same way "hold BOOT at boot" does — Wi-Fi + Bambuddy
+// creds, timezone, daily-reboot hour, brightness and language all go — then
+// reboots, so the captive portal flow runs again on the next start.
 void factory_reset() {
     log_w("Factory reset requested from UI");
     clear_all_prefs();
@@ -222,7 +223,7 @@ static void start_provisioning() {
     save_prefs();
 
     bambuddy::g_client.set_credentials(g_cfg_bambuddy_url, g_cfg_api_key);
-    bambuddy::g_ws.set_credentials    (g_cfg_bambuddy_url, g_cfg_api_key);
+    bambuddy::g_ws.set_credentials    (g_cfg_bambuddy_url);  // /ws is unauthenticated
     delay(300);
     ESP.restart();   // clean restart with the new config
 }
@@ -281,19 +282,26 @@ static void net_task(void*) {
 
         if (now >= next_status_ms) {
             int id = ui::g_ui.selected_printer_id();
-            if (id >= 0) bambuddy::g_client.fetch_printer_status(id);
-            // Always fetch every visible printer at a slower pace for the
-            // Printers screen.
-            bambuddy::Printer ps[8]; uint8_t n = 0;
-            bambuddy::g_client.snapshot_printers(ps, n);
-            for (uint8_t i = 0; i < n; ++i) {
-                if (ps[i].id != id) bambuddy::g_client.fetch_printer_status(ps[i].id);
+            bool ws = bambuddy::g_ws.is_connected();
+            if (ws) {
+                // WS is feeding `printer_status` for every printer in real
+                // time, so REST polling is purely a safety net — refresh
+                // only the focused printer at a slow cadence so a silently
+                // broken WS still surfaces stale data eventually.
+                if (id >= 0) bambuddy::g_client.fetch_printer_status(id);
+                next_status_ms = now + bambuddy::POLL_DASHBOARD_WS_MS;
+            } else {
+                // No WS push → poll every printer ourselves at the snappy
+                // cadence so the Printers screen stays responsive.
+                if (id >= 0) bambuddy::g_client.fetch_printer_status(id);
+                bambuddy::Printer ps[8]; uint8_t n = 0;
+                bambuddy::g_client.snapshot_printers(ps, n);
+                for (uint8_t i = 0; i < n; ++i) {
+                    if (ps[i].id != id)
+                        bambuddy::g_client.fetch_printer_status(ps[i].id);
+                }
+                next_status_ms = now + bambuddy::POLL_DASHBOARD_MS;
             }
-            // When the WebSocket is feeding us live deltas, drop polling to
-            // a 30 s safety net; otherwise stay on the snappy 2 s cadence.
-            next_status_ms = now + (bambuddy::g_ws.is_connected()
-                                        ? bambuddy::POLL_DASHBOARD_WS_MS
-                                        : bambuddy::POLL_DASHBOARD_MS);
         }
 
         if (now >= next_stats_ms) {
@@ -463,7 +471,7 @@ void setup() {
 #endif
 
     bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key);
-    bambuddy::g_ws.begin    (g_cfg_bambuddy_url, g_cfg_api_key);
+    bambuddy::g_ws.begin    (g_cfg_bambuddy_url);  // /ws is unauthenticated
 
     // Tasks: net on core 0, UI on core 1.
     xTaskCreatePinnedToCore(net_task, "net", 8192, nullptr, 1, nullptr, 0);
