@@ -114,6 +114,17 @@ int main(int argc, char** argv) {
         bambuddy::Printer ps[8]; uint8_t n = 0;
         bambuddy::g_client.snapshot_printers(ps, n);
         fprintf(stderr, "[sim] %u printer(s)\n", (unsigned)n);
+        if (n > 0) {
+            // Dump the real /status JSON to see the hms_errors structure (the
+            // device showed a false HMS error — investigate the real shape).
+            HTTPClient raw;
+            raw.begin(String(url) + "/api/v1/printers/" + ps[0].id + "/status");
+            raw.addHeader("X-API-Key", skey);
+            raw.GET();
+            String b = raw.getString();
+            fprintf(stderr, "[sim] RAW /status len=%d:\n%.2000s\n", (int)b.length(), b.c_str());
+            raw.end();
+        }
         for (uint8_t i = 0; i < n; ++i) bambuddy::g_client.fetch_printer_status(ps[i].id);
         bambuddy::g_client.fetch_statistics();
         bambuddy::g_client.fetch_recent_archives(bambuddy::MAX_RECENT_ARCHIVES);
