@@ -86,10 +86,17 @@ int main(int argc, char** argv) {
     // Real Bambuddy data (no fabricated values).
     const char* url = getenv("BAMBUDDY_URL");
     const char* key = getenv("BAMBUDDY_API_KEY");
+    const char* cf_id  = getenv("CF_ACCESS_CLIENT_ID");
+    const char* cf_sec = getenv("CF_ACCESS_CLIENT_SECRET");
     if (url && *url) {
         String surl(url), skey(key ? key : "");
-        bambuddy::g_client.begin(surl, skey);
-        bambuddy::g_ws.begin(surl);
+        String scf_id(cf_id ? cf_id : ""), scf_sec(cf_sec ? cf_sec : "");
+        // Pass the CF token through the firmware client/ws so begin_request()
+        // and apply_url() emit the CF-Access headers themselves — this exercises
+        // the real firmware path instead of relying on the libcurl shim's env
+        // injection (which now only backstops the raw diagnostic probes below).
+        bambuddy::g_client.begin(surl, skey, scf_id, scf_sec);
+        bambuddy::g_ws.begin(surl, scf_id, scf_sec);
         fprintf(stderr, "[sim] fetching from %s\n", url);
         // Raw diagnostic: who sends the 403 — Cloudflare Access or the origin?
         // Print the response body so the page identifies itself.
@@ -177,9 +184,15 @@ int main(int argc, char** argv) {
         lv_timer_handler();
         dump_png(out, sc.name);
     }
-    // Also capture the HMS overlay itself (it's a real, validated state).
+    // Also capture the HMS full-screen flash. A healthy printer never triggers
+    // it (apply_status_payload forces hms="ok" unless the printer is faulted),
+    // so force it open with a sample code — otherwise this PNG would just
+    // re-capture the dashboard and the overlay would never be validated.
     ui::g_ui.go_to(ui::Screen::Dashboard);
     pump(10);
+    ui::screens::hms_flash_show("HMS_0300_0100");
+    lv_tick_inc(8);
+    lv_timer_handler();
     dump_png(out, "hms_overlay");
 
     // Full-screen camera viewer — shows the decoded frame if the fetch above

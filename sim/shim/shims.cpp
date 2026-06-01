@@ -79,12 +79,21 @@ int HTTPClient::perform(const char* method, const std::string& body) {
     curl_easy_setopt(c, CURLOPT_FOLLOWLOCATION, 1L);
 
     struct curl_slist* hl = nullptr;
-    for (auto& h : hdrs_) hl = curl_slist_append(hl, (h.first + ": " + h.second).c_str());
-    // Cloudflare Access service token from the environment.
-    const char* cf_id = getenv("CF_ACCESS_CLIENT_ID");
-    const char* cf_sec = getenv("CF_ACCESS_CLIENT_SECRET");
-    if (cf_id && *cf_id)  hl = curl_slist_append(hl, (std::string("CF-Access-Client-Id: ") + cf_id).c_str());
-    if (cf_sec && *cf_sec) hl = curl_slist_append(hl, (std::string("CF-Access-Client-Secret: ") + cf_sec).c_str());
+    bool have_cf = false;
+    for (auto& h : hdrs_) {
+        hl = curl_slist_append(hl, (h.first + ": " + h.second).c_str());
+        if (h.first == "CF-Access-Client-Id") have_cf = true;
+    }
+    // Cloudflare Access service token from the environment — only as a backstop
+    // for requests that didn't already carry it (the raw diagnostic probes in
+    // main.cpp). The firmware client now sets these headers itself via
+    // begin_request(), so this prevents sending them twice on a client request.
+    if (!have_cf) {
+        const char* cf_id = getenv("CF_ACCESS_CLIENT_ID");
+        const char* cf_sec = getenv("CF_ACCESS_CLIENT_SECRET");
+        if (cf_id && *cf_id)  hl = curl_slist_append(hl, (std::string("CF-Access-Client-Id: ") + cf_id).c_str());
+        if (cf_sec && *cf_sec) hl = curl_slist_append(hl, (std::string("CF-Access-Client-Secret: ") + cf_sec).c_str());
+    }
     if (hl) curl_easy_setopt(c, CURLOPT_HTTPHEADER, hl);
 
     if (!strcmp(method, "POST")) {
