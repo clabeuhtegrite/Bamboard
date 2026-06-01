@@ -110,6 +110,11 @@ namespace bambuddy {
 constexpr uint32_t CONNECT_TIMEOUT_MS = 4000;
 constexpr uint32_t READ_TIMEOUT_MS    = 6000;
 
+// Camera stream-token reuse window. Bambuddy issues a snapshot/stream token
+// valid for 60 min; we refresh a little early (50 min) and also re-fetch on a
+// 401. Reusing it avoids a POST before every ~5 s snapshot.
+constexpr uint32_t CAMERA_TOKEN_TTL_MS = 50UL * 60UL * 1000UL;
+
 // Poll cadence per screen (the active screen polls more aggressively than
 // background screens). Bambuddy's read rate-limit is 100/min so we stay well
 // under it.

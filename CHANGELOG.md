@@ -5,6 +5,24 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.15.1 — 2026-06
+
+### Fixed
+
+- **The camera never showed a frame** (neither the full-screen viewer nor the new
+  Live thumbnail). Bambuddy's `/camera/snapshot` rejects the API key alone with
+  401 — it requires a **stream token** from `POST /printers/camera/stream-token`,
+  passed as `?token=`. The firmware never obtained one, so the camera could never
+  work on the device. It now fetches + caches the token (≈60 min server TTL,
+  refreshed early and re-fetched on a 401) before each snapshot.
+
+### Internal
+
+- The host simulator now **decodes the camera** (`stb_image`, pinned) and fetches
+  one real frame after boot, so CI renders the actual picture and the Live
+  thumbnail (`camera.png` + `dashboard.png`) instead of empty chrome — the last
+  screen the sim couldn't validate. Failed fetches log the libcurl reason.
+
 ## v0.15.0 — 2026-06
 
 ### Added / Changed

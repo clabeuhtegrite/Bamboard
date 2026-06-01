@@ -368,6 +368,23 @@ bool Client::ping_health(uint32_t* latency_ms_out) {
     return ok;
 }
 
+// Obtain + cache a camera stream token. Bambuddy's snapshot/stream routes reject
+// the API key alone with 401 — they require ?token=<t> from
+// POST /api/v1/printers/camera/stream-token (the token is reusable for ~60 min).
+// Net-task only, so camera_token_ needs no mutex.
+bool Client::fetch_camera_token() {
+    JsonDocument doc(&psram_json_allocator());
+    if (!do_post("/api/v1/printers/camera/stream-token", "", &doc)) {
+        last_error_ = "cam: token request failed";
+        return false;
+    }
+    const char* tok = doc["token"] | "";
+    if (!*tok) { last_error_ = "cam: no token in response"; return false; }
+    camera_token_    = tok;
+    camera_token_ms_ = millis();
+    return true;
+}
+
 bool Client::fetch_camera_jpeg(int printer_id, uint8_t** out_buf, size_t* out_len) {
     *out_buf = nullptr;
     *out_len = 0;
@@ -375,53 +392,72 @@ bool Client::fetch_camera_jpeg(int printer_id, uint8_t** out_buf, size_t* out_le
         last_error_ = "cam: not ready";
         return false;
     }
-    HTTPClient http;
-    http.setConnectTimeout(::bambuddy::CONNECT_TIMEOUT_MS);
-    http.setTimeout(::bambuddy::READ_TIMEOUT_MS);
-    String path = base_url_ + "/api/v1/printers/" + printer_id + "/camera/snapshot";
-    if (!http.begin(path)) { last_error_ = "cam: begin failed"; return false; }
-    http.addHeader("X-API-Key", api_key_);
 
-    int code = http.GET();
-    if (code != HTTP_CODE_OK) {
-        last_error_ = String("cam HTTP ") + code;
-        http.end();
-        return false;
-    }
-    // Cap the buffer so a misbehaving/huge source can't exhaust PSRAM.
-    const size_t CAM_MAX = 256 * 1024;
-    int      clen = http.getSize();                 // -1 when chunked
-    size_t   cap  = (clen > 0 && (size_t)clen <= CAM_MAX) ? (size_t)clen : CAM_MAX;
-    uint8_t* buf  = (uint8_t*)heap_caps_malloc(cap, MALLOC_CAP_SPIRAM);
-    if (!buf) { last_error_ = "cam: oom"; http.end(); return false; }
-
-    WiFiClient* stream = http.getStreamPtr();
-    size_t   got = 0;
-    uint32_t t0  = millis();
-    while (http.connected() && got < cap) {
-        size_t avail = stream->available();
-        if (avail) {
-            size_t toread = avail < (cap - got) ? avail : (cap - got);
-            int r = stream->readBytes(buf + got, toread);
-            if (r > 0) { got += r; t0 = millis(); }
-        } else {
-            if (clen > 0 && got >= (size_t)clen) break;
-            // Once bytes have started arriving, a short idle gap means the frame
-            // is complete. A chunked response (clen < 0) has no length to hit, so
-            // without this the loop would spin until the full read timeout
-            // (~seconds) on every frame — throttling the viewer and hogging the
-            // net task. Before the first byte, allow the full read budget.
-            uint32_t idle_budget = (got > 0) ? 250u : (uint32_t)::bambuddy::READ_TIMEOUT_MS;
-            if (millis() - t0 > idle_budget) break;
-            delay(2);
+    // Two attempts: a cached token may have expired (60 min server TTL). A 401 on
+    // the first try drops it and retries once with a fresh token.
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        if (camera_token_.length() == 0 ||
+            millis() - camera_token_ms_ > ::bambuddy::CAMERA_TOKEN_TTL_MS) {
+            if (!fetch_camera_token()) return false;   // last_error_ set by helper
         }
-        if (clen > 0 && got >= (size_t)clen) break;
+
+        HTTPClient http;
+        http.setConnectTimeout(::bambuddy::CONNECT_TIMEOUT_MS);
+        http.setTimeout(::bambuddy::READ_TIMEOUT_MS);
+        String path = base_url_ + "/api/v1/printers/" + printer_id +
+                      "/camera/snapshot?token=" + camera_token_;
+        if (!http.begin(path)) { last_error_ = "cam: begin failed"; return false; }
+        http.addHeader("X-API-Key", api_key_);
+
+        int code = http.GET();
+        if (code == 401 && attempt == 0) {   // stale/invalid token → refresh once
+            http.end();
+            camera_token_ = "";
+            continue;
+        }
+        if (code != HTTP_CODE_OK) {
+            last_error_ = String("cam HTTP ") + code;
+            http.end();
+            return false;
+        }
+
+        // Cap the buffer so a misbehaving/huge source can't exhaust PSRAM.
+        const size_t CAM_MAX = 256 * 1024;
+        int      clen = http.getSize();                 // -1 when chunked
+        size_t   cap  = (clen > 0 && (size_t)clen <= CAM_MAX) ? (size_t)clen : CAM_MAX;
+        uint8_t* buf  = (uint8_t*)heap_caps_malloc(cap, MALLOC_CAP_SPIRAM);
+        if (!buf) { last_error_ = "cam: oom"; http.end(); return false; }
+
+        WiFiClient* stream = http.getStreamPtr();
+        size_t   got = 0;
+        uint32_t t0  = millis();
+        while (http.connected() && got < cap) {
+            size_t avail = stream->available();
+            if (avail) {
+                size_t toread = avail < (cap - got) ? avail : (cap - got);
+                int r = stream->readBytes(buf + got, toread);
+                if (r > 0) { got += r; t0 = millis(); }
+            } else {
+                if (clen > 0 && got >= (size_t)clen) break;
+                // Once bytes have started arriving, a short idle gap means the
+                // frame is complete. A chunked response (clen < 0) has no length
+                // to hit, so without this the loop would spin until the full read
+                // timeout (~seconds) on every frame — throttling the viewer and
+                // hogging the net task. Before the first byte, allow the full budget.
+                uint32_t idle_budget = (got > 0) ? 250u : (uint32_t)::bambuddy::READ_TIMEOUT_MS;
+                if (millis() - t0 > idle_budget) break;
+                delay(2);
+            }
+            if (clen > 0 && got >= (size_t)clen) break;
+        }
+        http.end();
+        if (got == 0) { heap_caps_free(buf); last_error_ = "cam: empty"; return false; }
+        *out_buf = buf;
+        *out_len = got;
+        return true;
     }
-    http.end();
-    if (got == 0) { heap_caps_free(buf); last_error_ = "cam: empty"; return false; }
-    *out_buf = buf;
-    *out_len = got;
-    return true;
+    last_error_ = "cam: token rejected";
+    return false;
 }
 
 // --- Write operations -------------------------------------------------------

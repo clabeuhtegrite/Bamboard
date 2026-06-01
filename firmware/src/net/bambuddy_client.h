@@ -170,10 +170,18 @@ class Client {
     bool do_get(const String& path, JsonDocument& out_doc);
     bool do_post(const String& path, const String& body, JsonDocument* out_doc);
 
+    // Fetch + cache a camera stream token (required as ?token= on snapshot/stream).
+    bool fetch_camera_token();
+
     static PrinterState parse_state(const char* s);
 
     String base_url_;
     String api_key_;
+
+    // Camera stream token (?token= for snapshot/stream). Touched only on the net
+    // task, so no mutex. camera_token_ms_ is the millis() it was obtained.
+    String   camera_token_;
+    uint32_t camera_token_ms_ = 0;
 
     // Caches — read by the UI task, written by the network task.
     mutable SemaphoreHandle_t mtx_ = nullptr;
