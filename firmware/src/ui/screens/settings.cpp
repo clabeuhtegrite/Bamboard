@@ -188,7 +188,13 @@ void update_settings() {
     lv_label_set_text(s_set_url, ::g_cfg_bambuddy_url.length()
                                       ? ::g_cfg_bambuddy_url.c_str()
                                       : i18n::tr(i18n::Str::NOT_CONFIGURED));
-    lv_label_set_text(s_set_ip,   WiFi.localIP().toString().c_str());
+    // Format IPv4 by hand instead of allocating String via toString() — this
+    // refresh runs on every UI tick and toString() would churn the heap.
+    IPAddress ip = WiFi.localIP();
+    char ipbuf[20];
+    snprintf(ipbuf, sizeof(ipbuf), "%u.%u.%u.%u",
+             (unsigned)ip[0], (unsigned)ip[1], (unsigned)ip[2], (unsigned)ip[3]);
+    lv_label_set_text(s_set_ip, ipbuf);
     char r[16];
     snprintf(r, sizeof(r), "%d dBm", WiFi.RSSI());
     lv_label_set_text(s_set_rssi, r);
@@ -208,9 +214,10 @@ void update_settings() {
     if (s_set_reset_armed_at != 0 &&
         (lv_tick_get() - s_set_reset_armed_at) > 3000) {
         s_set_reset_armed_at = 0;
-        lv_label_set_text(s_set_reset_lbl,
-                          (String(LV_SYMBOL_TRASH "  ") +
-                           i18n::tr(i18n::Str::FACTORY_RESET)).c_str());
+        char rbuf[48];
+        snprintf(rbuf, sizeof(rbuf), LV_SYMBOL_TRASH "  %s",
+                 i18n::tr(i18n::Str::FACTORY_RESET));
+        lv_label_set_text(s_set_reset_lbl, rbuf);
         lv_obj_set_style_bg_color(s_set_reset_btn,
                                    lv_color_hex(::ui::C_PANEL_HI), 0);
     }
