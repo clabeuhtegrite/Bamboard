@@ -13,6 +13,8 @@
 
 #include "theme.h"
 
+#include <time.h>   // mktime / localtime_r for the wall-clock ETA
+
 namespace ui::screens {
 
 static lv_obj_t* s_dash_root         = nullptr;
@@ -394,10 +396,22 @@ void update_dashboard(int printer_id) {
     lv_label_set_text(s_dash_progress_lbl, pbuf);
 
     char eta_val[16];
-    char eta_buf[32];
-    snprintf(eta_buf, sizeof(eta_buf), "%s%s",
-             i18n::tr(i18n::Str::ETA),
-             fmt_eta(sel->remaining_s, eta_val, sizeof(eta_val)));
+    char eta_buf[48];
+    fmt_eta(sel->remaining_s, eta_val, sizeof(eta_val));
+    // Append the wall-clock finish time ("ETA 1h12 · 14:32") when we have both a
+    // remaining estimate and a synced clock (SNTP). localtime is already set up
+    // for the daily reboot, so this is free.
+    struct tm lt;
+    if (sel->remaining_s > 0 && getLocalTime(&lt, 0)) {
+        time_t done = mktime(&lt) + (time_t)sel->remaining_s;
+        struct tm dt;
+        localtime_r(&done, &dt);
+        snprintf(eta_buf, sizeof(eta_buf), "%s%s \xE2\x80\xA2 %02d:%02d",
+                 i18n::tr(i18n::Str::ETA), eta_val, dt.tm_hour, dt.tm_min);
+    } else {
+        snprintf(eta_buf, sizeof(eta_buf), "%s%s",
+                 i18n::tr(i18n::Str::ETA), eta_val);
+    }
     lv_label_set_text(s_dash_eta_lbl, eta_buf);
 
     char lay[24];

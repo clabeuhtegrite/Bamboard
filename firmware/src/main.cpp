@@ -14,6 +14,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
+#include <esp_system.h>   // esp_reset_reason() for boot diagnostics
 #include <lvgl.h>
 #include <time.h>
 
@@ -90,8 +91,12 @@ static void save_prefs() {
 void save_brightness_level(uint8_t level) {
     if (level < ::display::BL_LEVEL_MIN) level = ::display::BL_LEVEL_MIN;
     if (level > ::display::BL_LEVEL_MAX) level = ::display::BL_LEVEL_MAX;
-    g_cfg_brightness_level = level;
+    // Always apply the backlight, but only touch NVS when the level actually
+    // changed — re-tapping the current level (or the per-tick re-sync in the
+    // Settings screen) shouldn't burn a flash write.
     hw::g_display.set_brightness_level(level);
+    if (level == g_cfg_brightness_level) return;
+    g_cfg_brightness_level = level;
     s_prefs.begin("bamboard", false);
     s_prefs.putUChar("bl_level", level);
     s_prefs.end();
@@ -272,6 +277,14 @@ static void net_task(void*) {
             uint32_t lat = 0;
             bool ok = bambuddy::g_client.ping_health(&lat);
             ui::screens::header_set_online(ok, lat);
+            // Health-cadence device diagnostics over serial (heap is the one to
+            // watch for leaks/fragmentation; ws=0 means we're on the REST
+            // safety net rather than live push).
+            log_i("diag: heap=%uK psram=%uK ws=%d rssi=%d online=%d lat=%ums",
+                  (unsigned)(ESP.getFreeHeap()  / 1024),
+                  (unsigned)(ESP.getFreePsram() / 1024),
+                  (int)bambuddy::g_ws.is_connected(), (int)WiFi.RSSI(),
+                  (int)ok, (unsigned)lat);
             next_health_ms = now + bambuddy::POLL_HEALTH_MS;
         }
 
@@ -396,10 +409,29 @@ static void run_boot_update() {
 // setup / loop
 // ---------------------------------------------------------------------------
 
+// Human-readable reset cause — logged at boot so a field unit's reboot history
+// is diagnosable over serial (panic / brownout / watchdog vs a clean restart).
+static const char* reset_reason_str(esp_reset_reason_t r) {
+    switch (r) {
+        case ESP_RST_POWERON:  return "power-on";
+        case ESP_RST_EXT:      return "external";
+        case ESP_RST_SW:       return "software";       // our ESP.restart()
+        case ESP_RST_PANIC:    return "panic";
+        case ESP_RST_INT_WDT:  return "int-wdt";
+        case ESP_RST_TASK_WDT: return "task-wdt";
+        case ESP_RST_WDT:      return "other-wdt";
+        case ESP_RST_DEEPSLEEP:return "deep-sleep";
+        case ESP_RST_BROWNOUT: return "brownout";
+        case ESP_RST_SDIO:     return "sdio";
+        default:               return "unknown";
+    }
+}
+
 void setup() {
     Serial.begin(115200);
     delay(50);
-    log_i("Bamboard booting");
+    log_i("Bamboard %s booting — reset cause: %s",
+          BAMBOARD_VERSION, reset_reason_str(esp_reset_reason()));
 
     if (!hw::g_display.begin()) {
         // Fall back to a minimal serial-only mode; the user will see no
