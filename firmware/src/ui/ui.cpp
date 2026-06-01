@@ -67,7 +67,12 @@ void Manager::begin() {
     // build it last (LVGL z-orders by creation order within a parent).
     screens::build_tab_bar(s_root);
 
-    go_to(Screen::Dashboard);
+    // Show the initial screen directly. We can't use go_to() here: current_
+    // already starts at Dashboard, so go_to(Dashboard) would early-return on
+    // its `s == current_` guard and leave the screen hidden (the loop above
+    // hid them all) — booting to a blank Live screen. Reveal it explicitly.
+    lv_obj_clear_flag(s_screens[(uint8_t)current_], LV_OBJ_FLAG_HIDDEN);
+    screens::tab_bar_set_active((uint8_t)current_);
 }
 
 void Manager::go_to(Screen s) {

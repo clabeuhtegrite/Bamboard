@@ -289,7 +289,7 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_obj_set_style_bg_color(s_dash_state_dot, lv_color_hex(::ui::C_ACCENT), 0);
 
     s_dash_state_lbl = lv_label_create(s_dash_state_pill);
-    lv_label_set_text(s_dash_state_lbl, "—");
+    lv_label_set_text(s_dash_state_lbl, "-");
     lv_obj_set_style_text_font(s_dash_state_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(s_dash_state_lbl, lv_color_hex(::ui::C_ACCENT), 0);
 
@@ -352,7 +352,7 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
 // Stack-buffer-only to keep this off the heap; called every refresh.
 static const char* fmt_eta(uint32_t secs, char* out, size_t out_n) {
     if (secs == 0) {
-        snprintf(out, out_n, "\xE2\x80\x94");   // em-dash
+        snprintf(out, out_n, "-");   // bb_font has no em-dash (Latin-1 only)
         return out;
     }
     uint32_t h = secs / 3600;
@@ -411,7 +411,7 @@ void update_dashboard(int printer_id) {
         time_t done = mktime(&lt) + (time_t)sel->remaining_s;
         struct tm dt;
         localtime_r(&done, &dt);
-        snprintf(eta_buf, sizeof(eta_buf), "%s%s \xE2\x80\xA2 %02d:%02d",
+        snprintf(eta_buf, sizeof(eta_buf), "%s%s \xC2\xB7 %02d:%02d",
                  i18n::tr(i18n::Str::ETA), eta_val, dt.tm_hour, dt.tm_min);
     } else {
         snprintf(eta_buf, sizeof(eta_buf), "%s%s",
@@ -424,7 +424,7 @@ void update_dashboard(int printer_id) {
         snprintf(lay, sizeof(lay), "%s %u/%u", i18n::tr(i18n::Str::LAYER),
                  (unsigned)sel->current_layer, (unsigned)sel->total_layers);
     else
-        snprintf(lay, sizeof(lay), "%s —", i18n::tr(i18n::Str::LAYER));
+        snprintf(lay, sizeof(lay), "%s -", i18n::tr(i18n::Str::LAYER));
     lv_label_set_text(s_dash_layer_lbl, lay);
 
     bool hms_active = sel->hms.length() && sel->hms != "ok";

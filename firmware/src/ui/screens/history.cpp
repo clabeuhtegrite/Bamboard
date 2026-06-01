@@ -168,7 +168,7 @@ void update_history() {
             ar[i].name.length() ? ar[i].name.c_str() : "(unnamed)");
 
         char meta[24];
-        snprintf(meta, sizeof(meta), "%lum \xE2\x80\xA2 %.0fg",
+        snprintf(meta, sizeof(meta), "%lum \xC2\xB7 %.0fg",
                  (unsigned long)(ar[i].duration_s / 60),
                  (double)ar[i].filament_g);
         lv_label_set_text(r.meta, meta);
