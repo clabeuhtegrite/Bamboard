@@ -16,6 +16,8 @@
 namespace ui::screens {
 
 static lv_obj_t* s_dash_root         = nullptr;
+static lv_obj_t* s_dash_state_pill   = nullptr;
+static lv_obj_t* s_dash_state_dot    = nullptr;
 static lv_obj_t* s_dash_state_lbl    = nullptr;
 static lv_obj_t* s_dash_file_lbl     = nullptr;
 static lv_obj_t* s_dash_progress_arc = nullptr;
@@ -27,14 +29,21 @@ static lv_obj_t* s_dash_t_bed        = nullptr;
 static lv_obj_t* s_dash_t_cham       = nullptr;
 static lv_obj_t* s_dash_hms          = nullptr;
 
-// Action row. While printing: segmented speed chip spans the whole row.
-// When finished: single accent pill. While HMS error: red pill.
-static lv_obj_t* s_dash_speed_bar     = nullptr;
-static lv_obj_t* s_dash_speed_seg[4]  = {};
-static lv_obj_t* s_dash_speed_lbl[4]  = {};
-static lv_obj_t* s_dash_speed_caption = nullptr;
+// Action row (contextual, mutually exclusive). While printing: a "speed"
+// caption + a single button that opens a modal 4-item picker. When finished:
+// a "Clear plate" pill. While an HMS error is active: a red "Clear HMS" pill
+// (highest priority).
+static lv_obj_t* s_dash_speed_lbl_cap = nullptr;
+static lv_obj_t* s_dash_speed_btn     = nullptr;
+static lv_obj_t* s_dash_speed_btn_lbl = nullptr;
 static lv_obj_t* s_dash_btn_plate     = nullptr;
 static lv_obj_t* s_dash_btn_hms       = nullptr;
+// Modal speed picker (built once, hidden until the speed button is tapped).
+static lv_obj_t* s_speed_scrim        = nullptr;
+static lv_obj_t* s_speed_menu         = nullptr;
+static lv_obj_t* s_speed_opt[4]       = {};
+static lv_obj_t* s_speed_opt_lbl[4]   = {};
+static uint8_t   s_dash_cur_speed     = 2;
 
 // ---- temp cell --------------------------------------------------------------
 
@@ -62,15 +71,22 @@ static lv_obj_t* make_temp_cell(lv_obj_t* parent, const char* title,
 
 // ---- action callbacks -------------------------------------------------------
 
-// Segmented speed chip — each segment passes its mode (1..4) as user_data.
-static void speed_seg_clicked(lv_event_t* e) {
-    int id = ::ui::g_ui.selected_printer_id();
-    if (id < 0) return;
+// Speed picker — close + option handlers. The button that opens it and the
+// menu builder live further down (build_speed_menu / build_speed_control).
+static void speed_menu_close() {
+    if (s_speed_menu)  lv_obj_add_flag(s_speed_menu,  LV_OBJ_FLAG_HIDDEN);
+    if (s_speed_scrim) lv_obj_add_flag(s_speed_scrim, LV_OBJ_FLAG_HIDDEN);
+}
+static void speed_scrim_clicked(lv_event_t*) { speed_menu_close(); }
+static void speed_opt_clicked(lv_event_t* e) {
     uint8_t mode = (uint8_t)(uintptr_t)lv_event_get_user_data(e);
-    if (mode < 1 || mode > 4) return;
+    speed_menu_close();
+    int id = ::ui::g_ui.selected_printer_id();
+    if (id < 0 || mode < 1 || mode > 4) return;
     bool ok = ::bambuddy::g_client.set_print_speed(id, mode);
-    String msg = String(LV_SYMBOL_OK " ") + speed_mode_name(mode);
-    show_toast(ok ? msg.c_str() : i18n::tr(i18n::Str::SPEED_CHANGE_FAILED),
+    char msg[40];
+    snprintf(msg, sizeof(msg), LV_SYMBOL_OK " %s", speed_mode_name(mode));
+    show_toast(ok ? msg : i18n::tr(i18n::Str::SPEED_CHANGE_FAILED),
                lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
 }
 
@@ -115,59 +131,96 @@ static lv_obj_t* make_action_btn(lv_obj_t* parent, int x, int y, int w,
     return btn;
 }
 
-static void build_speed_segmented(lv_obj_t* parent, int x, int y, int w) {
-    s_dash_speed_caption = lv_label_create(parent);
-    lv_label_set_text(s_dash_speed_caption, i18n::tr(i18n::Str::SPEED));
-    lv_obj_add_style(s_dash_speed_caption, &s_label_dim, 0);
-    lv_obj_set_pos(s_dash_speed_caption, x + 4, y - 14);
-
-    s_dash_speed_bar = lv_obj_create(parent);
-    lv_obj_remove_style_all(s_dash_speed_bar);
-    lv_obj_set_pos (s_dash_speed_bar, x, y);
-    lv_obj_set_size(s_dash_speed_bar, w, ::ui::H_BTN);
-    lv_obj_set_style_bg_color(s_dash_speed_bar,
-                               lv_color_hex(::ui::C_PANEL_HI), 0);
-    lv_obj_set_style_bg_opa  (s_dash_speed_bar, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius  (s_dash_speed_bar, ::ui::R_PILL, 0);
-    lv_obj_set_style_border_width(s_dash_speed_bar, 1, 0);
-    lv_obj_set_style_border_color(s_dash_speed_bar,
-                                  lv_color_hex(::ui::C_PANEL_LINE), 0);
-    lv_obj_set_style_border_opa(s_dash_speed_bar, LV_OPA_80, 0);
-    lv_obj_set_style_pad_all(s_dash_speed_bar, 3, 0);
-    lv_obj_clear_flag(s_dash_speed_bar, LV_OBJ_FLAG_SCROLLABLE);
-
-    static const char* k_short[4] = { "Silent", "Standard", "Sport", "Ludicrous" };
-    int seg_w = (w - 6) / 4;
-    int seg_h = ::ui::H_BTN - 6;
-    for (uint8_t i = 0; i < 4; ++i) {
-        lv_obj_t* seg = lv_btn_create(s_dash_speed_bar);
-        lv_obj_remove_style_all(seg);
-        lv_obj_add_style(seg, &s_chip_off, 0);
-        lv_obj_add_style(seg, &s_btn_pressed, LV_STATE_PRESSED);
-        lv_obj_set_size(seg, seg_w, seg_h);
-        lv_obj_set_pos(seg, i * seg_w, 0);
-        lv_obj_add_event_cb(seg, speed_seg_clicked, LV_EVENT_CLICKED,
-                            (void*)(uintptr_t)(i + 1));
-        lv_obj_t* lbl = lv_label_create(seg);
-        lv_label_set_text(lbl, k_short[i]);
-        lv_obj_set_style_text_font(lbl, &bb_font_14, 0);
-        lv_obj_center(lbl);
-        s_dash_speed_seg[i] = seg;
-        s_dash_speed_lbl[i] = lbl;
-    }
-}
-
-static void speed_segmented_set_active(uint8_t mode /* 1..4 */) {
+static void speed_menu_set_active(uint8_t mode /* 1..4 */) {
     if (mode < 1 || mode > 4) mode = 2;
     for (uint8_t i = 0; i < 4; ++i) {
         bool on = (i + 1 == mode);
-        lv_obj_set_style_bg_color(s_dash_speed_seg[i],
-                                   lv_color_hex(on ? ::ui::C_ACCENT
-                                                   : ::ui::C_PANEL_HI), 0);
-        lv_obj_set_style_text_color(s_dash_speed_lbl[i],
-                                    lv_color_hex(on ? ::ui::C_TEXT_INV
-                                                    : ::ui::C_TEXT_DIM), 0);
+        lv_obj_set_style_bg_color(s_speed_opt[i],
+            lv_color_hex(on ? ::ui::C_ACCENT : ::ui::C_PANEL_HI), 0);
+        lv_obj_set_style_bg_grad_color(s_speed_opt[i],
+            lv_color_hex(on ? ::ui::C_ACCENT_DARK : ::ui::C_PANEL_HI), 0);
+        lv_obj_set_style_bg_grad_dir(s_speed_opt[i],
+            on ? LV_GRAD_DIR_VER : LV_GRAD_DIR_NONE, 0);
+        lv_obj_set_style_text_color(s_speed_opt_lbl[i],
+            lv_color_hex(on ? ::ui::C_TEXT_INV : ::ui::C_TEXT), 0);
     }
+}
+
+static void speed_btn_clicked(lv_event_t*) {
+    if (!s_speed_menu || !s_speed_scrim) return;
+    speed_menu_set_active(s_dash_cur_speed);
+    lv_obj_clear_flag(s_speed_scrim, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(s_speed_menu,  LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_speed_scrim);
+    lv_obj_move_foreground(s_speed_menu);
+}
+
+// Modal picker: a dimming scrim (tap to dismiss) + a centred card listing the
+// four Bambu speed modes. Built once; shown only while the user is choosing.
+static void build_speed_menu(lv_obj_t* parent) {
+    s_speed_scrim = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_speed_scrim);
+    lv_obj_set_size(s_speed_scrim, LV_HOR_RES, body_h());
+    lv_obj_set_pos(s_speed_scrim, 0, 0);
+    lv_obj_set_style_bg_color(s_speed_scrim, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(s_speed_scrim, LV_OPA_50, 0);
+    lv_obj_add_flag(s_speed_scrim, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_speed_scrim, speed_scrim_clicked, LV_EVENT_CLICKED, nullptr);
+    lv_obj_add_flag(s_speed_scrim, LV_OBJ_FLAG_HIDDEN);
+
+    s_speed_menu = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_speed_menu);
+    lv_obj_add_style(s_speed_menu, &s_panel, 0);
+    lv_obj_set_size(s_speed_menu, 220, 176);
+    lv_obj_align(s_speed_menu, LV_ALIGN_CENTER, 0, -8);
+    lv_obj_set_style_pad_all(s_speed_menu, 10, 0);
+    lv_obj_clear_flag(s_speed_menu, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* title = lv_label_create(s_speed_menu);
+    lv_label_set_text(title, i18n::tr(i18n::Str::SPEED));
+    lv_obj_add_style(title, &s_label_dim, 0);
+    lv_obj_set_pos(title, 2, 0);
+
+    for (uint8_t i = 0; i < 4; ++i) {
+        lv_obj_t* opt = lv_btn_create(s_speed_menu);
+        lv_obj_remove_style_all(opt);
+        lv_obj_add_style(opt, &s_btn_pressed, LV_STATE_PRESSED);
+        lv_obj_set_style_radius(opt, ::ui::R_CHIP, 0);
+        lv_obj_set_style_bg_opa(opt, LV_OPA_COVER, 0);
+        lv_obj_set_size(opt, 196, 30);
+        lv_obj_set_pos(opt, 2, 18 + i * 34);
+        lv_obj_add_event_cb(opt, speed_opt_clicked, LV_EVENT_CLICKED,
+                            (void*)(uintptr_t)(i + 1));
+        lv_obj_t* l = lv_label_create(opt);
+        lv_label_set_text(l, speed_mode_name(i + 1));
+        lv_obj_set_style_text_font(l, &bb_font_14, 0);
+        lv_obj_center(l);
+        s_speed_opt[i]     = opt;
+        s_speed_opt_lbl[i] = l;
+    }
+    lv_obj_add_flag(s_speed_menu, LV_OBJ_FLAG_HIDDEN);
+}
+
+// Print-speed row: a dim caption + the single button that opens the menu.
+static void build_speed_control(lv_obj_t* parent, int y) {
+    s_dash_speed_lbl_cap = lv_label_create(parent);
+    lv_label_set_text(s_dash_speed_lbl_cap, i18n::tr(i18n::Str::SPEED));
+    lv_obj_add_style(s_dash_speed_lbl_cap, &s_label_dim, 0);
+    lv_obj_set_pos(s_dash_speed_lbl_cap, 16, y + 14);
+
+    s_dash_speed_btn = lv_btn_create(parent);
+    lv_obj_remove_style_all(s_dash_speed_btn);
+    lv_obj_add_style(s_dash_speed_btn, &s_btn, 0);
+    lv_obj_add_style(s_dash_speed_btn, &s_btn_pressed, LV_STATE_PRESSED);
+    lv_obj_set_style_radius(s_dash_speed_btn, ::ui::R_PILL, 0);
+    lv_obj_set_size(s_dash_speed_btn, 182, ::ui::H_BTN);
+    lv_obj_set_pos(s_dash_speed_btn, 286, y);
+    lv_obj_add_event_cb(s_dash_speed_btn, speed_btn_clicked, LV_EVENT_CLICKED, nullptr);
+
+    s_dash_speed_btn_lbl = lv_label_create(s_dash_speed_btn);
+    lv_label_set_text(s_dash_speed_btn_lbl, speed_mode_name(2));
+    lv_obj_set_style_text_font(s_dash_speed_btn_lbl, &bb_font_16, 0);
+    lv_obj_center(s_dash_speed_btn_lbl);
 }
 
 // ---- builders ---------------------------------------------------------------
@@ -203,10 +256,34 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_obj_set_style_text_color(s_dash_progress_lbl, lv_color_hex(::ui::C_TEXT), 0);
     lv_obj_center(s_dash_progress_lbl);
 
-    s_dash_state_lbl = lv_label_create(s_dash_root);
+    // State pill: a rounded chip carrying a state-coloured dot + label.
+    // Auto-sizes to its contents so long localized state names (e.g. German
+    // "VORBEREITUNG") never get clipped.
+    s_dash_state_pill = lv_obj_create(s_dash_root);
+    lv_obj_remove_style_all(s_dash_state_pill);
+    lv_obj_set_style_bg_color(s_dash_state_pill, lv_color_hex(::ui::C_PANEL_HI), 0);
+    lv_obj_set_style_bg_opa(s_dash_state_pill, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(s_dash_state_pill, ::ui::R_PILL, 0);
+    lv_obj_set_style_pad_hor(s_dash_state_pill, 12, 0);
+    lv_obj_set_style_pad_ver(s_dash_state_pill, 4, 0);
+    lv_obj_set_style_pad_column(s_dash_state_pill, 8, 0);
+    lv_obj_set_flex_flow(s_dash_state_pill, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(s_dash_state_pill, LV_FLEX_ALIGN_START,
+                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_size(s_dash_state_pill, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_pos(s_dash_state_pill, 88, 2);
+    lv_obj_clear_flag(s_dash_state_pill, LV_OBJ_FLAG_SCROLLABLE);
+
+    s_dash_state_dot = lv_obj_create(s_dash_state_pill);
+    lv_obj_remove_style_all(s_dash_state_dot);
+    lv_obj_set_size(s_dash_state_dot, 8, 8);
+    lv_obj_set_style_radius(s_dash_state_dot, 4, 0);
+    lv_obj_set_style_bg_opa(s_dash_state_dot, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(s_dash_state_dot, lv_color_hex(::ui::C_ACCENT), 0);
+
+    s_dash_state_lbl = lv_label_create(s_dash_state_pill);
     lv_label_set_text(s_dash_state_lbl, "—");
-    lv_obj_set_pos(s_dash_state_lbl, 88, 0);
-    lv_obj_set_style_text_font(s_dash_state_lbl, &bb_font_20, 0);
+    lv_obj_set_style_text_font(s_dash_state_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(s_dash_state_lbl, lv_color_hex(::ui::C_ACCENT), 0);
 
     s_dash_eta_lbl = lv_label_create(s_dash_root);
@@ -219,19 +296,20 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_label_set_text(s_dash_file_lbl, i18n::tr(i18n::Str::NO_FILE));
     lv_obj_set_width(s_dash_file_lbl, 220);
     lv_label_set_long_mode(s_dash_file_lbl, LV_LABEL_LONG_DOT);
-    lv_obj_set_pos(s_dash_file_lbl, 88, 26);
+    lv_obj_set_pos(s_dash_file_lbl, 88, 32);
     lv_obj_add_style(s_dash_file_lbl, &s_label_dim, 0);
 
     s_dash_layer_lbl = lv_label_create(s_dash_root);
     lv_label_set_text(s_dash_layer_lbl,
                       (String(i18n::tr(i18n::Str::LAYER)) + " --/--").c_str());
-    lv_obj_set_pos(s_dash_layer_lbl, 320, 26);
+    lv_obj_set_pos(s_dash_layer_lbl, 320, 32);
     lv_obj_add_style(s_dash_layer_lbl, &s_label_dim, 0);
 
     // --- Temp row ---
-    s_dash_t_noz  = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::NOZZLE),   12, 142);
-    s_dash_t_bed  = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::BED),     162, 142);
-    s_dash_t_cham = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::CHAMBER), 312, 156);
+    // Three equal-width cells (146 px) at a uniform 12 px gutter / 9 px gap.
+    s_dash_t_noz  = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::NOZZLE),   12, 146);
+    s_dash_t_bed  = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::BED),     167, 146);
+    s_dash_t_cham = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::CHAMBER), 322, 146);
 
     // --- HMS line (hidden when "ok") ---
     s_dash_hms = lv_label_create(s_dash_root);
@@ -242,8 +320,8 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_obj_set_style_text_color(s_dash_hms, lv_color_hex(::ui::C_ERR), 0);
     lv_obj_set_style_text_font(s_dash_hms, &bb_font_14, 0);
 
-    // --- Inline action area ---
-    build_speed_segmented(s_dash_root, 12, 128, LV_HOR_RES - 24);
+    // --- Inline action area (contextual) ---
+    build_speed_control(s_dash_root, 128);
     s_dash_btn_plate = make_action_btn(s_dash_root, 12, 128, LV_HOR_RES - 24,
                                        (String(LV_SYMBOL_OK "  ") +
                                         i18n::tr(i18n::Str::CLEAR_PLATE)).c_str(),
@@ -252,9 +330,10 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
                                        (String(LV_SYMBOL_WARNING "  ") +
                                         i18n::tr(i18n::Str::CLEAR_HMS)).c_str(),
                                        btn_hms_clicked, ::ui::C_ERR);
+    build_speed_menu(s_dash_root);   // modal picker, hidden until the button is tapped
 
-    lv_obj_add_flag(s_dash_speed_bar,     LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(s_dash_speed_caption, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_speed_lbl_cap, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_speed_btn,     LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_dash_btn_plate,     LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_dash_btn_hms,       LV_OBJ_FLAG_HIDDEN);
     return s_dash_root;
@@ -282,10 +361,13 @@ void update_dashboard(int printer_id) {
     ::bambuddy::g_client.snapshot_printers(ps, n);
     if (n == 0) {
         lv_label_set_text(s_dash_state_lbl, i18n::tr(i18n::Str::NO_PRINTER));
+        lv_obj_set_style_text_color(s_dash_state_lbl, lv_color_hex(::ui::C_TEXT_DIM), 0);
+        lv_obj_set_style_bg_color(s_dash_state_dot, lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_label_set_text(s_dash_file_lbl, i18n::tr(i18n::Str::ADD_IN_BAMBUDDY));
         header_set_printer_name("");
-        lv_obj_add_flag(s_dash_speed_bar,     LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(s_dash_speed_caption, LV_OBJ_FLAG_HIDDEN);
+        speed_menu_close();
+        lv_obj_add_flag(s_dash_speed_lbl_cap, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_speed_btn,     LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_dash_btn_plate,     LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_dash_btn_hms,       LV_OBJ_FLAG_HIDDEN);
         return;
@@ -299,6 +381,8 @@ void update_dashboard(int printer_id) {
     lv_label_set_text(s_dash_state_lbl, state_name(sel->state));
     lv_obj_set_style_text_color(s_dash_state_lbl,
                                  lv_color_hex(state_color(sel->state)), 0);
+    lv_obj_set_style_bg_color(s_dash_state_dot,
+                              lv_color_hex(state_color(sel->state)), 0);
 
     lv_label_set_text(s_dash_file_lbl,
                        sel->filename.length() ? sel->filename.c_str()
@@ -358,15 +442,21 @@ void update_dashboard(int printer_id) {
         else   lv_obj_add_flag  (o, LV_OBJ_FLAG_HIDDEN);
     };
 
-    show(s_dash_btn_hms,         can_hms);
-    show(s_dash_btn_plate,       !can_hms && can_plate);
-    show(s_dash_speed_bar,       !can_hms && !can_plate && can_speed);
-    show(s_dash_speed_caption,   !can_hms && !can_plate && can_speed);
+    bool show_speed = !can_hms && !can_plate && can_speed;
+    show(s_dash_btn_hms,        can_hms);
+    show(s_dash_btn_plate,      !can_hms && can_plate);
+    show(s_dash_speed_btn,      show_speed);
+    show(s_dash_speed_lbl_cap,  show_speed);
 
     if (can_speed) {
-        uint8_t cur = (sel->speed_level >= 1 && sel->speed_level <= 4)
-                       ? sel->speed_level : 2;
-        speed_segmented_set_active(cur);
+        s_dash_cur_speed = (sel->speed_level >= 1 && sel->speed_level <= 4)
+                            ? sel->speed_level : 2;
+        lv_label_set_text(s_dash_speed_btn_lbl, speed_mode_name(s_dash_cur_speed));
+    }
+    // If the context left "printing" while the picker was open, dismiss it.
+    if (!show_speed && s_speed_menu &&
+        !lv_obj_has_flag(s_speed_menu, LV_OBJ_FLAG_HIDDEN)) {
+        speed_menu_close();
     }
 }
 
