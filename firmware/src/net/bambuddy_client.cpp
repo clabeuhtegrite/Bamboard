@@ -228,6 +228,17 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
                 p.hms = String(code) + " (+" + (uint32_t)(hms.size() - 1) + " more)";
             }
         }
+        // Bambu keeps low-severity HMS notifications (AMS / info) in hms_errors
+        // even on a perfectly healthy printer — Bambuddy's own UI doesn't flag
+        // them. Surfacing them popped a full-screen "HMS ERROR" alert on a
+        // finished, fault-free print. Only treat HMS as active (inline line +
+        // Clear-HMS action + full-screen flash all key off p.hms) when the
+        // printer is genuinely in a fault/paused state.
+        if (p.state != PrinterState::Failed &&
+            p.state != PrinterState::Error &&
+            p.state != PrinterState::Paused) {
+            p.hms = "ok";
+        }
 
         // Filename: Bambuddy exposes the on-printer name as `subtask_name`
         // first, falling back to the raw `gcode_file` path.
