@@ -134,7 +134,17 @@ int main(int argc, char** argv) {
     for (auto& sc : screens) {
         ui::g_ui.go_to(sc.s);
         pump(30);
+        // Dismiss the global HMS full-screen flash before capturing so we see
+        // the actual screen underneath (a real printer with an active HMS error
+        // would otherwise cover every screenshot during the flash's 5 s window).
+        ui::screens::hms_flash_hide();
+        lv_tick_inc(8);
+        lv_timer_handler();
         dump_png(out, sc.name);
     }
+    // Also capture the HMS overlay itself (it's a real, validated state).
+    ui::g_ui.go_to(ui::Screen::Dashboard);
+    pump(10);
+    dump_png(out, "hms_overlay");
     return 0;
 }
