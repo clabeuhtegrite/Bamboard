@@ -1,0 +1,38 @@
+name: tests
+
+# Host unit tests + static analysis on Bamboard's own sources. No secrets, no
+# hardware, no toolchain download — runs on every push to main and every PR
+# (forks included), as a fast gate next to the firmware build (ci.yml) and the
+# visual render (sim.yml).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + run host unit tests
+        run: |
+          cmake -S tests -B tests/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build tests/build -j
+          ctest --test-dir tests/build --output-on-failure
+
+  cppcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - name: Static analysis (firmware sources, excluding generated fonts)
+        run: |
+          cppcheck --enable=warning --std=c++17 --inline-suppr \
+            --error-exitcode=1 \
+            --suppress=missingInclude --suppress=missingIncludeSystem \
+            --suppress=unknownMacro --suppress=unusedStructMember \
+            --suppress=unmatchedSuppression \
+            -i firmware/src/ui/fonts \
+            firmware/src
