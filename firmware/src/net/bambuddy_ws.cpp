@@ -58,16 +58,14 @@ void WsClient::apply_url(const String& base_url) {
     configured_ = true;
 }
 
-void WsClient::begin(const String& base_url, const String& api_key) {
-    api_key_ = api_key;
+void WsClient::begin(const String& base_url) {
     client_.onEvent([this](WStype_t type, uint8_t* payload, size_t length) {
         handle_event(type, payload, length);
     });
     apply_url(base_url);
 }
 
-void WsClient::set_credentials(const String& base_url, const String& api_key) {
-    api_key_ = api_key;
+void WsClient::set_credentials(const String& base_url) {
     apply_url(base_url);
 }
 

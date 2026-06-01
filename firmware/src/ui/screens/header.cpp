@@ -4,9 +4,11 @@
 //   layout:  [ "Bamboard" accent ]   [ printer name centre ]   [ wifi / latency ]
 //
 // The connectivity readout colour-codes itself: green/teal when the last
-// Bambuddy ping succeeded, red when offline. The setter is safe to call
-// from the net task — LVGL widget mutation only happens on this TU's
-// statics, which the UI task reads next refresh.
+// Bambuddy ping succeeded, red when offline. header_set_online() is the only
+// hook called from the net task; it parks the new state in a volatile cell
+// and the UI task syncs it into the widget via header_apply() (called from
+// ui::Manager::refresh()). header_set_title() / header_set_printer_name()
+// only fire from the UI task and mutate LVGL widgets directly.
 
 #include "theme.h"
 
@@ -15,6 +17,13 @@ namespace ui::screens {
 static lv_obj_t* s_hdr_title   = nullptr;
 static lv_obj_t* s_hdr_printer = nullptr;
 static lv_obj_t* s_hdr_conn    = nullptr;
+
+// Net-task → UI-task hand-off for the connectivity readout. Volatile so the
+// reader sees the latest store; we accept a torn read on latency_ms because
+// the worst case is a single stale frame.
+static volatile bool     s_conn_dirty      = false;
+static volatile bool     s_conn_online     = false;
+static volatile uint32_t s_conn_latency_ms = 0;
 
 lv_obj_t* build_header(lv_obj_t* parent) {
     ensure_styles();
@@ -55,17 +64,29 @@ void header_set_title(const char* title) {
     if (s_hdr_title) lv_label_set_text(s_hdr_title, title);
 }
 
+// Net-task safe: just parks the state. The UI task picks it up next refresh
+// via header_apply().
 void header_set_online(bool online, uint32_t latency_ms) {
-    if (!s_hdr_conn) return;
+    s_conn_online     = online;
+    s_conn_latency_ms = latency_ms;
+    s_conn_dirty      = true;
+}
+
+void header_apply() {
+    if (!s_hdr_conn || !s_conn_dirty) return;
+    s_conn_dirty = false;
+    bool     online  = s_conn_online;
+    uint32_t latency = s_conn_latency_ms;
     if (online) {
         char buf[24];
-        snprintf(buf, sizeof(buf), LV_SYMBOL_WIFI " %ums", (unsigned)latency_ms);
+        snprintf(buf, sizeof(buf), LV_SYMBOL_WIFI " %ums", (unsigned)latency);
         lv_label_set_text(s_hdr_conn, buf);
         lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_OK), 0);
     } else {
-        lv_label_set_text(s_hdr_conn,
-                          (String(LV_SYMBOL_WARNING " ") +
-                           i18n::tr(i18n::Str::OFFLINE_SHORT)).c_str());
+        char buf[32];
+        snprintf(buf, sizeof(buf), LV_SYMBOL_WARNING " %s",
+                 i18n::tr(i18n::Str::OFFLINE_SHORT));
+        lv_label_set_text(s_hdr_conn, buf);
         lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_ERR), 0);
     }
 }

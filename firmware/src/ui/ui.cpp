@@ -113,6 +113,10 @@ void Manager::refresh() {
     // state when the device reboots back to the same UI on success.
     screens::ota_apply();
 
+    // Sync any net-task-side header updates (connectivity readout) onto the
+    // UI task, where the LVGL widget actually lives.
+    screens::header_apply();
+
     // Auto-pick the first printer the first time we know about one.
     ::bambuddy::Printer ps[8];
     uint8_t n = 0;

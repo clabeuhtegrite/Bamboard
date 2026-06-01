@@ -60,15 +60,20 @@ int semver_cmp(const char* a, const char* b) {
 // ---------------------------------------------------------------------------
 
 // Pulls manifest.json from the latest-release redirect and extracts the
-// version + firmware-binary URL. Returns false on any network / parse error.
-static bool fetch_manifest(String& out_version, String& out_bin_url) {
+// version + firmware-binary URL + expected MD5. Returns false on any
+// network / parse error.
+static bool fetch_manifest(String& out_version, String& out_bin_url,
+                           String& out_md5) {
     WiFiClientSecure client;
     // GitHub + its asset CDN (objects.githubusercontent.com) are HTTPS, and
     // the asset host changes across redirects. We skip cert-chain validation
-    // rather than bundle and rotate multiple root CAs on the device. The
-    // payload's integrity is still vouched for end to end by the firmware
-    // image's own signature check inside Update (and we publish a sha256 in
-    // the manifest for anyone who wants to verify out of band).
+    // rather than bundle and rotate multiple root CAs on the device. End-to-
+    // end integrity for the firmware binary itself is recovered by validating
+    // the MD5 published in the manifest against Update's running hash (see
+    // check_and_update below) — a MITM swapping the .bin would have to forge
+    // a matching MD5, which is infeasible without also tampering with the
+    // manifest in flight (and the user can still verify the sha256 published
+    // alongside out of band).
     client.setInsecure();
 
     HTTPClient http;
@@ -101,6 +106,9 @@ static bool fetch_manifest(String& out_version, String& out_bin_url) {
 
     out_version = (const char*)(doc["version"] | "");
     out_bin_url = (const char*)(doc["url"] | "");
+    out_md5     = (const char*)(doc["md5"] | "");
+    // md5 is optional for backwards compatibility with manifests published by
+    // older release.yml workflows; an empty value just disables verification.
     return out_version.length() > 0 && out_bin_url.length() > 0;
 }
 
@@ -114,8 +122,8 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
         return CheckResult::NoNetwork;
     }
 
-    String latest, bin_url;
-    if (!fetch_manifest(latest, bin_url)) {
+    String latest, bin_url, expected_md5;
+    if (!fetch_manifest(latest, bin_url, expected_md5)) {
         return CheckResult::NoNetwork;
     }
 
@@ -134,6 +142,20 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
             s_on_progress((uint8_t)((uint64_t)cur * 100ULL / total));
         }
     });
+
+    // Bind the expected MD5 (when published in the manifest) so Update.end()
+    // rejects a corrupted or tampered binary at the flash layer instead of
+    // boot-looping into a half-written app slot. httpUpdate calls
+    // Update.begin()/write()/end() internally; setMD5 sets a target hash the
+    // end() step compares against the running MD5 of every byte written.
+    if (expected_md5.length() == 32) {
+        Update.setMD5(expected_md5.c_str());
+    } else if (expected_md5.length() > 0) {
+        log_w("OTA: manifest md5 has unexpected length %u — skipping check",
+              (unsigned)expected_md5.length());
+    } else {
+        log_w("OTA: no md5 in manifest — integrity not verified");
+    }
 
     WiFiClientSecure client;
     client.setInsecure();

@@ -323,9 +323,10 @@ void update_ams(int printer_id) {
             lv_obj_set_style_text_color(s_ams_dry_btn_lbl,
                                         lv_color_hex(::ui::C_TEXT_INV), 0);
         } else {
-            lv_label_set_text(s_ams_dry_btn_lbl,
-                              (String(LV_SYMBOL_TINT " ") +
-                               i18n::tr(i18n::Str::DRY)).c_str());
+            char dlbl[32];
+            snprintf(dlbl, sizeof(dlbl), LV_SYMBOL_TINT " %s",
+                     i18n::tr(i18n::Str::DRY));
+            lv_label_set_text(s_ams_dry_btn_lbl, dlbl);
             lv_obj_set_style_bg_color(s_ams_dry_btn,
                                        lv_color_hex(::ui::C_PANEL_HI), 0);
             lv_obj_set_style_text_color(s_ams_dry_btn_lbl,

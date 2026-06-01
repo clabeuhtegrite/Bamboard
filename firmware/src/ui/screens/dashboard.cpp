@@ -262,14 +262,18 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
 
 // ---- updater ----------------------------------------------------------------
 
-static String fmt_eta(uint32_t secs) {
-    if (secs == 0) return "—";
+// Writes "Xh YYm" / "YYm" / "—" into out (size out_n) and returns out.
+// Stack-buffer-only to keep this off the heap; called every refresh.
+static const char* fmt_eta(uint32_t secs, char* out, size_t out_n) {
+    if (secs == 0) {
+        snprintf(out, out_n, "\xE2\x80\x94");   // em-dash
+        return out;
+    }
     uint32_t h = secs / 3600;
     uint32_t m = (secs % 3600) / 60;
-    char buf[16];
-    if (h > 0) snprintf(buf, sizeof(buf), "%uh%02u", (unsigned)h, (unsigned)m);
-    else       snprintf(buf, sizeof(buf), "%um",     (unsigned)m);
-    return String(buf);
+    if (h > 0) snprintf(out, out_n, "%uh%02u", (unsigned)h, (unsigned)m);
+    else       snprintf(out, out_n, "%um",     (unsigned)m);
+    return out;
 }
 
 void update_dashboard(int printer_id) {
@@ -305,8 +309,12 @@ void update_dashboard(int printer_id) {
     snprintf(pbuf, sizeof(pbuf), "%u%%", (unsigned)sel->progress);
     lv_label_set_text(s_dash_progress_lbl, pbuf);
 
-    String eta = String(i18n::tr(i18n::Str::ETA)) + fmt_eta(sel->remaining_s);
-    lv_label_set_text(s_dash_eta_lbl, eta.c_str());
+    char eta_val[16];
+    char eta_buf[32];
+    snprintf(eta_buf, sizeof(eta_buf), "%s%s",
+             i18n::tr(i18n::Str::ETA),
+             fmt_eta(sel->remaining_s, eta_val, sizeof(eta_val)));
+    lv_label_set_text(s_dash_eta_lbl, eta_buf);
 
     char lay[24];
     if (sel->total_layers > 0)
@@ -318,9 +326,10 @@ void update_dashboard(int printer_id) {
 
     bool hms_active = sel->hms.length() && sel->hms != "ok";
     if (hms_active) {
-        String h = String(LV_SYMBOL_WARNING " ") +
-                   i18n::tr(i18n::Str::HMS_PREFIX) + sel->hms;
-        lv_label_set_text(s_dash_hms, h.c_str());
+        char hbuf[96];
+        snprintf(hbuf, sizeof(hbuf), LV_SYMBOL_WARNING " %s%s",
+                 i18n::tr(i18n::Str::HMS_PREFIX), sel->hms.c_str());
+        lv_label_set_text(s_dash_hms, hbuf);
     } else {
         lv_label_set_text(s_dash_hms, "");
     }

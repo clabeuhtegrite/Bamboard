@@ -42,11 +42,24 @@ namespace pins {
 // factory-reset gesture; LVGL touch handles every other interaction.
 constexpr uint8_t BOOT_BUTTON = 0;
 
-// Display backlight PWM (LovyanGFX drives this internally, but we keep
-// the constants here so other firmware code can reference them if needed).
-constexpr uint8_t BL_PIN     = 2;
-constexpr uint32_t BL_FREQ   = 5000;
-constexpr uint8_t  BL_RES    = 8;
+// Display backlight PWM. LovyanGFX configures the channel itself; these
+// constants are the source of truth that hw/display.cpp pulls from when
+// building its Light_PWM config.
+constexpr uint8_t  BL_PIN     = 2;
+constexpr uint32_t BL_FREQ    = 5000;
+constexpr uint8_t  BL_RES     = 8;
+
+// GT911 capacitive touch controller on the Guition JC4827W543. The board
+// routes the touch IC onto a dedicated I²C bus that doesn't clash with the
+// native USB lines (S3 USB lives on the same physical USB-C connector as
+// power). INT is not wired on this revision; RST is on GPIO 38.
+constexpr int      GT911_SDA  = 19;
+constexpr int      GT911_SCL  = 20;
+constexpr int      GT911_INT  = -1;    // GPIO_NUM_NC equivalent
+constexpr int      GT911_RST  = 38;
+constexpr uint32_t GT911_FREQ = 400000;
+constexpr uint8_t  GT911_ADDR = 0x5D;  // primary; 0x14 fallback
+constexpr uint8_t  GT911_PORT = 0;
 
 }  // namespace pins
 

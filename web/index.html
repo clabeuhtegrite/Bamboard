@@ -85,7 +85,7 @@
     </header>
 
     <div class="card install">
-      <esp-web-install-button manifest="./manifest.json">
+      <esp-web-install-button id="installBtn" manifest="./manifest.json">
         <!-- Shown when the browser doesn't support Web Serial (Firefox/Safari/mobile). -->
         <span slot="unsupported" class="msg bad">
           ⚠️ This browser can't talk to USB serial devices.
@@ -96,6 +96,11 @@
           ⚠️ Web Serial needs a secure (https) page.
         </span>
       </esp-web-install-button>
+      <p id="placeholderWarn" class="msg bad" hidden>
+        ⚠️ The published manifest is a placeholder (<code>0.0.0-dev</code>) — the release CI hasn't run yet.
+        Use the <a href="https://github.com/clabeuhtegrite/Bamboard/releases/latest" target="_blank" rel="noopener">latest release</a>
+        on GitHub instead.
+      </p>
       <div class="badges">
         <span class="badge"><span class="dot"></span>Latest&nbsp;·&nbsp;<strong>v<span id="ver">…</span></strong></span>
         <span class="badge">ESP32-S3</span>
@@ -136,9 +141,17 @@
 
   <script>
     // Surface the firmware version from the ESP Web Tools manifest so the page
-    // always shows what it will install, without hard-coding it here.
+    // always shows what it will install, without hard-coding it here. When the
+    // version is still the in-tree placeholder ("0.0.0-dev"), hide the install
+    // button — that means the release CI hasn't regenerated the manifest yet
+    // and clicking Connect would flash a dev sentinel build users don't want.
     fetch("./manifest.json").then(r => r.json()).then(m => {
-      if (m && m.version) document.getElementById("ver").textContent = m.version;
+      const ver = (m && m.version) || "";
+      document.getElementById("ver").textContent = ver || "?";
+      if (!ver || ver === "0.0.0-dev") {
+        document.getElementById("installBtn").hidden = true;
+        document.getElementById("placeholderWarn").hidden = false;
+      }
     }).catch(() => {});
   </script>
 </body>

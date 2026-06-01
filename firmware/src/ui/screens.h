@@ -56,10 +56,15 @@ void      ota_apply       ();
 bool      ota_is_active   ();
 
 // Shared header (title + connectivity indicator). Used by the carousel.
+// header_set_online() is safe to call from any task — it parks the new
+// state and header_apply() (pumped by the UI manager) syncs it into the
+// widget on the UI task. header_set_title() / header_set_printer_name()
+// must only be called from the UI task.
 lv_obj_t* build_header(lv_obj_t* parent);
-void      header_set_title(const char* title);
-void      header_set_online(bool online, uint32_t latency_ms);
+void      header_set_title       (const char* title);
+void      header_set_online      (bool online, uint32_t latency_ms);
 void      header_set_printer_name(const char* name);
+void      header_apply           ();
 
 // Bottom tab bar. Permanent — sits above every screen and routes taps
 // to ui::g_ui.go_to(Screen). tab_bar_set_active() highlights the tab
