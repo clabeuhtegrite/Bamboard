@@ -41,6 +41,13 @@ static lv_obj_t* s_ams_card_bar    [4] = {};
 static int s_ams_visible_index = 0;
 static uint8_t s_ams_count_cache = 0;   // last-seen unit count, for cycle clamping
 
+// Drying-countdown baseline: Bambuddy reports whole minutes remaining, so we
+// latch that value + the tick it arrived on and tick the seconds down locally
+// between polls. s_dry_unit_seen is the unit index the baseline belongs to.
+static int      s_dry_unit_seen   = -1;
+static uint32_t s_dry_min_seen    = 0;
+static uint32_t s_dry_baseline_ms = 0;
+
 uint8_t ams_visible_unit_index() {
     return (uint8_t)(s_ams_visible_index < 0 ? 0 : s_ams_visible_index);
 }
@@ -484,19 +491,30 @@ void update_ams(int printer_id) {
     }
 
     if (u.dry_time_min > 0) {
+        // Re-baseline whenever Bambuddy reports a new minutes value (or we switch
+        // units), then tick the seconds down locally so the readout feels live.
+        // The daily reboot keeps lv_tick_get() from wrapping during a cycle.
+        if (s_ams_visible_index != s_dry_unit_seen || u.dry_time_min != s_dry_min_seen) {
+            s_dry_unit_seen   = s_ams_visible_index;
+            s_dry_min_seen    = u.dry_time_min;
+            s_dry_baseline_ms = lv_tick_get();
+        }
+        uint32_t elapsed_s = (lv_tick_get() - s_dry_baseline_ms) / 1000;
+        uint32_t total_s   = s_dry_min_seen * 60;
+        uint32_t left_s    = (elapsed_s < total_s) ? (total_s - elapsed_s) : 0;
         char dbuf[24];
-        if (u.dry_time_min >= 60)
+        if (left_s >= 3600)
             snprintf(dbuf, sizeof(dbuf), "%s %luh%02lu",
                      i18n::tr(i18n::Str::DRY),
-                     (unsigned long)(u.dry_time_min / 60),
-                     (unsigned long)(u.dry_time_min % 60));
+                     (unsigned long)(left_s / 3600), (unsigned long)((left_s % 3600) / 60));
         else
-            snprintf(dbuf, sizeof(dbuf), "%s %lum",
+            snprintf(dbuf, sizeof(dbuf), "%s %02lu:%02lu",
                      i18n::tr(i18n::Str::DRY),
-                     (unsigned long)u.dry_time_min);
+                     (unsigned long)(left_s / 60), (unsigned long)(left_s % 60));
         lv_label_set_text(s_ams_dry_lbl, dbuf);
     } else {
         lv_label_set_text(s_ams_dry_lbl, "");
+        s_dry_unit_seen = -1;   // reset so the next cycle re-bases cleanly
     }
 
     uint8_t visible = u.slot_count > 0 ? u.slot_count : (u.is_ht ? 1 : 4);

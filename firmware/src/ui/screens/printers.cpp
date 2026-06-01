@@ -70,6 +70,8 @@ static void build_one_row(uint8_t idx) {
 
     r.sub = lv_label_create(r.row);
     lv_label_set_text(r.sub, "");
+    lv_obj_set_width(r.sub, 340);   // leave room for the right-edge progress %
+    lv_label_set_long_mode(r.sub, LV_LABEL_LONG_DOT);
     lv_obj_align(r.sub, LV_ALIGN_LEFT_MID, 26, 10);
     lv_obj_add_style(r.sub, &s_label_dim, 0);
 
@@ -117,6 +119,13 @@ static void hide_empty_state() {
     if (s_empty_lbl) lv_obj_add_flag(s_empty_lbl, LV_OBJ_FLAG_HIDDEN);
 }
 
+// Compact remaining-time string ("1h12" / "12m") for the at-a-glance sub-line.
+static void short_eta(uint32_t secs, char* out, size_t n) {
+    uint32_t h = secs / 3600, m = (secs % 3600) / 60;
+    if (h) snprintf(out, n, "%uh%02u", (unsigned)h, (unsigned)m);
+    else   snprintf(out, n, "%um", (unsigned)m);
+}
+
 void update_printers(int focused_id) {
     maybe_hide_toast();
     ::bambuddy::Printer ps[::bambuddy::MAX_PRINTERS]; uint8_t n = 0;
@@ -154,12 +163,25 @@ void update_printers(int focused_id) {
         lv_obj_set_style_bg_color(r.dot, lv_color_hex(state_color(ps[i].state)), 0);
         lv_label_set_text(r.name, ps[i].name.c_str());
 
-        char sub[64];
-        snprintf(sub, sizeof(sub), "%s  %s",
-                 ps[i].model.c_str(), state_name(ps[i].state));
+        using PState = ::bambuddy::PrinterState;   // 'PS' clashes with the Xtensa register macro
+        bool active = (ps[i].state == PState::Printing || ps[i].state == PState::Paused);
+        char sub[80];
+        if (active) {
+            // Live at-a-glance status: nozzle/bed temps + remaining ETA.
+            char eta[16] = "";
+            if (ps[i].remaining_s > 0) {
+                char e[12]; short_eta(ps[i].remaining_s, e, sizeof(e));
+                snprintf(eta, sizeof(eta), "  \xC2\xB7  %s", e);
+            }
+            snprintf(sub, sizeof(sub), "%s  \xC2\xB7  %.0f\xC2\xB0/%.0f\xC2\xB0%s",
+                     ps[i].model.c_str(), ps[i].temps.nozzle, ps[i].temps.bed, eta);
+        } else {
+            snprintf(sub, sizeof(sub), "%s  \xC2\xB7  %s",
+                     ps[i].model.c_str(), state_name(ps[i].state));
+        }
         lv_label_set_text(r.sub, sub);
 
-        if (ps[i].state == ::bambuddy::PrinterState::Printing) {
+        if (active) {
             char pbuf[8];
             snprintf(pbuf, sizeof(pbuf), "%u%%", (unsigned)ps[i].progress);
             lv_label_set_text(r.prog, pbuf);

@@ -5,6 +5,38 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.18.0 — 2026-06
+
+A feature round from the post-audit idea list: more at-a-glance status, a
+couple of new live readouts, and a parsing optimisation.
+
+### Added
+
+- **Print finished / failed toast.** When any printer leaves a printing state
+  for Finish (✓) or Failed/Error, a toast pops over whatever screen is up — so
+  a finished or failed job is noticed even from another tab. One-shot per
+  transition; nothing fires for an already-finished printer at boot.
+- **Live status on the Printers list.** A printing/paused row now shows its
+  nozzle/bed temps and remaining ETA inline (e.g. `X1C · 220°/60° · 1h12`)
+  beside the progress %, turning the Printers tab into an at-a-glance
+  multi-printer view without leaving it.
+- **AMS drying countdown.** The drying readout ticks down live (mm:ss in the
+  final hour) instead of showing a static minutes figure — re-synced to
+  Bambuddy's authoritative remaining-minutes on every poll.
+
+### Changed
+
+- **The camera refreshes faster while the full-screen viewer is open** (~2 s vs
+  the 5 s thumbnail cadence) for a more live picture; it backs off again on close.
+
+### Internal
+
+- **`/status` is parsed through an ArduinoJson filter.** Bambuddy mirrors the
+  full MQTT report under `/status`; the firmware reads ~25 fields of it. A
+  filter whitelisting exactly those fields shrinks the PSRAM document and the
+  parse time on every REST status fetch. The CI simulator renders the same real
+  data unchanged, confirming nothing the UI needs was filtered out.
+
 ## v0.17.3 — 2026-06
 
 A second full-project audit pass. No critical or major bugs surfaced — the

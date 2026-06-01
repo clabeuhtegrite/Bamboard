@@ -30,6 +30,13 @@ static lv_obj_t* s_root        = nullptr;
 static lv_obj_t* s_screens[(uint8_t)Screen::_Count] = {};
 static lv_obj_t* s_header      = nullptr;
 
+// One-shot "print finished / failed" toast: remember each printer's last state
+// (keyed by id) and fire a toast when it leaves a printing state for Finish or
+// Failed/Error. Shown over whatever screen is up (the toast is a global overlay).
+struct PrevPrinterState { int id; ::bambuddy::PrinterState state; };
+static PrevPrinterState s_prev_state[::bambuddy::MAX_PRINTERS];
+static uint8_t          s_prev_state_n = 0;
+
 // Forward declaration — the swipe handler attached to each screen needs
 // to call go_to_next / go_to_prev on the manager.
 static void screen_gesture_cb(lv_event_t* e);
@@ -120,6 +127,36 @@ void Manager::refresh() {
     ::bambuddy::g_client.snapshot_printers(ps, n);
     if (selected_printer_id_ < 0 && n > 0) {
         selected_printer_id_ = ps[0].id;
+    }
+
+    // Fire a one-shot toast when any printer leaves a printing state for
+    // Finish (✓) or Failed/Error. Skipped on the first sight of a printer
+    // (no known previous state) so an already-finished job doesn't toast at boot.
+    {
+        using PState = ::bambuddy::PrinterState;   // 'PS' clashes with the Xtensa register macro
+        for (uint8_t i = 0; i < n; ++i) {
+            PState prev = PState::Unknown; bool known = false;
+            for (uint8_t k = 0; k < s_prev_state_n; ++k)
+                if (s_prev_state[k].id == ps[i].id) { prev = s_prev_state[k].state; known = true; break; }
+            if (known && (prev == PState::Printing || prev == PState::Paused)) {
+                char m[64];
+                if (ps[i].state == PState::Finish) {
+                    snprintf(m, sizeof(m), "%s  " LV_SYMBOL_OK " %s",
+                             ps[i].name.c_str(), ::i18n::tr(::i18n::Str::PRINT_DONE));
+                    screens::show_toast(m, lv_color_hex(::ui::C_OK));
+                } else if (ps[i].state == PState::Failed || ps[i].state == PState::Error) {
+                    snprintf(m, sizeof(m), "%s  " LV_SYMBOL_WARNING " %s",
+                             ps[i].name.c_str(), ::i18n::tr(::i18n::Str::PRINT_FAILED));
+                    screens::show_toast(m, lv_color_hex(::ui::C_ERR));
+                }
+            }
+        }
+        s_prev_state_n = 0;
+        for (uint8_t i = 0; i < n && i < ::bambuddy::MAX_PRINTERS; ++i) {
+            s_prev_state[i].id    = ps[i].id;
+            s_prev_state[i].state = ps[i].state;
+            ++s_prev_state_n;
+        }
     }
 
     switch (current_) {

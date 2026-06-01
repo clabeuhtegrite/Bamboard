@@ -209,7 +209,10 @@ class Client {
     bool last_error(String& out) const;
 
    private:
-    bool do_get(const String& path, JsonDocument& out_doc);
+    // `filter` (optional) is an ArduinoJson filter document: when set, only the
+    // whitelisted fields are parsed out of the response — used on the large
+    // /status payload (which mirrors the full MQTT report) to cut PSRAM + time.
+    bool do_get(const String& path, JsonDocument& out_doc, JsonDocument* filter = nullptr);
     bool do_post(const String& path, const String& body, JsonDocument* out_doc);
 
     // Configure `http` for `url`: pick the transport by scheme (https → validate
