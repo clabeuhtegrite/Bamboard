@@ -51,7 +51,11 @@ class Manager {
     void show_toast(const char* text, lv_color_t colour);
 
     Screen current_ = Screen::Dashboard;
-    int    selected_printer_id_ = -1;
+    // Written on the UI task (tap-row / auto-pick), also read on the net task
+    // (focused-printer polling + camera). A 32-bit aligned scalar is read/written
+    // atomically on the ESP32, so `volatile` (no caching) is enough here — the
+    // worst case is one poll cycle aimed at the previous printer.
+    volatile int selected_printer_id_ = -1;
 
     // HMS flash state machine (driven from refresh()). The overlay's own
     // visibility lives in screens::hms_flash_is_visible(); we only track

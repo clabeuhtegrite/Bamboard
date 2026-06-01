@@ -47,7 +47,6 @@ constexpr uint8_t BOOT_BUTTON = 0;
 // building its Light_PWM config.
 constexpr uint8_t  BL_PIN     = 2;
 constexpr uint32_t BL_FREQ    = 5000;
-constexpr uint8_t  BL_RES     = 8;
 
 // GT911 capacitive touch controller on the Guition JC4827W543. The board
 // routes the touch IC onto a dedicated I²C bus that doesn't clash with the
