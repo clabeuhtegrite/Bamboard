@@ -1,9 +1,14 @@
 name: ci
 
 # Compile the firmware on every pull request and on pushes to main, so a build
-# break is caught here instead of only when a v* release tag is pushed. This is
-# build-only — no artifacts are published (that's release.yml's job, on v*
-# tags). The build has no version tag, so it reports the 0.0.0-dev sentinel.
+# break is caught here instead of only when a v* release tag is pushed. The
+# build has no version tag, so it reports the 0.0.0-dev sentinel (which also
+# disables the boot-time OTA check — handy for flashing a test build without it
+# being overwritten by the published release).
+#
+# It also uploads the app + factory binaries as a workflow artifact so a branch
+# can be flashed and eyeballed before it's released. This is NOT a release
+# (no GitHub Release, no OTA manifest) — that stays release.yml's job on v* tags.
 
 on:
   push:
@@ -36,9 +41,34 @@ jobs:
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
           restore-keys: pio-${{ runner.os }}-
 
-      - name: Install PlatformIO
-        run: pip install --upgrade platformio
+      - name: Install PlatformIO + esptool
+        run: |
+          pip install --upgrade platformio
+          pip install "esptool>=4.7,<5"
 
       - name: Build firmware
         working-directory: firmware
         run: pio run -e esp32-s3-devkitc-1
+
+      - name: Merge factory image
+        working-directory: firmware
+        run: |
+          set -euo pipefail
+          BD=.pio/build/esp32-s3-devkitc-1
+          BOOT_APP0="$HOME/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin"
+          python -m esptool --chip esp32s3 merge_bin \
+            -o "$BD/bamboard-factory.bin" \
+            --flash_mode keep --flash_freq keep --flash_size keep \
+            0x0     "$BD/bootloader.bin" \
+            0x8000  "$BD/partitions.bin" \
+            0xe000  "$BOOT_APP0" \
+            0x10000 "$BD/firmware.bin"
+
+      - name: Upload test-build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bamboard-firmware-${{ github.sha }}
+          path: |
+            firmware/.pio/build/esp32-s3-devkitc-1/firmware.bin
+            firmware/.pio/build/esp32-s3-devkitc-1/bamboard-factory.bin
+          if-no-files-found: error

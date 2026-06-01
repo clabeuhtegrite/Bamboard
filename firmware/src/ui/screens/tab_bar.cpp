@@ -64,6 +64,9 @@ lv_obj_t* build_tab_bar(lv_obj_t* parent) {
         lv_obj_remove_style_all(btn);
         lv_obj_set_size(btn, tab_w, ::ui::TAB_BAR_H);
         lv_obj_set_pos(btn, i * tab_w, 0);
+        // A dark-teal wash fades in behind the active cell (toggled in
+        // tab_bar_set_active); inactive cells stay transparent.
+        lv_obj_set_style_bg_color(btn, lv_color_hex(::ui::C_TINT), 0);
         lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
         lv_obj_set_style_pad_all(btn, 0, 0);
         lv_obj_add_event_cb(btn, tab_clicked_cb, LV_EVENT_CLICKED,
@@ -112,6 +115,8 @@ void tab_bar_set_active(uint8_t idx) {
         lv_obj_set_style_text_color(s_tab_labels[i], lv_color_hex(col), 0);
         lv_obj_set_style_bg_opa(s_tab_indicat[i],
                                 on ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+        // ~55 % dark-teal wash behind the active cell.
+        lv_obj_set_style_bg_opa(s_tab_btns[i], on ? 140 : LV_OPA_TRANSP, 0);
     }
 }
 

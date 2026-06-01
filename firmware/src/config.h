@@ -153,6 +153,17 @@ constexpr uint32_t C_TEXT        = 0xE9EEF3;
 constexpr uint32_t C_TEXT_DIM    = 0x8A95A4;
 constexpr uint32_t C_TEXT_INV    = 0x0E1116;   // text on top of accent fill
 
+// v0.10 visual refresh — depth + accent tokens.
+// Cards get a subtle top-to-bottom gradient (TOP lighter than BOT) plus a
+// crisp hairline for elevation; we avoid heavy blur shadows to protect the
+// ESP32 frame rate. The accent gradient (C_ACCENT -> C_ACCENT_DARK) fills
+// the active chip / primary button. C_TINT is a dark-teal wash used behind
+// the active tab cell and the dashboard state pill.
+constexpr uint32_t C_PANEL_GRAD_TOP = 0x2B313B;
+constexpr uint32_t C_PANEL_GRAD_BOT = 0x222831;
+constexpr uint32_t C_TINT           = 0x0E2A2E;   // dark-teal accent wash
+constexpr uint32_t C_ACCENT_HI      = 0x2BE0EC;   // bright accent (pill text)
+
 // Shared radii so every panel / button / pill agrees with the others.
 // Bumping these in one place reshapes the whole UI consistently.
 constexpr uint8_t  R_PANEL      = 12;

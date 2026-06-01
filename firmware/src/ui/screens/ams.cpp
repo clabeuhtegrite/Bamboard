@@ -46,13 +46,13 @@ static lv_obj_t* make_ams_slot_card(lv_obj_t* parent,
                                      lv_obj_t** bar) {
     lv_obj_t* card = lv_obj_create(parent);
     lv_obj_add_style(card, &s_panel, 0);
-    lv_obj_set_size(card, 106, 156);
+    lv_obj_set_size(card, 108, 156);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_pad_all(card, 0, 0);
 
     *swatch = lv_obj_create(card);
     lv_obj_remove_style_all(*swatch);
-    lv_obj_set_size(*swatch, 106, 50);
+    lv_obj_set_size(*swatch, 108, 50);
     lv_obj_align(*swatch, LV_ALIGN_TOP_LEFT, 0, 0);
     lv_obj_set_style_radius(*swatch, 8, 0);
     lv_obj_set_style_bg_opa(*swatch, LV_OPA_COVER, 0);
@@ -199,11 +199,11 @@ lv_obj_t* build_ams(lv_obj_t* parent) {
     lv_obj_center(s_ams_dry_btn_lbl);
     lv_obj_add_flag(s_ams_dry_btn, LV_OBJ_FLAG_HIDDEN);
 
-    // --- Slot row ---
+    // --- Slot row --- (unified 12 px gutter; 4×108 cards + 3×8 gaps = 456)
     s_ams_row = lv_obj_create(s_ams_root);
     lv_obj_remove_style_all(s_ams_row);
-    lv_obj_set_size(s_ams_row, LV_HOR_RES - 32, 148);
-    lv_obj_align(s_ams_row, LV_ALIGN_TOP_LEFT, 16, 40);
+    lv_obj_set_size(s_ams_row, LV_HOR_RES - 24, 148);
+    lv_obj_align(s_ams_row, LV_ALIGN_TOP_LEFT, 12, 40);
     lv_obj_set_flex_flow(s_ams_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_column(s_ams_row, 8, 0);
     lv_obj_clear_flag(s_ams_row, LV_OBJ_FLAG_SCROLLABLE);

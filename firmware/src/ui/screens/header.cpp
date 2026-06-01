@@ -40,23 +40,42 @@ lv_obj_t* build_header(lv_obj_t* parent) {
     lv_obj_set_style_border_opa(hdr, LV_OPA_70, 0);
     lv_obj_clear_flag(hdr, LV_OBJ_FLAG_SCROLLABLE);
 
+    // Small accent square "logo" mark at the far left.
+    lv_obj_t* mark = lv_obj_create(hdr);
+    lv_obj_remove_style_all(mark);
+    lv_obj_set_size(mark, 10, 10);
+    lv_obj_align(mark, LV_ALIGN_LEFT_MID, 12, 0);
+    lv_obj_set_style_radius(mark, 3, 0);
+    lv_obj_set_style_bg_opa(mark, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(mark, lv_color_hex(::ui::C_ACCENT), 0);
+
+    // Brand wordmark — "board" recoloured in accent. The header shows the
+    // brand, NOT the screen name: the bottom tab bar already marks the active
+    // screen, so a screen title up here would just duplicate it.
     s_hdr_title = lv_label_create(hdr);
-    lv_label_set_text(s_hdr_title, "Bamboard");
-    lv_obj_align(s_hdr_title, LV_ALIGN_LEFT_MID, 12, 0);
-    lv_obj_set_style_text_color(s_hdr_title, lv_color_hex(::ui::C_ACCENT), 0);
+    lv_label_set_recolor(s_hdr_title, true);
+    lv_label_set_text(s_hdr_title, "Bam#00B7C3 board#");
+    lv_obj_align(s_hdr_title, LV_ALIGN_LEFT_MID, 29, 0);
+    lv_obj_set_style_text_color(s_hdr_title, lv_color_hex(::ui::C_TEXT), 0);
     lv_obj_set_style_text_font(s_hdr_title, &bb_font_20, 0);
 
     s_hdr_printer = lv_label_create(hdr);
     lv_label_set_text(s_hdr_printer, "");
     lv_obj_align(s_hdr_printer, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_text_color(s_hdr_printer, lv_color_hex(::ui::C_TEXT), 0);
-    lv_obj_set_style_text_font(s_hdr_printer, &bb_font_16, 0);
+    lv_obj_set_style_text_color(s_hdr_printer, lv_color_hex(::ui::C_TEXT_DIM), 0);
+    lv_obj_set_style_text_font(s_hdr_printer, &bb_font_14, 0);
 
+    // Connectivity readout styled as a rounded badge.
     s_hdr_conn = lv_label_create(hdr);
     lv_label_set_text(s_hdr_conn, LV_SYMBOL_WIFI " --");
     lv_obj_align(s_hdr_conn, LV_ALIGN_RIGHT_MID, -12, 0);
     lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_TEXT_DIM), 0);
     lv_obj_set_style_text_font(s_hdr_conn, &bb_font_14, 0);
+    lv_obj_set_style_bg_color(s_hdr_conn, lv_color_hex(::ui::C_TINT), 0);
+    lv_obj_set_style_bg_opa(s_hdr_conn, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(s_hdr_conn, ::ui::R_PILL, 0);
+    lv_obj_set_style_pad_hor(s_hdr_conn, 8, 0);
+    lv_obj_set_style_pad_ver(s_hdr_conn, 2, 0);
     return hdr;
 }
 

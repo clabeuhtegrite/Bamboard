@@ -86,6 +86,15 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
     lv_obj_align(s_set_root, LV_ALIGN_TOP_LEFT, 0, ::ui::HEADER_H);
     lv_obj_clear_flag(s_set_root, LV_OBJ_FLAG_SCROLLABLE);
 
+    // A card panel sits behind the read-only diagnostics rows (the rows
+    // themselves stay absolutely positioned and draw on top of it). Created
+    // first so it lands underneath.
+    lv_obj_t* diag_card = lv_obj_create(s_set_root);
+    lv_obj_add_style(diag_card, &s_panel, 0);
+    lv_obj_set_size(diag_card, LV_HOR_RES - 24, 80);
+    lv_obj_align(diag_card, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_clear_flag(diag_card, LV_OBJ_FLAG_SCROLLABLE);
+
     auto make_row = [&](const char* k, int y) {
         lv_obj_t* kl = lv_label_create(s_set_root);
         lv_label_set_text(kl, k);

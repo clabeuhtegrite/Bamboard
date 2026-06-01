@@ -5,6 +5,38 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.10.0 — 2026-06
+
+UI visual refresh. Same screens and controls, a more coherent and polished
+look across all of them. Designed mockups-first (`docs/screenshots/`), then the
+firmware was brought in line.
+
+### Changed
+
+- **Brand wordmark header.** Every screen now shows the **Bamboard** wordmark
+  (with an accent mark + the focused printer + a Wi-Fi link badge) instead of
+  the screen name — the bottom tab bar already marks the active screen, so the
+  title was a duplicate.
+- **Print speed is one button + a menu.** The always-on 4-segment speed chip on
+  Live is replaced by a single button showing the current mode; tapping it opens
+  a modal 4-item picker (Silent / Standard / Sport / Ludicrous). Frees up the
+  action row and reads cleaner.
+- **Depth + cohesion.** Cards get a subtle vertical gradient and a crisp
+  hairline (no blur shadow — it would tax the ESP32 frame rate); the active
+  chip, primary buttons and the progress ring use an accent gradient; the
+  printer state shows as a dot+label pill; the active tab cell gets a dark-teal
+  wash behind its accent icon/label.
+- **Consistent geometry.** Unified 12 px content gutter everywhere (AMS was
+  16 px); the three temperature cells are now equal width (were 142/142/156).
+- **Refreshed mockups + hero render.** `docs/screenshots/*` and the README
+  reflect the new look, with vector icons faithful to the FontAwesome glyphs
+  the firmware renders.
+
+### Notes
+
+- No functional/behaviour change to printing, AMS control, OTA or networking —
+  this release is cosmetic. All controls work exactly as before.
+
 ## v0.9.1 — 2026-06
 
 Hardening + performance pass from a full-project audit. No new features —

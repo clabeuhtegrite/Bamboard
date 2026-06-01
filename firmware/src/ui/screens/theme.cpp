@@ -24,8 +24,13 @@ void ensure_styles() {
     if (s_styles_ready) return;
     s_styles_ready = true;
 
+    // v0.10: cards carry a subtle vertical gradient (lighter top → darker
+    // bottom) + a crisp hairline for depth. No blur shadow — it would tax the
+    // ESP32 frame rate once a dozen cards are on screen at once.
     lv_style_init(&s_panel);
-    lv_style_set_bg_color(&s_panel, lv_color_hex(::ui::C_PANEL_HI));
+    lv_style_set_bg_color(&s_panel, lv_color_hex(::ui::C_PANEL_GRAD_TOP));
+    lv_style_set_bg_grad_color(&s_panel, lv_color_hex(::ui::C_PANEL_GRAD_BOT));
+    lv_style_set_bg_grad_dir(&s_panel, LV_GRAD_DIR_VER);
     lv_style_set_bg_opa(&s_panel, LV_OPA_COVER);
     lv_style_set_border_width(&s_panel, 1);
     lv_style_set_border_color(&s_panel, lv_color_hex(::ui::C_PANEL_LINE));
@@ -65,9 +70,12 @@ void ensure_styles() {
     lv_style_set_text_color(&s_btn, lv_color_hex(::ui::C_TEXT));
     lv_style_set_text_font(&s_btn, &bb_font_16);
 
-    // Accent variant — the "do the thing" primary action.
+    // Accent variant — the "do the thing" primary action. Vertical accent
+    // gradient gives it a little dimensionality vs the flat chips.
     lv_style_init(&s_btn_accent);
     lv_style_set_bg_color(&s_btn_accent, lv_color_hex(::ui::C_ACCENT));
+    lv_style_set_bg_grad_color(&s_btn_accent, lv_color_hex(::ui::C_ACCENT_DARK));
+    lv_style_set_bg_grad_dir(&s_btn_accent, LV_GRAD_DIR_VER);
     lv_style_set_border_color(&s_btn_accent,
                               lv_color_hex(::ui::C_ACCENT_DARK));
     lv_style_set_border_opa(&s_btn_accent, LV_OPA_COVER);
@@ -94,6 +102,8 @@ void ensure_styles() {
 
     lv_style_init(&s_chip_on);
     lv_style_set_bg_color(&s_chip_on, lv_color_hex(::ui::C_ACCENT));
+    lv_style_set_bg_grad_color(&s_chip_on, lv_color_hex(::ui::C_ACCENT_DARK));
+    lv_style_set_bg_grad_dir(&s_chip_on, LV_GRAD_DIR_VER);
     lv_style_set_text_color(&s_chip_on, lv_color_hex(::ui::C_TEXT_INV));
     lv_style_set_text_font(&s_chip_on, &bb_font_14);
 }
