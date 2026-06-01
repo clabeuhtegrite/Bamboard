@@ -5,6 +5,30 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.13.0 — 2026-06
+
+AMS readability + drying reach. Both issues were seen on the host simulator
+rendering real Bambuddy data (a 3-unit AMS 2 Pro with black PLA and clear PETG).
+
+### Added
+
+- **Dry / Stop on AMS 2 Pro.** The drying control was gated on AMS-HT only, so
+  it never appeared on AMS 2 Pro units (they report `is_ams_ht=false` despite
+  having a heater). It now shows on any heater-equipped unit — detected via
+  HT-or-has-an-ambient-temperature — and stays hidden on the heater-less
+  first-gen AMS.
+
+### Fixed
+
+- **Black and clear filament were indistinguishable (both drawn as panel grey).**
+  Bambu reports tray colour as `RRGGBBAA`; we discarded the alpha, so clear PETG
+  (`00000000`) and black PLA (`000000FF`) both became RGB `000000` — and the
+  renderer additionally treated `000000` as "unknown" and painted it the panel
+  highlight colour. Now: the alpha is parsed into a `translucent` flag, every
+  swatch carries a 1 px outline so a black spool reads against the dark panel,
+  real black renders as black, and translucent / "clear" filament renders as a
+  light checkerboard (washed toward the filament's own tint when it has one).
+
 ## v0.12.1 — 2026-06
 
 Bug-fix release — all three caught by the new host simulator running against a

@@ -38,11 +38,12 @@ struct Temperatures {
 // as RRGGBBAA hex; we strip alpha at parse time so the UI can pass a 0xRRGGBB
 // value straight into LVGL.
 struct AmsSlot {
-    uint8_t  id        = 0;          // 0..3 within the unit
-    bool     present   = false;      // true when the slot reports any filament data
-    uint32_t color_rgb = 0;          // 0xRRGGBB, 0 = unknown
-    char     type[12]  = {};         // "PLA", "PETG", "" — short tag for the slot
-    uint8_t  remain    = 0;          // 0..100, Bambu's RFID estimate
+    uint8_t  id          = 0;        // 0..3 within the unit
+    bool     present     = false;    // true when the slot reports any filament data
+    uint32_t color_rgb   = 0;        // 0xRRGGBB, 0 = unknown / black (see translucent)
+    bool     translucent = false;    // tray_color alpha < 0x80 → clear/see-through
+    char     type[12]    = {};       // "PLA", "PETG", "" — short tag for the slot
+    uint8_t  remain      = 0;        // 0..100, Bambu's RFID estimate
 };
 
 // One AMS (or AMS-HT) unit. Bambu chains up to 4 units per printer; we cap at

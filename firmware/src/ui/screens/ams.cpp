@@ -5,10 +5,15 @@
 //
 // Slot row (y=76..224): up to 4 cards (1 for AMS-HT, 4 for vanilla AMS).
 // Each card carries a colour swatch + filament type + remaining % + bar.
+// Every swatch gets a 1 px outline so a black spool reads against the dark
+// panel; clear/translucent filament (low tray_color alpha) is drawn as a
+// checkerboard instead of a flat near-black square.
 //
 // The chevrons sit flush against the unit label and only become visible
 // when the focused printer has more than one chained AMS / AMS-HT unit.
-// The Dry / Stop button is hidden entirely on non-HT units (no heater).
+// The Dry / Stop button shows on any heater-equipped unit — AMS-HT *and*
+// AMS 2 Pro (the latter reports is_ams_ht=false but still dries); it's hidden
+// only on the first-gen AMS, which has no heater.
 
 #include "theme.h"
 
@@ -37,6 +42,35 @@ uint8_t ams_visible_unit_index() {
     return (uint8_t)(s_ams_visible_index < 0 ? 0 : s_ams_visible_index);
 }
 
+// A tiny 2-shade checkerboard, tiled behind translucent / "clear" filament so a
+// see-through spool reads as transparent instead of as a flat near-black square
+// (Bambu reports clear PETG as RGB 000000 — identical to black without alpha).
+// INDEXED_1BIT: a 2-colour palette (4 bytes BGRA each) followed by a 16x16
+// 1-bpp bitmap (MSB-first, 2 bytes/row), 8 px squares. Both shades are light so
+// the pattern pops on the dark panel; render_ams_slot can wash it toward the
+// filament's own colour for tinted-translucent spools.
+static const uint8_t kCheckerMap[] = {
+    0xB0, 0xB0, 0xB0, 0xFF,   // idx 0 — light grey
+    0xE6, 0xE6, 0xE6, 0xFF,   // idx 1 — near-white
+    0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,   // rows  0..3
+    0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,   // rows  4..7
+    0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,   // rows  8..11
+    0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,   // rows 12..15
+};
+static const lv_img_dsc_t kChecker = {
+    { LV_IMG_CF_INDEXED_1BIT, 0, 0, 16, 16 },   // header: cf, always_zero, reserved, w, h
+    sizeof(kCheckerMap),
+    kCheckerMap,
+};
+
+// AMS-HT and AMS 2 Pro both carry a heater + ambient-temp sensor and can run a
+// drying cycle; the first-gen AMS has neither. "Is HT, or reports a temperature"
+// is the dryer-capability proxy — it lights the Dry control on Pro units, which
+// report is_ams_ht=false.
+static bool ams_unit_can_dry(const ::bambuddy::AmsUnit& u) {
+    return u.is_ht || u.temp > 0.5f;
+}
+
 // ---- slot card --------------------------------------------------------------
 
 static lv_obj_t* make_ams_slot_card(lv_obj_t* parent,
@@ -57,6 +91,13 @@ static lv_obj_t* make_ams_slot_card(lv_obj_t* parent,
     lv_obj_set_style_radius(*swatch, 8, 0);
     lv_obj_set_style_bg_opa(*swatch, LV_OPA_COVER, 0);
     lv_obj_set_style_bg_color(*swatch, lv_color_hex(::ui::C_PANEL_HI), 0);
+    // Outline (so a black/dark/clear swatch reads against the dark card) +
+    // tiling for the checkerboard bg-image. Width is toggled per-slot in
+    // render_ams_slot (0 on empty slots); the colour/opacity are static.
+    lv_obj_set_style_border_color(*swatch, lv_color_hex(::ui::C_TEXT_DIM), 0);
+    lv_obj_set_style_border_opa(*swatch, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(*swatch, 0, 0);
+    lv_obj_set_style_bg_img_tiled(*swatch, true, 0);
 
     *type_lbl = lv_label_create(card);
     lv_label_set_text(*type_lbl, "-");
@@ -230,10 +271,12 @@ lv_obj_t* build_ams(lv_obj_t* parent) {
 // ---- updater ----------------------------------------------------------------
 
 static void render_ams_slot(uint8_t idx, const ::bambuddy::AmsSlot* s) {
+    lv_obj_t* sw = s_ams_card_swatch[idx];
     lv_obj_clear_flag(s_ams_card[idx], LV_OBJ_FLAG_HIDDEN);
     if (!s || !s->present) {
-        lv_obj_set_style_bg_color(s_ams_card_swatch[idx],
-                                   lv_color_hex(::ui::C_PANEL_HI), 0);
+        lv_obj_set_style_bg_img_src(sw, NULL, 0);
+        lv_obj_set_style_bg_color(sw, lv_color_hex(::ui::C_PANEL_HI), 0);
+        lv_obj_set_style_border_width(sw, 0, 0);
         lv_label_set_text(s_ams_card_type[idx], i18n::tr(i18n::Str::EMPTY));
         lv_obj_set_style_text_color(s_ams_card_type[idx],
                                      lv_color_hex(::ui::C_TEXT_DIM), 0);
@@ -243,8 +286,24 @@ static void render_ams_slot(uint8_t idx, const ::bambuddy::AmsSlot* s) {
         lv_bar_set_value(s_ams_card_bar[idx], 0, LV_ANIM_OFF);
         return;
     }
-    uint32_t rgb = s->color_rgb ? s->color_rgb : ::ui::C_PANEL_HI;
-    lv_obj_set_style_bg_color(s_ams_card_swatch[idx], lv_color_hex(rgb), 0);
+    // Translucent / clear filament → checkerboard (so a see-through spool reads
+    // as transparent); opaque → its real colour, even pure black (the static
+    // 1 px outline keeps a black swatch off the dark card). Reset every property
+    // each pass since the 4 swatch objects are reused across refreshes.
+    if (s->translucent) {
+        lv_obj_set_style_bg_color(sw, lv_color_hex(0xE6E6E6), 0);
+        lv_obj_set_style_bg_img_src(sw, &kChecker, 0);
+        if (s->color_rgb) {   // tinted-translucent → wash the checker toward it
+            lv_obj_set_style_bg_img_recolor(sw, lv_color_hex(s->color_rgb), 0);
+            lv_obj_set_style_bg_img_recolor_opa(sw, LV_OPA_40, 0);
+        } else {
+            lv_obj_set_style_bg_img_recolor_opa(sw, LV_OPA_TRANSP, 0);
+        }
+    } else {
+        lv_obj_set_style_bg_img_src(sw, NULL, 0);
+        lv_obj_set_style_bg_color(sw, lv_color_hex(s->color_rgb), 0);
+    }
+    lv_obj_set_style_border_width(sw, 1, 0);
     lv_label_set_text(s_ams_card_type[idx], s->type[0] ? s->type : "-");
     lv_obj_set_style_text_color(s_ams_card_type[idx],
                                  lv_color_hex(::ui::C_TEXT), 0);
@@ -311,10 +370,10 @@ void update_ams(int printer_id) {
         lv_obj_add_flag(s_ams_next_btn, LV_OBJ_FLAG_HIDDEN);
     }
 
-    // Drying button label + colour reflect the current state of *this*
-    // unit (not the whole printer). HT units have a heater; vanilla AMS
-    // doesn't, so we hide the button entirely on those.
-    if (u.is_ht) {
+    // Drying button label + colour reflect the current state of *this* unit
+    // (not the whole printer). Shown on any heater-equipped unit — AMS-HT and
+    // AMS 2 Pro (see ams_unit_can_dry); hidden on the heater-less first-gen AMS.
+    if (ams_unit_can_dry(u)) {
         lv_obj_clear_flag(s_ams_dry_btn, LV_OBJ_FLAG_HIDDEN);
         if (u.dry_time_min > 0) {
             lv_label_set_text(s_ams_dry_btn_lbl, i18n::tr(i18n::Str::STOP));
