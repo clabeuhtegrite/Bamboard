@@ -46,6 +46,7 @@ void Manager::begin() {
     s_screens[(uint8_t)Screen::Dashboard] = screens::build_dashboard(s_root);
     s_screens[(uint8_t)Screen::Ams]       = screens::build_ams(s_root);
     s_screens[(uint8_t)Screen::Printers]  = screens::build_printers(s_root);
+    s_screens[(uint8_t)Screen::Queue]     = screens::build_queue(s_root);
     s_screens[(uint8_t)Screen::History]   = screens::build_history(s_root);
     s_screens[(uint8_t)Screen::Settings]  = screens::build_settings(s_root);
 
@@ -125,6 +126,7 @@ void Manager::refresh() {
         case Screen::Dashboard: screens::update_dashboard(selected_printer_id_); break;
         case Screen::Ams:       screens::update_ams(selected_printer_id_);       break;
         case Screen::Printers:  screens::update_printers(selected_printer_id_);  break;
+        case Screen::Queue:     screens::update_queue();                         break;
         case Screen::History:   screens::update_history();                       break;
         case Screen::Settings:  screens::update_settings();                      break;
         default: break;

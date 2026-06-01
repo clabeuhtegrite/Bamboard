@@ -122,6 +122,8 @@ constexpr uint32_t POLL_DASHBOARD_MS = 2000;     // active dashboard, no WS
 constexpr uint32_t POLL_LIST_MS      = 5000;
 constexpr uint32_t POLL_STATS_MS     = 30000;
 constexpr uint32_t POLL_HEALTH_MS    = 15000;
+constexpr uint32_t POLL_QUEUE_MS     = 15000;    // print-queue refresh
+constexpr uint32_t POLL_SYSINFO_MS   = 60000;    // Bambuddy version / uptime
 
 // When the WebSocket is connected the server pushes printer_status frames
 // on every MQTT delta, so REST polling becomes a low-cadence safety net.
@@ -137,6 +139,9 @@ constexpr uint8_t  MAX_PRINTERS = 8;
 
 // Max recent archives we display.
 constexpr uint8_t  MAX_RECENT_ARCHIVES = 10;
+
+// Max pending print-queue items we keep / show.
+constexpr uint8_t  MAX_QUEUE_ITEMS = 10;
 
 }  // namespace bambuddy
 

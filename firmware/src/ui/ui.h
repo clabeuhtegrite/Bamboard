@@ -22,6 +22,7 @@ enum class Screen : uint8_t {
     Dashboard = 0,
     Ams,
     Printers,
+    Queue,
     History,
     Settings,
     _Count,

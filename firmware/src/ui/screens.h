@@ -12,6 +12,7 @@ namespace ui::screens {
 lv_obj_t* build_dashboard(lv_obj_t* parent);
 lv_obj_t* build_ams      (lv_obj_t* parent);
 lv_obj_t* build_printers (lv_obj_t* parent);
+lv_obj_t* build_queue    (lv_obj_t* parent);
 lv_obj_t* build_history  (lv_obj_t* parent);
 lv_obj_t* build_settings (lv_obj_t* parent);
 
@@ -20,6 +21,7 @@ lv_obj_t* build_settings (lv_obj_t* parent);
 void update_dashboard(int printer_id);
 void update_ams      (int printer_id);
 void update_printers (int focused_printer_id);
+void update_queue    ();
 void update_history  ();
 void update_settings ();
 

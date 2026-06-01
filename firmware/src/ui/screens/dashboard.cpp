@@ -42,6 +42,19 @@ static lv_obj_t* s_dash_speed_btn     = nullptr;
 static lv_obj_t* s_dash_speed_btn_lbl = nullptr;
 static lv_obj_t* s_dash_btn_plate     = nullptr;
 static lv_obj_t* s_dash_btn_hms       = nullptr;
+// Print controls (shown while printing/paused): pause/resume + stop, alongside
+// the speed button. Stop is two-tap (toast-confirmed) so a stray touch can't abort.
+static lv_obj_t* s_dash_btn_pause     = nullptr;
+static lv_obj_t* s_dash_btn_pause_lbl = nullptr;
+static lv_obj_t* s_dash_btn_stop      = nullptr;
+static uint32_t  s_dash_stop_armed_at = 0;
+static bool      s_dash_is_paused     = false;
+// Fan readout line (shares the HMS row — HMS wins when active) + a chamber-light
+// toggle pill at the right (amber when lit).
+static lv_obj_t* s_dash_fan_lbl       = nullptr;
+static lv_obj_t* s_dash_light_btn     = nullptr;
+static lv_obj_t* s_dash_light_lbl     = nullptr;
+static bool      s_dash_light_on      = false;
 // Modal speed picker (built once, hidden until the speed button is tapped).
 static lv_obj_t* s_speed_scrim        = nullptr;
 static lv_obj_t* s_speed_menu         = nullptr;
@@ -110,6 +123,37 @@ static void btn_hms_clicked(lv_event_t*) {
     show_toast(ok ? i18n::tr(i18n::Str::HMS_CLEARED)
                   : i18n::tr(i18n::Str::CLEAR_HMS_FAILED),
                lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
+}
+
+static void btn_pause_clicked(lv_event_t*) {
+    int id = ::ui::g_ui.selected_printer_id();
+    if (id < 0) return;
+    bool ok = s_dash_is_paused ? ::bambuddy::g_client.resume_print(id)
+                               : ::bambuddy::g_client.pause_print(id);
+    if (!ok) show_toast(i18n::tr(i18n::Str::CONTROL_FAILED), lv_color_hex(::ui::C_ERR));
+}
+
+// Stop is two-tap: the first tap arms (toast-confirmed); a second within 3 s
+// sends the stop. update_dashboard() disarms the window after 3 s.
+static void btn_stop_clicked(lv_event_t*) {
+    int id = ::ui::g_ui.selected_printer_id();
+    if (id < 0) return;
+    uint32_t now = lv_tick_get();
+    if (s_dash_stop_armed_at != 0 && (now - s_dash_stop_armed_at) < 3000) {
+        s_dash_stop_armed_at = 0;
+        bool ok = ::bambuddy::g_client.stop_print(id);
+        if (!ok) show_toast(i18n::tr(i18n::Str::CONTROL_FAILED), lv_color_hex(::ui::C_ERR));
+    } else {
+        s_dash_stop_armed_at = now;
+        show_toast(i18n::tr(i18n::Str::CONFIRM_STOP), lv_color_hex(::ui::C_WARN));
+    }
+}
+
+static void light_btn_clicked(lv_event_t*) {
+    int id = ::ui::g_ui.selected_printer_id();
+    if (id < 0) return;
+    bool ok = ::bambuddy::g_client.set_chamber_light(id, !s_dash_light_on);
+    if (!ok) show_toast(i18n::tr(i18n::Str::CONTROL_FAILED), lv_color_hex(::ui::C_ERR));
 }
 
 // Tapping the progress ring opens the full-screen camera snapshot overlay.
@@ -220,8 +264,8 @@ static void build_speed_control(lv_obj_t* parent, int y) {
     lv_obj_add_style(s_dash_speed_btn, &s_btn, 0);
     lv_obj_add_style(s_dash_speed_btn, &s_btn_pressed, LV_STATE_PRESSED);
     lv_obj_set_style_radius(s_dash_speed_btn, ::ui::R_PILL, 0);
-    lv_obj_set_size(s_dash_speed_btn, 182, ::ui::H_BTN);
-    lv_obj_set_pos(s_dash_speed_btn, 286, y);
+    lv_obj_set_size(s_dash_speed_btn, 178, ::ui::H_BTN);
+    lv_obj_set_pos(s_dash_speed_btn, 290, y);
     lv_obj_add_event_cb(s_dash_speed_btn, speed_btn_clicked, LV_EVENT_CLICKED, nullptr);
 
     s_dash_speed_btn_lbl = lv_label_create(s_dash_speed_btn);
@@ -349,7 +393,7 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     // --- HMS line (hidden when "ok") ---
     s_dash_hms = lv_label_create(s_dash_root);
     lv_label_set_text(s_dash_hms, "");
-    lv_obj_set_width(s_dash_hms, LV_HOR_RES - 24);
+    lv_obj_set_width(s_dash_hms, LV_HOR_RES - 100);   // leave room for the light pill
     lv_label_set_long_mode(s_dash_hms, LV_LABEL_LONG_DOT);
     lv_obj_set_pos(s_dash_hms, 12, 108);
     lv_obj_set_style_text_color(s_dash_hms, lv_color_hex(::ui::C_ERR), 0);
@@ -367,10 +411,45 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
                                        btn_hms_clicked, ::ui::C_ERR);
     build_speed_menu(s_dash_root);   // modal picker, hidden until the button is tapped
 
+    // Pause/Resume + Stop sit left of the speed button while printing. Pause is
+    // accent; Stop is amber (turns red once armed) and two-tap-confirmed.
+    s_dash_btn_pause = make_action_btn(s_dash_root, 12, 128, 146,
+                                       i18n::tr(i18n::Str::PAUSE), btn_pause_clicked);
+    s_dash_btn_pause_lbl = lv_obj_get_child(s_dash_btn_pause, 0);
+    s_dash_btn_stop  = make_action_btn(s_dash_root, 164, 128, 120,
+                                       i18n::tr(i18n::Str::STOP), btn_stop_clicked,
+                                       ::ui::C_WARN);
+
+    // Fan readout (shares the HMS y) + chamber-light toggle pill at the right.
+    s_dash_fan_lbl = lv_label_create(s_dash_root);
+    lv_label_set_text(s_dash_fan_lbl, "");
+    lv_obj_set_width(s_dash_fan_lbl, 384);
+    lv_label_set_long_mode(s_dash_fan_lbl, LV_LABEL_LONG_DOT);
+    lv_obj_set_pos(s_dash_fan_lbl, 12, 108);
+    lv_obj_add_style(s_dash_fan_lbl, &s_label_dim, 0);
+
+    s_dash_light_btn = lv_btn_create(s_dash_root);
+    lv_obj_remove_style_all(s_dash_light_btn);
+    lv_obj_add_style(s_dash_light_btn, &s_btn_pressed, LV_STATE_PRESSED);
+    lv_obj_set_style_radius(s_dash_light_btn, ::ui::R_PILL, 0);
+    lv_obj_set_style_bg_opa(s_dash_light_btn, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(s_dash_light_btn, lv_color_hex(::ui::C_PANEL_HI), 0);
+    lv_obj_set_size(s_dash_light_btn, 64, 24);
+    lv_obj_set_pos(s_dash_light_btn, 404, 102);
+    lv_obj_add_event_cb(s_dash_light_btn, light_btn_clicked, LV_EVENT_CLICKED, nullptr);
+    s_dash_light_lbl = lv_label_create(s_dash_light_btn);
+    lv_label_set_text(s_dash_light_lbl, i18n::tr(i18n::Str::LIGHT));
+    lv_obj_set_style_text_font(s_dash_light_lbl, &bb_font_14, 0);
+    lv_obj_center(s_dash_light_lbl);
+
     lv_obj_add_flag(s_dash_speed_lbl_cap, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_dash_speed_btn,     LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_dash_btn_plate,     LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_dash_btn_hms,       LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_btn_pause,     LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_btn_stop,      LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_fan_lbl,       LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_dash_light_btn,     LV_OBJ_FLAG_HIDDEN);
     return s_dash_root;
 }
 
@@ -407,6 +486,10 @@ void update_dashboard(int printer_id) {
         lv_obj_add_flag(s_dash_speed_btn,     LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_dash_btn_plate,     LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_dash_btn_hms,       LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_btn_pause,     LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_btn_stop,      LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_fan_lbl,       LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_light_btn,     LV_OBJ_FLAG_HIDDEN);
         return;
     }
     const ::bambuddy::Printer* sel = nullptr;
@@ -471,9 +554,34 @@ void update_dashboard(int printer_id) {
         snprintf(hbuf, sizeof(hbuf), LV_SYMBOL_WARNING " %s%s",
                  i18n::tr(i18n::Str::HMS_PREFIX), sel->hms.c_str());
         lv_label_set_text(s_dash_hms, hbuf);
+        lv_obj_clear_flag(s_dash_hms, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_dash_fan_lbl, LV_OBJ_FLAG_HIDDEN);
     } else {
-        lv_label_set_text(s_dash_hms, "");
+        // No HMS → show the fan speeds Bambuddy reports (-1 = unknown, skipped).
+        // Short abbreviations + value; "·" separates them.
+        lv_obj_add_flag(s_dash_hms, LV_OBJ_FLAG_HIDDEN);
+        char fbuf[64]; size_t off = 0;
+        auto add_fan = [&](const char* tag, int v) {
+            if (v < 0 || off >= sizeof(fbuf)) return;
+            off += snprintf(fbuf + off, sizeof(fbuf) - off, "%s%s %d%%",
+                            off ? "  \xC2\xB7  " : "", tag, v);
+        };
+        fbuf[0] = '\0';
+        add_fan("Fan", sel->fan_cooling);
+        add_fan("Aux", sel->fan_aux);
+        add_fan("Cha", sel->fan_chamber);
+        lv_label_set_text(s_dash_fan_lbl, fbuf);
+        if (fbuf[0]) lv_obj_clear_flag(s_dash_fan_lbl, LV_OBJ_FLAG_HIDDEN);
+        else         lv_obj_add_flag  (s_dash_fan_lbl, LV_OBJ_FLAG_HIDDEN);
     }
+    // Chamber-light toggle: amber + inverted text when lit. Always available
+    // while a printer is present.
+    s_dash_light_on = sel->chamber_light;
+    lv_obj_clear_flag(s_dash_light_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_bg_color(s_dash_light_btn,
+        lv_color_hex(s_dash_light_on ? ::ui::C_WARN : ::ui::C_PANEL_HI), 0);
+    lv_obj_set_style_text_color(s_dash_light_lbl,
+        lv_color_hex(s_dash_light_on ? ::ui::C_TEXT_INV : ::ui::C_TEXT_DIM), 0);
 
     char buf[16];
     snprintf(buf, sizeof(buf), "%.0f °C", sel->temps.nozzle);
@@ -492,6 +600,7 @@ void update_dashboard(int printer_id) {
                       sel->state == PState::Prepare);
     bool can_plate = (sel->state == PState::Finish || sel->state == PState::Failed);
     bool can_hms   = hms_active;
+    bool can_ctrl  = (sel->state == PState::Printing || sel->state == PState::Paused);
 
     auto show = [](lv_obj_t* o, bool v) {
         if (!o) return;
@@ -500,16 +609,30 @@ void update_dashboard(int printer_id) {
     };
 
     bool show_speed = !can_hms && !can_plate && can_speed;
-    show(s_dash_btn_hms,        can_hms);
-    show(s_dash_btn_plate,      !can_hms && can_plate);
-    show(s_dash_speed_btn,      show_speed);
-    show(s_dash_speed_lbl_cap,  show_speed);
+    bool show_ctrl  = !can_hms && !can_plate && can_ctrl;
+    show(s_dash_btn_hms,    can_hms);
+    show(s_dash_btn_plate,  !can_hms && can_plate);
+    show(s_dash_speed_btn,  show_speed);
+    show(s_dash_btn_pause,  show_ctrl);
+    show(s_dash_btn_stop,   show_ctrl);
 
     if (can_speed) {
         s_dash_cur_speed = (sel->speed_level >= 1 && sel->speed_level <= 4)
                             ? sel->speed_level : 2;
         lv_label_set_text(s_dash_speed_btn_lbl, speed_mode_name(s_dash_cur_speed));
     }
+    // Pause vs Resume label tracks the paused state (the callback reads it too).
+    s_dash_is_paused = (sel->state == PState::Paused);
+    if (s_dash_btn_pause_lbl)
+        lv_label_set_text(s_dash_btn_pause_lbl,
+            i18n::tr(s_dash_is_paused ? i18n::Str::RESUME : i18n::Str::PAUSE));
+    // Stop's two-tap window disarms after 3 s; tint the pill red while armed.
+    if (s_dash_stop_armed_at != 0 && (lv_tick_get() - s_dash_stop_armed_at) > 3000)
+        s_dash_stop_armed_at = 0;
+    if (s_dash_btn_stop)
+        lv_obj_set_style_bg_color(s_dash_btn_stop,
+            lv_color_hex(s_dash_stop_armed_at ? ::ui::C_ERR : ::ui::C_WARN), 0);
+
     // If the context left "printing" while the picker was open, dismiss it.
     if (!show_speed && s_speed_menu &&
         !lv_obj_has_flag(s_speed_menu, LV_OBJ_FLAG_HIDDEN)) {

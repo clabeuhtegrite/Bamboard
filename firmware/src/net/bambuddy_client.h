@@ -95,6 +95,12 @@ struct Printer {
     String   filename;
     uint8_t  speed_level = 2;       // 1=Silent, 2=Standard, 3=Sport, 4=Ludicrous
 
+    // populated by /status: chamber light + fan speeds (int; -1 = unknown).
+    bool     chamber_light = false;
+    int16_t  fan_cooling = -1;      // part-cooling fan (cooling_fan_speed)
+    int16_t  fan_aux     = -1;      // auxiliary fan    (big_fan1_speed)
+    int16_t  fan_chamber = -1;      // chamber/exhaust  (big_fan2_speed)
+
     // populated by /status (ams subtree):
     bool     ams_exists = false;
     uint8_t  ams_count  = 0;
@@ -118,6 +124,21 @@ struct Archive {
     float    filament_g   = 0.0f;
 };
 
+// One pending entry of Bambuddy's print queue (only the fields a desk monitor
+// shows). printer_id == -1 means the job isn't assigned to a printer yet.
+struct QueueItem {
+    String  name;              // archive_name (the job)
+    String  status;            // "pending" (we only cache those)
+    int     printer_id = -1;
+    int     position   = 0;
+};
+
+// A trimmed view of GET /system/info — just what the Settings screen shows.
+struct SystemInfo {
+    String  version;           // Bambuddy app version
+    String  uptime;            // human-formatted uptime string
+};
+
 // ---------- Client --------------------------------------------------------
 
 class Client {
@@ -139,6 +160,8 @@ class Client {
     bool fetch_printer_status(int printer_id);     // → updates that printer
     bool fetch_statistics();                       // → stats_
     bool fetch_recent_archives(uint8_t limit);     // → recent_
+    bool fetch_queue();                            // → queue_ (pending items)
+    bool fetch_system_info();                      // → sysinfo_
     bool ping_health(uint32_t* latency_ms_out);
 
     // Fetch the latest camera JPEG for a printer into a freshly-allocated PSRAM
@@ -151,6 +174,10 @@ class Client {
     bool set_print_speed(int printer_id, uint8_t mode);  // 1..4
     bool clear_hms(int printer_id);
     bool clear_plate(int printer_id);
+    bool pause_print(int printer_id);
+    bool resume_print(int printer_id);
+    bool stop_print(int printer_id);
+    bool set_chamber_light(int printer_id, bool on);
 
     // AMS drying control. The exact Bambuddy route hasn't shipped upstream
     // at the time of writing — these issue a POST to
@@ -173,6 +200,8 @@ class Client {
     void snapshot_printers(Printer* out, uint8_t& count) const;
     Stats snapshot_stats() const;
     void snapshot_recent(Archive* out, uint8_t& count) const;
+    void snapshot_queue(QueueItem* out, uint8_t& count) const;
+    SystemInfo snapshot_system_info() const;
     bool last_error(String& out) const;
 
    private:
@@ -207,6 +236,9 @@ class Client {
     Stats    stats_;
     Archive  recent_[10];
     uint8_t  recent_count_ = 0;
+    QueueItem queue_[10];
+    uint8_t   queue_count_ = 0;
+    SystemInfo sysinfo_;
     String   last_error_;
 };
 

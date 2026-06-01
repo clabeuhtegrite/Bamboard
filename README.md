@@ -32,11 +32,12 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 
 ### What you see on the screen
 
-- **Live dashboard** — nozzle / bed / chamber temperature, layer progress, ETA, filename.
+- **Live dashboard** — nozzle / bed / chamber temperature, layer progress, ETA, filename. While printing it also carries inline **Pause / Resume** and **Stop** (two-tap) controls, a **chamber-light** toggle, and a fan-speed readout (part / aux / chamber) shown when no error is active.
 - **AMS overview** — per-slot filament colour / type / remaining %, plus AMS humidity, temperature and active drying countdown. Each slot is a colour swatch: every swatch is outlined so even **black** filament reads on the dark panel, and **clear / translucent** filament shows a **checkerboard** instead of a flat square. Big ◀ / ▶ side buttons cycle through chained AMS units, and a one-tap **Dry / Stop** pill on heater-equipped units (**AMS-HT and AMS 2 Pro**) starts (or aborts) a drying cycle whose **temperature and duration are taken from the loaded filament** — Bambu's per-spool RFID profile when present, a per-filament-type fallback otherwise.
 - **Printers list** — every printer Bambuddy knows about, highlighted by state. **Tap a row** to focus that printer and jump to Live.
+- **Print queue** — the jobs Bambuddy still has queued (pending), in order, with each job's target printer.
 - **History & stats** — last 10 prints, success rate, total filament, total time.
-- **Settings** — Bambuddy URL, local IP, Wi-Fi RSSI, uptime, **brightness 1–5** segmented selector, and a two-tap **Factory reset** button.
+- **Settings** — Bambuddy URL, the **Bambuddy server version + uptime**, local IP, Wi-Fi RSSI, device uptime, **brightness 1–5** segmented selector, and a two-tap **Factory reset** button.
 
 ### Alerts
 
@@ -44,12 +45,13 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 
 ### Controls (touch-first)
 
-- **Bottom tab bar** — 5 tabs always visible (Live / AMS / Printers / History / Settings). Tap to switch.
+- **Bottom tab bar** — 6 tabs always visible (Live / AMS / Printers / Queue / History / Settings). Tap to switch.
 - **Swipe gesture** — swipe left / right inside the screen body to move to the next / previous tab.
 - **Inline action area on Live** — appears contextually based on the focused printer's state:
-  - while printing → a 4-segment **speed chip** (Silent / Standard / Sport / Ludicrous); tap a segment to switch — the active one is highlighted in accent;
+  - while printing / paused → **Pause / Resume** + **Stop** (tap twice to confirm) next to the **print-speed** button (Silent / Standard / Sport / Ludicrous);
   - when finished → `Clear plate` pill;
-  - while an HMS error is active → red `Clear HMS` pill (takes priority over the other two).
+  - while an HMS error is active → red `Clear HMS` pill (takes priority).
+- **Chamber-light toggle** on Live — turns the printer's chamber light on/off (amber when lit).
 - **Brightness 1–5** — segmented selector on Settings. Persisted to NVS and applied at boot. The auto-dim wake target follows the chosen level instead of always ramping to full.
 - **Factory reset** — Settings → "Factory reset" → tap a second time within 3 s to confirm. Wipes **all** persisted settings (Wi-Fi + Bambuddy creds, timezone, daily-reboot hour, brightness and interface language) and reboots into the captive portal.
 
