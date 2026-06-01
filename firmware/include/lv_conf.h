@@ -2,8 +2,10 @@
  * lv_conf.h — LVGL configuration for Bamboard
  *
  * Trimmed-down version of the LVGL v8.3 default conf. Only what Bamboard
- * actually needs is enabled, to keep flash and RAM use sensible on the C3-
- * sized SRAM budget (although we run on S3, this keeps the firmware lean).
+ * actually needs is enabled, to keep flash use sensible on the 4 MB
+ * partitions and leave headroom in internal SRAM (the panel draw buffers
+ * live in PSRAM — see hw/display.cpp — but LVGL's object tree, the
+ * LV_MEM_SIZE pool below, stays in DRAM).
  */
 
 #ifndef LV_CONF_H
@@ -28,8 +30,19 @@
 
 /* -------- Feature usage -------- */
 #define LV_USE_LOG 0
-#define LV_USE_ASSERT_NULL          1
-#define LV_USE_ASSERT_MALLOC        1
+/* Asserts panic() the device on null/OOM. Useful while iterating on the UI,
+ * but a wall-mounted device with no serial console shouldn't reboot-loop on
+ * a transient malloc failure — gate them behind the dev sentinel so only
+ * unflashed-from-CI builds keep them on. The CI tag-build path defines
+ * BAMBOARD_FW_VERSION, which flips BAMBOARD_VERSION_IS_DEV to 0 (see
+ * src/config.h).  */
+#if defined(BAMBOARD_FW_VERSION)
+#  define LV_USE_ASSERT_NULL        0
+#  define LV_USE_ASSERT_MALLOC      0
+#else
+#  define LV_USE_ASSERT_NULL        1
+#  define LV_USE_ASSERT_MALLOC      1
+#endif
 
 #define LV_USE_PERF_MONITOR 0
 #define LV_USE_MEM_MONITOR  0
