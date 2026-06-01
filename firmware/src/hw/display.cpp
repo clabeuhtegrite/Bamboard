@@ -111,22 +111,23 @@ class LGFX_JC4827W543 : public lgfx::LGFX_Device {
         }
 
         {  // ---- GT911 capacitive touch (I²C) ----
-            // The JC4827W543C routes the GT911 onto the dedicated I²C bus
-            // that doesn't conflict with native USB (GPIO 19 / 20). If your
-            // board boots blank or touches don't register, this is the
-            // first place to look.
+            // The JC4827W543C routes the GT911 onto a dedicated I²C bus that
+            // doesn't conflict with native USB. Pin map lives in config.h's
+            // `pins::` namespace so a fork targeting a different board only
+            // edits one file.
             auto cfg = touch_.config();
             cfg.x_min = 0;
             cfg.x_max = ::display::WIDTH  - 1;
             cfg.y_min = 0;
             cfg.y_max = ::display::HEIGHT - 1;
-            cfg.pin_sda  = GPIO_NUM_19;
-            cfg.pin_scl  = GPIO_NUM_20;
-            cfg.pin_int  = GPIO_NUM_NC;
-            cfg.pin_rst  = GPIO_NUM_38;
-            cfg.freq     = 400000;
-            cfg.i2c_addr = 0x5D;            // 0x5D primary, 0x14 fallback
-            cfg.i2c_port = 0;
+            cfg.pin_sda  = (gpio_num_t)pins::GT911_SDA;
+            cfg.pin_scl  = (gpio_num_t)pins::GT911_SCL;
+            cfg.pin_int  = (gpio_num_t)(pins::GT911_INT < 0 ? GPIO_NUM_NC
+                                                            : pins::GT911_INT);
+            cfg.pin_rst  = (gpio_num_t)pins::GT911_RST;
+            cfg.freq     = pins::GT911_FREQ;
+            cfg.i2c_addr = pins::GT911_ADDR;
+            cfg.i2c_port = pins::GT911_PORT;
             touch_.config(cfg);
             panel_.setTouch(&touch_);
         }
