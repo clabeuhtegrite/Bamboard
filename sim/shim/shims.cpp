@@ -14,6 +14,12 @@
 #include <curl/curl.h>
 #endif
 
+// Real JPEG decoder backing the TJpg_Decoder shim's camera path. STBI_ONLY_JPEG
+// / STBI_NO_STDIO are set by <TJpg_Decoder.h> (included above); this TU provides
+// the single implementation.
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 // ---- timing ----------------------------------------------------------------
 uint32_t millis() {
     static auto t0 = std::chrono::steady_clock::now();
