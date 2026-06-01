@@ -5,6 +5,17 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.17.1 — 2026-06
+
+### Fixed
+
+- **"Clear plate" no longer appears when Bambuddy isn't waiting for it.** The pill
+  was shown for any FINISH/FAILED print, so a finished job whose plate had already
+  been acknowledged (or a printer that rebooted back into that state) kept
+  prompting. It now follows Bambuddy's own **`awaiting_plate_clear`** flag from
+  `/status` — the authoritative "an acknowledgment is expected" signal — instead
+  of inferring it from the print state.
+
 ## v0.17.0 — 2026-06
 
 More of Bambuddy's API brought to the device: control a running print, toggle
