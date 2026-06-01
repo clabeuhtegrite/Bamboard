@@ -14,6 +14,11 @@
 
 #include "theme.h"
 
+#include <TJpg_Decoder.h>
+#include <esp_heap_caps.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
 namespace ui::screens {
 
 // =============================================================================
@@ -278,6 +283,141 @@ void ota_apply() {
         lv_obj_set_style_text_color(s_ota_status, lv_color_hex(::ui::C_ERR), 0);
         s_ota_error_cache = true;
     }
+}
+
+// =============================================================================
+// CAMERA SNAPSHOT OVERLAY
+// =============================================================================
+//
+// Full-screen JPEG snapshot viewer. The net task fetches + decodes frames
+// (camera_decode_frame) into a PSRAM RGB565 buffer under a mutex; the UI task
+// points an lv_img at it (camera_apply); a tap dismisses the overlay. lv_img
+// is used rather than lv_canvas because LV_USE_CANVAS is off.
+//
+// HARDWARE-TUNING NOTE: the byte-swap (setSwapBytes) / colour order and the
+// decode scale are the things most likely to need adjusting once a real panel
+// + camera stream are in hand — they can't be eyeballed in CI.
+
+static lv_obj_t*  s_cam_overlay = nullptr;
+static lv_obj_t*  s_cam_img     = nullptr;
+static lv_obj_t*  s_cam_hint    = nullptr;
+static lv_img_dsc_t s_cam_dsc   = {};
+static uint8_t*   s_cam_pix      = nullptr;   // PSRAM RGB565, CAM_W_MAX*CAM_H_MAX
+static SemaphoreHandle_t s_cam_mtx = nullptr;
+static volatile bool s_cam_open  = false;
+static volatile bool s_cam_dirty = false;
+static uint16_t s_cam_w = 0, s_cam_h = 0;
+
+static const uint16_t CAM_W_MAX = 480;
+static const uint16_t CAM_H_MAX = 232;   // body height between header and tab bar
+
+// TJpgDec block callback — runs on the net task during decode. Writes the
+// decoded RGB565 block into the shared buffer, clipped to its bounds.
+static bool cam_tjpg_cb(int16_t x, int16_t y, uint16_t bw, uint16_t bh, uint16_t* bmp) {
+    if (!s_cam_pix) return false;
+    uint16_t* dst = (uint16_t*)s_cam_pix;
+    for (uint16_t row = 0; row < bh; ++row) {
+        int yy = y + row;
+        if (yy < 0 || yy >= (int)s_cam_h) continue;
+        for (uint16_t col = 0; col < bw; ++col) {
+            int xx = x + col;
+            if (xx < 0 || xx >= (int)s_cam_w) continue;
+            dst[(uint32_t)yy * s_cam_w + xx] = bmp[(uint32_t)row * bw + col];
+        }
+    }
+    return true;
+}
+
+static void cam_overlay_clicked(lv_event_t*) { camera_overlay_close(); }
+
+lv_obj_t* build_camera_overlay(lv_obj_t* parent) {
+    ensure_styles();
+    s_cam_mtx = xSemaphoreCreateMutex();
+    s_cam_pix = (uint8_t*)heap_caps_malloc((size_t)CAM_W_MAX * CAM_H_MAX * 2,
+                                           MALLOC_CAP_SPIRAM);
+    TJpgDec.setJpgScale(1);
+    TJpgDec.setSwapBytes(true);   // match the LVGL RGB565 buffer byte order
+    TJpgDec.setCallback(cam_tjpg_cb);
+
+    s_cam_overlay = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_cam_overlay);
+    lv_obj_set_size(s_cam_overlay, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(s_cam_overlay, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_bg_color(s_cam_overlay, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(s_cam_overlay, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(s_cam_overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(s_cam_overlay, cam_overlay_clicked, LV_EVENT_CLICKED, nullptr);
+
+    s_cam_img = lv_img_create(s_cam_overlay);
+    lv_obj_center(s_cam_img);
+    lv_obj_clear_flag(s_cam_img, LV_OBJ_FLAG_CLICKABLE);
+
+    s_cam_hint = lv_label_create(s_cam_overlay);
+    lv_label_set_text(s_cam_hint, i18n::tr(i18n::Str::TAP_DISMISS));
+    lv_obj_set_style_text_font(s_cam_hint, &bb_font_14, 0);
+    lv_obj_set_style_text_color(s_cam_hint, lv_color_hex(::ui::C_TEXT_DIM), 0);
+    lv_obj_align(s_cam_hint, LV_ALIGN_BOTTOM_MID, 0, -10);
+
+    lv_obj_add_flag(s_cam_overlay, LV_OBJ_FLAG_HIDDEN);
+    return s_cam_overlay;
+}
+
+void camera_overlay_open() {
+    if (!s_cam_overlay || !s_cam_pix) return;   // no PSRAM buffer → feature off
+    s_cam_dirty = false;
+    s_cam_open  = true;
+    lv_obj_clear_flag(s_cam_overlay, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_cam_overlay);
+}
+
+void camera_overlay_close() {
+    if (!s_cam_overlay) return;
+    s_cam_open = false;
+    lv_obj_add_flag(s_cam_overlay, LV_OBJ_FLAG_HIDDEN);
+}
+
+bool camera_overlay_is_open() { return s_cam_open; }
+
+// Net task: decode a freshly-fetched JPEG into the shared PSRAM buffer.
+void camera_decode_frame(const uint8_t* jpeg, size_t len) {
+    if (!s_cam_pix || !s_cam_mtx || !jpeg || !len) return;
+    uint16_t w = 0, h = 0;
+    if (TJpgDec.getJpgSize(&w, &h, jpeg, len) != JDR_OK || w == 0 || h == 0) return;
+    // Native power-of-two downscale until it fits the on-screen area.
+    uint8_t scale = 1;
+    while ((w / scale > CAM_W_MAX || h / scale > CAM_H_MAX) && scale < 8) scale *= 2;
+    uint16_t dw = w / scale, dh = h / scale;
+    if (dw > CAM_W_MAX) dw = CAM_W_MAX;
+    if (dh > CAM_H_MAX) dh = CAM_H_MAX;
+
+    xSemaphoreTake(s_cam_mtx, portMAX_DELAY);
+    s_cam_w = dw;
+    s_cam_h = dh;
+    memset(s_cam_pix, 0, (size_t)dw * dh * 2);
+    TJpgDec.setJpgScale(scale);
+    TJpgDec.drawJpg(0, 0, jpeg, len);   // → cam_tjpg_cb fills s_cam_pix
+    s_cam_dirty = true;
+    xSemaphoreGive(s_cam_mtx);
+}
+
+// UI task: publish the latest decoded frame to the on-screen image.
+void camera_apply() {
+    if (!s_cam_overlay || !s_cam_dirty) return;
+    xSemaphoreTake(s_cam_mtx, portMAX_DELAY);
+    s_cam_dirty = false;
+    uint16_t w = s_cam_w, h = s_cam_h;
+    s_cam_dsc.header.always_zero = 0;
+    s_cam_dsc.header.cf   = LV_IMG_CF_TRUE_COLOR;
+    s_cam_dsc.header.w    = w;
+    s_cam_dsc.header.h    = h;
+    s_cam_dsc.data        = s_cam_pix;
+    s_cam_dsc.data_size   = (uint32_t)w * h * 2;
+    xSemaphoreGive(s_cam_mtx);
+    if (w == 0 || h == 0) return;
+    lv_img_set_src(s_cam_img, &s_cam_dsc);
+    lv_obj_set_size(s_cam_img, w, h);
+    lv_obj_center(s_cam_img);
+    lv_obj_invalidate(s_cam_img);
 }
 
 }  // namespace ui::screens

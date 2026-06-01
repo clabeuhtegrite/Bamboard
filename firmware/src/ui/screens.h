@@ -55,6 +55,17 @@ void      ota_set_error   (const char* msg);
 void      ota_apply       ();
 bool      ota_is_active   ();
 
+// Full-screen camera snapshot overlay. Opened by tapping the dashboard
+// progress ring; while it's open the net task fetches + decodes JPEG frames
+// (camera_decode_frame, called ON the net task), camera_apply() (UI task)
+// publishes the latest frame to the on-screen image, and a tap dismisses it.
+lv_obj_t* build_camera_overlay(lv_obj_t* parent);
+void      camera_overlay_open();
+void      camera_overlay_close();
+bool      camera_overlay_is_open();
+void      camera_decode_frame(const uint8_t* jpeg, size_t len);  // net task
+void      camera_apply();                                        // UI task
+
 // Shared header (title + connectivity indicator). Used by the carousel.
 // header_set_online() is safe to call from any task — it parks the new
 // state and header_apply() (pumped by the UI manager) syncs it into the

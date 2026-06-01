@@ -334,6 +334,56 @@ bool Client::ping_health(uint32_t* latency_ms_out) {
     return ok;
 }
 
+bool Client::fetch_camera_jpeg(int printer_id, uint8_t** out_buf, size_t* out_len) {
+    *out_buf = nullptr;
+    *out_len = 0;
+    if (!is_configured() || WiFi.status() != WL_CONNECTED) {
+        last_error_ = "cam: not ready";
+        return false;
+    }
+    HTTPClient http;
+    http.setConnectTimeout(::bambuddy::CONNECT_TIMEOUT_MS);
+    http.setTimeout(::bambuddy::READ_TIMEOUT_MS);
+    String path = base_url_ + "/api/v1/printers/" + printer_id + "/camera/snapshot";
+    if (!http.begin(path)) { last_error_ = "cam: begin failed"; return false; }
+    http.addHeader("X-API-Key", api_key_);
+
+    int code = http.GET();
+    if (code != HTTP_CODE_OK) {
+        last_error_ = String("cam HTTP ") + code;
+        http.end();
+        return false;
+    }
+    // Cap the buffer so a misbehaving/huge source can't exhaust PSRAM.
+    const size_t CAM_MAX = 256 * 1024;
+    int      clen = http.getSize();                 // -1 when chunked
+    size_t   cap  = (clen > 0 && (size_t)clen <= CAM_MAX) ? (size_t)clen : CAM_MAX;
+    uint8_t* buf  = (uint8_t*)heap_caps_malloc(cap, MALLOC_CAP_SPIRAM);
+    if (!buf) { last_error_ = "cam: oom"; http.end(); return false; }
+
+    WiFiClient* stream = http.getStreamPtr();
+    size_t   got = 0;
+    uint32_t t0  = millis();
+    while (http.connected() && got < cap) {
+        size_t avail = stream->available();
+        if (avail) {
+            size_t toread = avail < (cap - got) ? avail : (cap - got);
+            int r = stream->readBytes(buf + got, toread);
+            if (r > 0) { got += r; t0 = millis(); }
+        } else {
+            if (clen > 0 && got >= (size_t)clen) break;
+            if (millis() - t0 > ::bambuddy::READ_TIMEOUT_MS) break;
+            delay(2);
+        }
+        if (clen > 0 && got >= (size_t)clen) break;
+    }
+    http.end();
+    if (got == 0) { heap_caps_free(buf); last_error_ = "cam: empty"; return false; }
+    *out_buf = buf;
+    *out_len = got;
+    return true;
+}
+
 // --- Write operations -------------------------------------------------------
 
 bool Client::refresh_status(int printer_id) {

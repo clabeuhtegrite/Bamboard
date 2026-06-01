@@ -5,6 +5,27 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.12.0 — 2026-06
+
+Live printer camera on the device.
+
+### Added
+
+- **Camera snapshot viewer.** Tap the progress ring on Live to open a
+  full-screen view of the printer's camera (Bambuddy `GET /camera/snapshot`).
+  Frames are fetched + JPEG-decoded on the network task (with a native
+  power-of-two downscale to fit the 480×272 panel) into a PSRAM buffer and
+  refreshed roughly twice a second while the viewer is open; tap anywhere to
+  close. Decode uses `bodmer/TJpg_Decoder`; the net task stack grew to 12 KB
+  for the decoder workspace.
+
+### Notes
+
+- The viewer only does anything if your Bambuddy build exposes the camera
+  endpoint and the printer has a reachable camera.
+- Colour/byte order and decode scale are conservative defaults pending tuning
+  on real hardware.
+
 ## v0.11.0 — 2026-06
 
 Observability + robustness pass. No visual change to speak of; the device just

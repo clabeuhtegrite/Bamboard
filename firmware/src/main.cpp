@@ -14,6 +14,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
+#include <esp_heap_caps.h> // free the PSRAM camera-JPEG buffer
 #include <esp_system.h>   // esp_reset_reason() for boot diagnostics
 #include <esp_task_wdt.h> // task watchdog on the UI task
 #include <lvgl.h>
@@ -245,6 +246,7 @@ static void net_task(void*) {
     uint32_t next_recent_ms       = 0;
     uint32_t next_health_ms       = 0;
     uint32_t next_reboot_check_ms = 0;
+    uint32_t next_cam_ms          = 0;
 
     for (;;) {
         uint32_t now = millis();
@@ -326,6 +328,22 @@ static void net_task(void*) {
         if (now >= next_recent_ms) {
             bambuddy::g_client.fetch_recent_archives(bambuddy::MAX_RECENT_ARCHIVES);
             next_recent_ms = now + bambuddy::POLL_STATS_MS;
+        }
+
+        // Camera: only while the snapshot overlay is open. Fetch + decode are
+        // both heavy (HTTP + JPEG), so they live here on the net task; the UI
+        // task just blits the decoded frame. ~0.5 fps is plenty for a monitor.
+        if (ui::screens::camera_overlay_is_open() && now >= next_cam_ms) {
+            int id = ui::g_ui.selected_printer_id();
+            if (id >= 0) {
+                uint8_t* jpeg = nullptr;
+                size_t   jlen = 0;
+                if (bambuddy::g_client.fetch_camera_jpeg(id, &jpeg, &jlen)) {
+                    ui::screens::camera_decode_frame(jpeg, jlen);
+                    heap_caps_free(jpeg);
+                }
+            }
+            next_cam_ms = now + 2000;
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -520,9 +538,11 @@ void setup() {
     // by design).
     esp_task_wdt_init(10, true);
 
-    // Tasks: net on core 0, UI on core 1.
-    xTaskCreatePinnedToCore(net_task, "net", 8192, nullptr, 1, nullptr, 0);
-    xTaskCreatePinnedToCore(ui_task,  "ui",  6144, nullptr, 2, nullptr, 1);
+    // Tasks: net on core 0, UI on core 1. The net task carries a larger stack
+    // because it now also runs the TJpgDec JPEG decode for camera snapshots
+    // (≈3.5 KB workspace) on top of the TLS-capable HTTP/WS clients.
+    xTaskCreatePinnedToCore(net_task, "net", 12288, nullptr, 1, nullptr, 0);
+    xTaskCreatePinnedToCore(ui_task,  "ui",  6144,  nullptr, 2, nullptr, 1);
 }
 
 void loop() {
