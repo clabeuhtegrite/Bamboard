@@ -5,6 +5,33 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.12.1 — 2026-06
+
+Bug-fix release — all three caught by the new host simulator running against a
+real Bambuddy instance.
+
+### Fixed
+
+- **Live screen was blank on boot.** `ui::Manager::begin()` hid every screen
+  then called `go_to(Dashboard)`, which early-returns because the manager
+  already starts on Dashboard — so the Live screen never un-hid until you
+  switched tabs. It now reveals the initial screen explicitly.
+- **False full-screen HMS alert on healthy printers.** Bambu keeps low-severity
+  HMS notifications in `hms_errors` even when nothing is wrong (Bambuddy's own
+  UI ignores them); the device popped a red "HMS ERROR" overlay on a finished,
+  fault-free print. HMS is now treated as active only when the printer is in a
+  Failed / Error / Paused state.
+- **Missing-glyph boxes.** The `•` (bullet) and `—` (em-dash) used as
+  separators/placeholders aren't in the `bb_font` (Latin-1 + FontAwesome only)
+  and rendered as tofu boxes; replaced with `·` (Latin-1 middot) and `-`.
+
+### Internal
+
+- **Host simulator** (`sim/`): a CI job builds the real LVGL UI + Bambuddy REST
+  client against host shims and renders every screen to PNG artifacts on **real
+  Bambuddy data** (via a Cloudflare Access service token), for visual validation
+  without hardware. Not shipped to the device.
+
 ## v0.12.0 — 2026-06
 
 Live printer camera on the device.
