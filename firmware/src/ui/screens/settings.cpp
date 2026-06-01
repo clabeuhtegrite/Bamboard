@@ -1,6 +1,6 @@
 // Bamboard screens — Settings (diagnostics + brightness + factory reset).
 //
-//   y =  36 ..  82 : 4 read-only rows (Bambuddy / IP / RSSI / Uptime)
+//   y =  36 ..  82 : 5 read-only rows (Bambuddy / IP / RSSI / Uptime / Server)
 //   y =  84 .. 116 : Brightness 1..5 segmented selector (panel + 5 chips)
 //   y = bot - 52   : Factory-reset pill (two-tap confirm within 3 s)
 //

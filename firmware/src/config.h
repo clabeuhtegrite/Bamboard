@@ -82,7 +82,7 @@ constexpr uint8_t  BL_DIM  = 40;
 // User-facing brightness levels (1..5). The Settings screen lets the user
 // pick one; the chosen level is stored in NVS as `bl_level`, applied at
 // boot, and used as the "wake" target by the auto-dim logic instead of
-// the hard-coded BL_FULL. Level 3 (≈ 70 %) is the default first-boot
+// the hard-coded BL_FULL. Level 3 (≈ 50 %) is the default first-boot
 // value — comfortable on a desk in normal light.
 constexpr uint8_t  BL_LEVEL_DEFAULT = 3;
 constexpr uint8_t  BL_LEVEL_MIN     = 1;

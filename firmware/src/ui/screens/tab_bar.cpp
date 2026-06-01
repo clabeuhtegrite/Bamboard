@@ -2,7 +2,7 @@
 //
 //   y = 228 .. 272 (44 px), permanent on every screen.
 //
-// 5 buttons of equal width. Each carries (icon over label) plus a tiny
+// 6 buttons of equal width. Each carries (icon over label) plus a tiny
 // 3-px accent strip at the top edge that fades in on the active tab —
 // makes the selected screen obvious from across the room without
 // reading the labels.
@@ -59,7 +59,7 @@ lv_obj_t* build_tab_bar(lv_obj_t* parent) {
     lv_obj_set_style_border_opa(s_tab_bar, LV_OPA_70, 0);
     lv_obj_clear_flag(s_tab_bar, LV_OBJ_FLAG_SCROLLABLE);
 
-    // 5 buttons, equal width, sliced edge-to-edge.
+    // 6 buttons, equal width, sliced edge-to-edge.
     int tab_w = LV_HOR_RES / (int)Screen::_Count;
     for (uint8_t i = 0; i < (uint8_t)Screen::_Count; ++i) {
         lv_obj_t* btn = lv_btn_create(s_tab_bar);

@@ -33,11 +33,9 @@ static lv_obj_t* s_dash_hms          = nullptr;
 static lv_obj_t* s_dash_cam_box      = nullptr;   // inline camera thumbnail (Live)
 static lv_obj_t* s_dash_cam_img      = nullptr;
 
-// Action row (contextual, mutually exclusive). While printing: a "speed"
-// caption + a single button that opens a modal 4-item picker. When finished:
-// a "Clear plate" pill. While an HMS error is active: a red "Clear HMS" pill
-// (highest priority).
-static lv_obj_t* s_dash_speed_lbl_cap = nullptr;
+// Action row (contextual, mutually exclusive). While printing: a single button
+// that opens a modal 4-item speed picker. When finished: a "Clear plate" pill.
+// While an HMS error is active: a red "Clear HMS" pill (highest priority).
 static lv_obj_t* s_dash_speed_btn     = nullptr;
 static lv_obj_t* s_dash_speed_btn_lbl = nullptr;
 static lv_obj_t* s_dash_btn_plate     = nullptr;
@@ -252,13 +250,9 @@ static void build_speed_menu(lv_obj_t* parent) {
     lv_obj_add_flag(s_speed_menu, LV_OBJ_FLAG_HIDDEN);
 }
 
-// Print-speed row: a dim caption + the single button that opens the menu.
+// Print-speed row: the single button that opens the modal speed picker. (The
+// "SPEED" caption was dropped in v0.17.0 to make room for the pause/stop pair.)
 static void build_speed_control(lv_obj_t* parent, int y) {
-    s_dash_speed_lbl_cap = lv_label_create(parent);
-    lv_label_set_text(s_dash_speed_lbl_cap, i18n::tr(i18n::Str::SPEED));
-    lv_obj_add_style(s_dash_speed_lbl_cap, &s_label_dim, 0);
-    lv_obj_set_pos(s_dash_speed_lbl_cap, 16, y + 14);
-
     s_dash_speed_btn = lv_btn_create(parent);
     lv_obj_remove_style_all(s_dash_speed_btn);
     lv_obj_add_style(s_dash_speed_btn, &s_btn, 0);
@@ -442,7 +436,6 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_obj_set_style_text_font(s_dash_light_lbl, &bb_font_14, 0);
     lv_obj_center(s_dash_light_lbl);
 
-    lv_obj_add_flag(s_dash_speed_lbl_cap, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_dash_speed_btn,     LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_dash_btn_plate,     LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_dash_btn_hms,       LV_OBJ_FLAG_HIDDEN);
@@ -482,7 +475,6 @@ void update_dashboard(int printer_id) {
         lv_obj_add_flag(s_dash_cam_box, LV_OBJ_FLAG_HIDDEN);
         header_set_printer_name("");
         speed_menu_close();
-        lv_obj_add_flag(s_dash_speed_lbl_cap, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_dash_speed_btn,     LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_dash_btn_plate,     LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_dash_btn_hms,       LV_OBJ_FLAG_HIDDEN);
