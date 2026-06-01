@@ -106,7 +106,7 @@ lv_obj_t* build_hms_flash(lv_obj_t* parent) {
     lv_obj_align(icon, LV_ALIGN_CENTER, 0, -66);
 
     lv_obj_t* title = lv_label_create(s_hms_overlay);
-    lv_label_set_text(title, "HMS ERROR");
+    lv_label_set_text(title, i18n::tr(i18n::Str::HMS_ERROR));
     lv_obj_set_style_text_font(title, &bb_font_28, 0);
     lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(title, LV_ALIGN_CENTER, 0, -22);
@@ -121,7 +121,7 @@ lv_obj_t* build_hms_flash(lv_obj_t* parent) {
     lv_obj_align(s_hms_msg, LV_ALIGN_CENTER, 0, 28);
 
     lv_obj_t* hint = lv_label_create(s_hms_overlay);
-    lv_label_set_text(hint, "Tap anywhere to dismiss");
+    lv_label_set_text(hint, i18n::tr(i18n::Str::TAP_DISMISS));
     lv_obj_set_style_text_font(hint, &bb_font_14, 0);
     lv_obj_set_style_text_color(hint, lv_color_hex(0xFFE0E0), 0);
     lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -14);
@@ -132,7 +132,8 @@ lv_obj_t* build_hms_flash(lv_obj_t* parent) {
 
 void hms_flash_show(const char* msg) {
     if (!s_hms_overlay) return;
-    lv_label_set_text(s_hms_msg, (msg && *msg) ? msg : "Check the printer.");
+    lv_label_set_text(s_hms_msg, (msg && *msg) ? msg
+                                               : i18n::tr(i18n::Str::CHECK_PRINTER));
     lv_obj_clear_flag(s_hms_overlay, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(s_hms_overlay);
     s_hms_visible = true;
@@ -200,7 +201,7 @@ lv_obj_t* build_ota_overlay(lv_obj_t* parent) {
     lv_obj_align(icon, LV_ALIGN_CENTER, 0, -66);
 
     lv_obj_t* title = lv_label_create(s_ota_overlay);
-    lv_label_set_text(title, "Updating firmware");
+    lv_label_set_text(title, i18n::tr(i18n::Str::UPDATING_FW));
     lv_obj_set_style_text_font(title, &bb_font_20, 0);
     lv_obj_set_style_text_color(title, lv_color_hex(::ui::C_TEXT), 0);
     lv_obj_align(title, LV_ALIGN_CENTER, 0, -22);
@@ -224,7 +225,7 @@ lv_obj_t* build_ota_overlay(lv_obj_t* parent) {
     lv_obj_align(s_ota_pct_lbl, LV_ALIGN_CENTER, 0, 50);
 
     s_ota_status = lv_label_create(s_ota_overlay);
-    lv_label_set_text(s_ota_status, "Do not power off the device.");
+    lv_label_set_text(s_ota_status, i18n::tr(i18n::Str::DONT_POWER_OFF));
     lv_obj_set_style_text_font(s_ota_status, &bb_font_14, 0);
     lv_obj_set_style_text_color(s_ota_status, lv_color_hex(::ui::C_TEXT_DIM), 0);
     lv_obj_align(s_ota_status, LV_ALIGN_BOTTOM_MID, 0, -14);
@@ -241,7 +242,7 @@ void ota_set_progress(uint8_t pct) {
     if (pct != s_ota_pct) { s_ota_pct = pct; s_ota_dirty = true; }
 }
 void ota_set_error(const char* msg) {
-    if (!msg) msg = "Update failed.";
+    if (!msg) msg = i18n::tr(i18n::Str::UPDATE_FAILED);
     strncpy(s_ota_err_msg, msg, sizeof(s_ota_err_msg) - 1);
     s_ota_err_msg[sizeof(s_ota_err_msg) - 1] = '\0';
     s_ota_error_flag = true;

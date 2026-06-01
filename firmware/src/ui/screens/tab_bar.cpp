@@ -18,12 +18,23 @@ static lv_obj_t* s_tab_labels [(uint8_t)Screen::_Count] = {};
 static lv_obj_t* s_tab_indicat[(uint8_t)Screen::_Count] = {};
 static uint8_t   s_tab_active = 0;
 
-static const char* k_tab_labels[(uint8_t)Screen::_Count] = {
-    "Live", "AMS", "Printers", "History", "Settings",
-};
 static const char* k_tab_icons[(uint8_t)Screen::_Count] = {
     LV_SYMBOL_HOME, LV_SYMBOL_TINT, LV_SYMBOL_LIST, LV_SYMBOL_LOOP, LV_SYMBOL_SETTINGS,
 };
+
+// Tab labels are produced at the point of use (not as a static array) because
+// the active language is only known at runtime. Index 1 is the "AMS" acronym,
+// which is never translated.
+static const char* tab_label(uint8_t i) {
+    switch (i) {
+        case 0:  return i18n::tr(i18n::Str::TAB_LIVE);
+        case 1:  return "AMS";
+        case 2:  return i18n::tr(i18n::Str::TAB_PRINTERS);
+        case 3:  return i18n::tr(i18n::Str::TAB_HISTORY);
+        case 4:  return i18n::tr(i18n::Str::TAB_SETTINGS);
+        default: return "";
+    }
+}
 
 static void tab_clicked_cb(lv_event_t* e) {
     uint8_t idx = (uint8_t)(intptr_t)lv_event_get_user_data(e);
@@ -76,7 +87,7 @@ lv_obj_t* build_tab_bar(lv_obj_t* parent) {
         lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 6);
 
         lv_obj_t* lbl = lv_label_create(btn);
-        lv_label_set_text(lbl, k_tab_labels[i]);
+        lv_label_set_text(lbl, tab_label(i));
         lv_obj_set_style_text_font(lbl, &bb_font_12, 0);
         lv_obj_set_style_text_color(lbl, lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, -3);

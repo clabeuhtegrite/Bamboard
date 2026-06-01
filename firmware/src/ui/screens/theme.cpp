@@ -112,15 +112,15 @@ void clear_children(lv_obj_t* o) {
 const char* state_name(::bambuddy::PrinterState s) {
     using PState = ::bambuddy::PrinterState;
     switch (s) {
-        case PState::Idle:     return "IDLE";
-        case PState::Prepare:  return "PREPARE";
-        case PState::Printing: return "PRINTING";
-        case PState::Paused:   return "PAUSED";
-        case PState::Finish:   return "FINISH";
-        case PState::Failed:   return "FAILED";
-        case PState::Offline:  return "OFFLINE";
-        case PState::Error:    return "ERROR";
-        default:           return "?";
+        case PState::Idle:     return i18n::tr(i18n::Str::STATE_IDLE);
+        case PState::Prepare:  return i18n::tr(i18n::Str::STATE_PREPARE);
+        case PState::Printing: return i18n::tr(i18n::Str::STATE_PRINTING);
+        case PState::Paused:   return i18n::tr(i18n::Str::STATE_PAUSED);
+        case PState::Finish:   return i18n::tr(i18n::Str::STATE_FINISH);
+        case PState::Failed:   return i18n::tr(i18n::Str::STATE_FAILED);
+        case PState::Offline:  return i18n::tr(i18n::Str::STATE_OFFLINE);
+        case PState::Error:    return i18n::tr(i18n::Str::STATE_ERROR);
+        default:           return i18n::tr(i18n::Str::STATE_UNKNOWN);
     }
 }
 

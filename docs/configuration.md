@@ -11,10 +11,19 @@ storage). All compile-time tunables live in `firmware/src/config.h`.
 | `key` | Bambuddy API key, sent as `X-API-Key` header             |
 | `tz` | POSIX timezone string for the clock / daily reboot (e.g. `CET-1CEST,M3.5.0,M10.5.0/3`) |
 | `reboot_h` | Daily reboot hour in local time (`0`–`23`); `255` = disabled |
+| `lang` | UI language index — `0` en, `1` es, `2` fr, `3` pt, `4` de |
 | `bl_level` | Screen brightness 1–5 (set on the Settings screen, not the portal) |
 
-`url`, `key`, `tz` and `reboot_h` are populated by the captive portal on first
-boot. To re-run the portal, hold the side **BOOT** button at power-on.
+`url`, `key`, `tz`, `reboot_h` and `lang` are populated by the captive portal on
+first boot. To re-run the portal, hold the side **BOOT** button at power-on.
+
+### Interface language
+
+The captive portal's **Language** field takes a two-letter code — `en`
+(English), `es` (Español), `fr` (Français), `pt` (Português) or `de` (Deutsch).
+It's applied at boot before the screens are built. Adding a language means
+extending the `i18n` table (`firmware/src/ui/i18n.*`); only Latin-script
+languages work with the bundled `bb_font_*` fonts.
 
 ## Compile-time tunables (`config.h`)
 

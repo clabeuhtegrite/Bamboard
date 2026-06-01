@@ -37,8 +37,8 @@ static uint32_t  s_set_reset_armed_at = 0;
 static void brightness_seg_clicked(lv_event_t* e) {
     uint8_t level = (uint8_t)(uintptr_t)lv_event_get_user_data(e);
     ::save_brightness_level(level);
-    char buf[24];
-    snprintf(buf, sizeof(buf), "Brightness %u / 5", (unsigned)level);
+    char buf[32];
+    snprintf(buf, sizeof(buf), i18n::tr(i18n::Str::BRIGHTNESS_FMT), (unsigned)level);
     show_toast(buf, lv_color_hex(::ui::C_ACCENT));
 }
 
@@ -103,16 +103,16 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
     };
 
     s_set_url    = make_row("Bambuddy",    2);
-    s_set_ip     = make_row("Local IP",   22);
-    s_set_rssi   = make_row("Wi-Fi RSSI", 42);
-    s_set_uptime = make_row("Uptime",     62);
+    s_set_ip     = make_row(i18n::tr(i18n::Str::LOCAL_IP),   22);
+    s_set_rssi   = make_row(i18n::tr(i18n::Str::WIFI_RSSI), 42);
+    s_set_uptime = make_row(i18n::tr(i18n::Str::UPTIME),     62);
 
     // --- Brightness 1..5 selector ---------------------------------------
     // Identical visual language to the speed chip on Live so the user
     // recognises segmented controls as "pick one of N" without any other
     // affordance.
     lv_obj_t* bl_lbl = lv_label_create(s_set_root);
-    lv_label_set_text(bl_lbl, "Brightness");
+    lv_label_set_text(bl_lbl, i18n::tr(i18n::Str::BRIGHTNESS));
     lv_obj_add_style(bl_lbl, &s_label_dim, 0);
     lv_obj_align(bl_lbl, LV_ALIGN_TOP_LEFT, 18, 90);
 
@@ -163,7 +163,9 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
     lv_obj_add_event_cb(s_set_reset_btn, set_reset_clicked, LV_EVENT_CLICKED, nullptr);
 
     s_set_reset_lbl = lv_label_create(s_set_reset_btn);
-    lv_label_set_text(s_set_reset_lbl, LV_SYMBOL_TRASH "  Factory reset");
+    lv_label_set_text(s_set_reset_lbl,
+                      (String(LV_SYMBOL_TRASH "  ") +
+                       i18n::tr(i18n::Str::FACTORY_RESET)).c_str());
     lv_obj_set_style_text_font(s_set_reset_lbl, &bb_font_16, 0);
     lv_obj_center(s_set_reset_lbl);
 
@@ -171,7 +173,9 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
     // Lets the user confirm at a glance which build is running — handy after
     // the boot-time OTA pulls a new release from GitHub.
     lv_obj_t* ver = lv_label_create(s_set_root);
-    lv_label_set_text(ver, "Firmware " BAMBOARD_VERSION);
+    lv_label_set_text(ver,
+                      (String(i18n::tr(i18n::Str::FIRMWARE)) +
+                       BAMBOARD_VERSION).c_str());
     lv_obj_add_style(ver, &s_label_dim, 0);
     lv_obj_set_style_text_font(ver, &bb_font_14, 0);
     lv_obj_align(ver, LV_ALIGN_BOTTOM_MID, 0, -56);
@@ -204,7 +208,9 @@ void update_settings() {
     if (s_set_reset_armed_at != 0 &&
         (lv_tick_get() - s_set_reset_armed_at) > 3000) {
         s_set_reset_armed_at = 0;
-        lv_label_set_text(s_set_reset_lbl, LV_SYMBOL_TRASH "  Factory reset");
+        lv_label_set_text(s_set_reset_lbl,
+                          (String(LV_SYMBOL_TRASH "  ") +
+                           i18n::tr(i18n::Str::FACTORY_RESET)).c_str());
         lv_obj_set_style_bg_color(s_set_reset_btn,
                                    lv_color_hex(::ui::C_PANEL_HI), 0);
     }

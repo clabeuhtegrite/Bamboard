@@ -63,7 +63,9 @@ void header_set_online(bool online, uint32_t latency_ms) {
         lv_label_set_text(s_hdr_conn, buf);
         lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_OK), 0);
     } else {
-        lv_label_set_text(s_hdr_conn, LV_SYMBOL_WARNING " offline");
+        lv_label_set_text(s_hdr_conn,
+                          (String(LV_SYMBOL_WARNING " ") +
+                           i18n::tr(i18n::Str::OFFLINE_SHORT)).c_str());
         lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_ERR), 0);
     }
 }

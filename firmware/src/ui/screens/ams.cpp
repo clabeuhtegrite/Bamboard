@@ -109,11 +109,13 @@ static void ams_dry_clicked(lv_event_t*) {
     bool ok;
     if (currently_drying) {
         ok = ::bambuddy::g_client.stop_ams_drying(id, unit);
-        show_toast(ok ? "Drying stopped" : "Stop drying failed",
+        show_toast(ok ? i18n::tr(i18n::Str::DRYING_STOPPED)
+                      : i18n::tr(i18n::Str::STOP_DRYING_FAILED),
                    lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
     } else {
         ok = ::bambuddy::g_client.start_ams_drying(id, unit, 60, 55);
-        show_toast(ok ? "Drying 60 min @ 55 °C" : "Start drying failed",
+        show_toast(ok ? "Drying 60 min @ 55 °C"
+                      : i18n::tr(i18n::Str::START_DRYING_FAILED),
                    lv_color_hex(ok ? ::ui::C_WARN : ::ui::C_ERR));
     }
 }
@@ -192,7 +194,7 @@ lv_obj_t* build_ams(lv_obj_t* parent) {
     lv_obj_align(s_ams_dry_btn, LV_ALIGN_TOP_RIGHT, -12, 0);
     lv_obj_add_event_cb(s_ams_dry_btn, ams_dry_clicked, LV_EVENT_CLICKED, nullptr);
     s_ams_dry_btn_lbl = lv_label_create(s_ams_dry_btn);
-    lv_label_set_text(s_ams_dry_btn_lbl, "Dry");
+    lv_label_set_text(s_ams_dry_btn_lbl, i18n::tr(i18n::Str::DRY));
     lv_obj_set_style_text_font(s_ams_dry_btn_lbl, &bb_font_14, 0);
     lv_obj_center(s_ams_dry_btn_lbl);
     lv_obj_add_flag(s_ams_dry_btn, LV_OBJ_FLAG_HIDDEN);
@@ -216,10 +218,7 @@ lv_obj_t* build_ams(lv_obj_t* parent) {
 
     // --- Empty state overlay ---
     s_ams_empty = lv_label_create(s_ams_root);
-    lv_label_set_text(s_ams_empty,
-        "No AMS connected.\n"
-        "Connect an AMS or AMS-HT to this printer\n"
-        "in Bambu Studio to see its slots here.");
+    lv_label_set_text(s_ams_empty, i18n::tr(i18n::Str::NO_AMS));
     lv_obj_set_style_text_align(s_ams_empty, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_add_style(s_ams_empty, &s_label_dim, 0);
     lv_obj_align(s_ams_empty, LV_ALIGN_CENTER, 0, 0);
@@ -235,7 +234,7 @@ static void render_ams_slot(uint8_t idx, const ::bambuddy::AmsSlot* s) {
     if (!s || !s->present) {
         lv_obj_set_style_bg_color(s_ams_card_swatch[idx],
                                    lv_color_hex(::ui::C_PANEL_HI), 0);
-        lv_label_set_text(s_ams_card_type[idx], "EMPTY");
+        lv_label_set_text(s_ams_card_type[idx], i18n::tr(i18n::Str::EMPTY));
         lv_obj_set_style_text_color(s_ams_card_type[idx],
                                      lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_label_set_text(s_ams_card_pct[idx], "—");
@@ -318,13 +317,15 @@ void update_ams(int printer_id) {
     if (u.is_ht) {
         lv_obj_clear_flag(s_ams_dry_btn, LV_OBJ_FLAG_HIDDEN);
         if (u.dry_time_min > 0) {
-            lv_label_set_text(s_ams_dry_btn_lbl, "Stop");
+            lv_label_set_text(s_ams_dry_btn_lbl, i18n::tr(i18n::Str::STOP));
             lv_obj_set_style_bg_color(s_ams_dry_btn,
                                        lv_color_hex(::ui::C_ERR), 0);
             lv_obj_set_style_text_color(s_ams_dry_btn_lbl,
                                         lv_color_hex(::ui::C_TEXT_INV), 0);
         } else {
-            lv_label_set_text(s_ams_dry_btn_lbl, LV_SYMBOL_TINT " Dry");
+            lv_label_set_text(s_ams_dry_btn_lbl,
+                              (String(LV_SYMBOL_TINT " ") +
+                               i18n::tr(i18n::Str::DRY)).c_str());
             lv_obj_set_style_bg_color(s_ams_dry_btn,
                                        lv_color_hex(::ui::C_PANEL_HI), 0);
             lv_obj_set_style_text_color(s_ams_dry_btn_lbl,
@@ -357,13 +358,15 @@ void update_ams(int printer_id) {
     }
 
     if (u.dry_time_min > 0) {
-        char dbuf[20];
+        char dbuf[24];
         if (u.dry_time_min >= 60)
-            snprintf(dbuf, sizeof(dbuf), "Dry %luh%02lu",
+            snprintf(dbuf, sizeof(dbuf), "%s %luh%02lu",
+                     i18n::tr(i18n::Str::DRY),
                      (unsigned long)(u.dry_time_min / 60),
                      (unsigned long)(u.dry_time_min % 60));
         else
-            snprintf(dbuf, sizeof(dbuf), "Dry %lum",
+            snprintf(dbuf, sizeof(dbuf), "%s %lum",
+                     i18n::tr(i18n::Str::DRY),
                      (unsigned long)u.dry_time_min);
         lv_label_set_text(s_ams_dry_lbl, dbuf);
     } else {

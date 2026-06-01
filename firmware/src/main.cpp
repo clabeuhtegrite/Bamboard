@@ -37,6 +37,7 @@ String  g_cfg_tz               = ::schedule::TZ;
 uint8_t g_cfg_reboot_hour      = ::schedule::DAILY_REBOOT_ENABLED
                                      ? ::schedule::DAILY_REBOOT_HOUR
                                      : ::schedule::REBOOT_DISABLED;
+uint8_t g_cfg_lang             = (uint8_t)::i18n::Lang::EN;  // UI language index
 
 // Public hook used by the Settings screen's brightness selector. Applies
 // the new level immediately and persists it to NVS so the next boot picks
@@ -68,6 +69,10 @@ static void load_prefs() {
         g_cfg_reboot_hour != ::schedule::REBOOT_DISABLED) {
         g_cfg_reboot_hour = ::schedule::REBOOT_DISABLED;
     }
+    g_cfg_lang = s_prefs.getUChar("lang", (uint8_t)::i18n::Lang::EN);
+    if (g_cfg_lang >= (uint8_t)::i18n::Lang::COUNT) {
+        g_cfg_lang = (uint8_t)::i18n::Lang::EN;
+    }
     s_prefs.end();
 }
 
@@ -78,6 +83,7 @@ static void save_prefs() {
     s_prefs.putUChar ("bl_level", g_cfg_brightness_level);
     s_prefs.putString("tz",       g_cfg_tz);
     s_prefs.putUChar ("reboot_h", g_cfg_reboot_hour);
+    s_prefs.putUChar ("lang",     g_cfg_lang);
     s_prefs.end();
 }
 
@@ -162,11 +168,22 @@ static void start_provisioning() {
     WiFiManagerParameter p_rbh("reboot_h",
         "Daily reboot hour 0-23 (blank = off)", rbh_default, 4);
 
+    // UI language — a two-letter code; the hint lists the five supported ones.
+    WiFiManagerParameter p_lang_hint(
+        "<br/><p>Interface language &mdash; "
+        "<code>en</code> English &middot; <code>es</code> Español &middot; "
+        "<code>fr</code> Français &middot; <code>pt</code> Português &middot; "
+        "<code>de</code> Deutsch</p>");
+    WiFiManagerParameter p_lang("lang", "Language (en/es/fr/pt/de)",
+        ::i18n::lang_code(g_cfg_lang), 4);
+
     s_wm.addParameter(&p_url);
     s_wm.addParameter(&p_key);
     s_wm.addParameter(&p_tz_hint);
     s_wm.addParameter(&p_tz);
     s_wm.addParameter(&p_rbh);
+    s_wm.addParameter(&p_lang_hint);
+    s_wm.addParameter(&p_lang);
 
     s_wm.setConfigPortalTimeout(provision::PORTAL_TIMEOUT_S);
     s_wm.setBreakAfterConfig(true);
@@ -197,6 +214,10 @@ static void start_provisioning() {
     } else {
         g_cfg_reboot_hour = ::schedule::REBOOT_DISABLED;
     }
+
+    int li = ::i18n::lang_from_code(p_lang.getValue());
+    if (li >= 0) g_cfg_lang = (uint8_t)li;   // unknown code → keep current
+    ::i18n::set_language(g_cfg_lang);
 
     save_prefs();
 
@@ -377,9 +398,6 @@ void setup() {
         // output but we don't want to brick the device.
         log_e("Display init failed");
     }
-    ui::g_ui.begin();
-    lv_timer_handler();
-
     // Factory reset: the BOOT button on the side of the Guition PCB is the
     // only physical input left. Holding it during power-up wipes NVS and
     // re-opens the captive portal (used to be PREV-at-boot on v0.x).
@@ -390,12 +408,17 @@ void setup() {
         delay(500);
     }
 
+    // Load persisted settings and apply the UI language BEFORE building the
+    // screens, so the tab bar and titles come up already translated.
     load_prefs();
+    ::i18n::set_language(g_cfg_lang);
 
-    // Apply the user's saved brightness as soon as we have the value. The
+    ui::g_ui.begin();
+    lv_timer_handler();
+
+    // Apply the user's saved brightness now that we have the value. The
     // display starts off dimmed inside hw::Display::begin() to avoid a
-    // bright flash before the first frame is drawn; now that LVGL has
-    // ticked at least once we can ramp to the chosen level.
+    // bright flash before the first frame is drawn.
     hw::g_display.set_brightness_level(g_cfg_brightness_level);
 
     // Bring up Wi-Fi. If we have no saved credentials or Bambuddy details,
