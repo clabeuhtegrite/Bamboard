@@ -5,6 +5,46 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.17.2 — 2026-06
+
+Hardening + cleanup pass from a full-project audit — correctness, safety and
+accuracy only, no new features. Like every release it lands automatically over
+the air on the next boot / daily reboot.
+
+### Fixed
+
+- **Factory-reset toast rendered a tofu box.** The `Resetting…` string (shown
+  the instant before the device reboots into the captive portal) used a Unicode
+  ellipsis `…` (U+2026), which isn't in the firmware's Latin-1 + FontAwesome
+  font — so it drew a missing-glyph box in all five languages. Replaced with
+  ASCII `...`.
+- **Camera: an oversized snapshot is rejected instead of shown half-decoded.**
+  `fetch_camera_jpeg` capped its PSRAM buffer at 256 KiB but still returned
+  `true` when the source declared a larger frame, handing a truncated JPEG to
+  the decoder. It now fails cleanly ("frame too large") when the declared
+  content length exceeds the cap, and clears a rejected stream token on a retry
+  401 so the next fetch starts fresh.
+
+### Security
+
+- **The Cloudflare Access token can no longer leak onto a clear-text link.** The
+  `CF-Access-Client-Id` / `CF-Access-Client-Secret` headers were attached
+  whenever a token was set, relying solely on the captive portal blanking the
+  token on http. The REST client and the WebSocket handshake now also gate the
+  headers on the scheme (`https://` / `wss://`) at the point they're emitted —
+  defence in depth, so a token that ever lingered in NVS beside an `http://` URL
+  still can't go out in clear text. No change for the normal https + CF setup.
+
+### Internal
+
+- Dropped the dead `s_dash_speed_lbl_cap` widget on Live — the "SPEED" caption
+  was removed in v0.17.0 but the (permanently hidden) label object lingered.
+- Corrected stale source comments the audit surfaced: the tab bar's "5 buttons"
+  (it's 6 since the Queue tab), Settings' "4 read-only rows" (5 with the
+  Bambuddy server row), the default-brightness note (level 3 ≈ 50 %, not 70 %),
+  and the REST client's API-endpoint list + AMS-drying route header (now
+  matching the routes the code actually calls).
+
 ## v0.17.1 — 2026-06
 
 ### Fixed

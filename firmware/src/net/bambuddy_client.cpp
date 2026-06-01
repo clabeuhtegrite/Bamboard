@@ -98,8 +98,11 @@ bool Client::begin_request(HTTPClient& http, WiFiClientSecure& secure,
     if (!ok) return false;
 
     http.addHeader("X-API-Key", api_key_);
-    // Cloudflare Access service token — only set for https deployments behind CF.
-    if (cf_id_.length() && cf_secret_.length()) {
+    // Cloudflare Access service token — only ever sent over https so it can't
+    // leak onto a clear-text link, even if a stale token were to linger in NVS
+    // beside an http:// URL. The portal already blanks it on http; this is the
+    // belt-and-braces guard at the point the header is actually emitted.
+    if (base_url_.startsWith("https://") && cf_id_.length() && cf_secret_.length()) {
         http.addHeader("CF-Access-Client-Id", cf_id_);
         http.addHeader("CF-Access-Client-Secret", cf_secret_);
     }
@@ -493,14 +496,25 @@ bool Client::fetch_camera_jpeg(int printer_id, uint8_t** out_buf, size_t* out_le
         }
         if (code != HTTP_CODE_OK) {
             last_error_ = String("cam HTTP ") + code;
+            // A 401 here is already the retry (the first attempt refreshed the
+            // token): drop the rejected token so the next fetch starts clean
+            // instead of re-sending a known-bad one.
+            if (code == 401) camera_token_ = "";
             http.end();
             return false;
         }
 
-        // Cap the buffer so a misbehaving/huge source can't exhaust PSRAM.
+        // Cap the buffer so a misbehaving/huge source can't exhaust PSRAM. A
+        // declared length above the cap would be silently truncated — reject the
+        // frame instead of handing a half-image to the JPEG decoder.
         const size_t CAM_MAX = 256 * 1024;
         int      clen = http.getSize();                 // -1 when chunked
-        size_t   cap  = (clen > 0 && (size_t)clen <= CAM_MAX) ? (size_t)clen : CAM_MAX;
+        if (clen > 0 && (size_t)clen > CAM_MAX) {
+            last_error_ = "cam: frame too large";
+            http.end();
+            return false;
+        }
+        size_t   cap  = (clen > 0) ? (size_t)clen : CAM_MAX;
         uint8_t* buf  = (uint8_t*)heap_caps_malloc(cap, MALLOC_CAP_SPIRAM);
         if (!buf) { last_error_ = "cam: oom"; http.end(); return false; }
 

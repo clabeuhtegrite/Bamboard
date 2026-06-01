@@ -95,7 +95,7 @@ static const char* const T[][(int)Lang::COUNT] = {
         "Aucune imprimante dans Bambuddy.\nAjoutez-en une dans l'interface Bambuddy.",
         "Sem impressoras no Bambuddy.\nAdicione uma na interface do Bambuddy.",
         "Keine Drucker in Bambuddy.\nFügen Sie einen in der Bambuddy-Oberfläche hinzu."},
-    /*RESETTING*/     {"Resetting…", "Restableciendo…", "Réinitialisation…", "A repor…", "Zurücksetzen…"},
+    /*RESETTING*/     {"Resetting...", "Restableciendo...", "Réinitialisation...", "A repor...", "Zurücksetzen..."},
     /*NOT_CONFIGURED*/{"(not configured)", "(sin configurar)", "(non configuré)", "(não configurado)", "(nicht konfiguriert)"},
     /*DRYING_STARTED*/{"Drying %s @ %d °C", "Secando %s @ %d °C", "Séchage %s @ %d °C", "Secagem %s @ %d °C", "Trocknen %s @ %d °C"},
     /*QUEUE_EMPTY*/   {"Queue is empty.", "La cola está vacía.", "La file est vide.", "A fila está vazia.", "Warteschlange leer."},

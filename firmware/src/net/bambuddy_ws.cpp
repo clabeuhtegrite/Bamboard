@@ -52,8 +52,10 @@ void WsClient::apply_url(const String& base_url) {
 
     // Behind Cloudflare Access the /ws handshake must carry the service token,
     // or CF rejects it before it reaches Bambuddy. Held in extra_headers_ since
-    // setExtraHeaders() keeps the pointer. No token → clear any previous one.
-    if (cf_id_.length() && cf_secret_.length()) {
+    // setExtraHeaders() keeps the pointer. Only sent over wss:// so the token
+    // can't leak onto a plain ws:// link; no token (or non-secure) → clear any
+    // previous one.
+    if (secure_ && cf_id_.length() && cf_secret_.length()) {
         extra_headers_ = "CF-Access-Client-Id: " + cf_id_ +
                          "\r\nCF-Access-Client-Secret: " + cf_secret_;
         client_.setExtraHeaders(extra_headers_.c_str());

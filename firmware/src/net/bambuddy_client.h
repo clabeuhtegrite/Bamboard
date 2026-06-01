@@ -1,14 +1,19 @@
 // Bambuddy REST client
 //
 // Wraps the small subset of the Bambuddy API that Bamboard actually uses:
-//   GET  /api/v1/printers
+//   GET  /api/v1/printers/                            (identity list)
 //   GET  /api/v1/printers/{id}/status
-//   GET  /api/v1/statistics
-//   GET  /api/v1/archives?limit=N
-//   POST /api/v1/printers/{id}/refresh-status
+//   GET  /api/v1/archives/stats                       (History totals)
+//   GET  /api/v1/archives/slim?limit=N                (recent prints)
+//   GET  /api/v1/queue                                (pending jobs)
+//   GET  /api/v1/system/info                          (Bambuddy version/uptime)
+//   GET  /api/v1/printers/{id}/camera/snapshot?token= (+ POST .../camera/stream-token)
+//   POST /api/v1/printers/{id}/print/{pause,resume,stop}
 //   POST /api/v1/printers/{id}/print-speed?mode=N
+//   POST /api/v1/printers/{id}/chamber-light?on=
 //   POST /api/v1/printers/{id}/hms/clear
 //   POST /api/v1/printers/{id}/clear-plate
+//   POST /api/v1/printers/{id}/drying/{start,stop}?ams_id=N
 //   GET  /health
 //
 // The client never blocks the LVGL task — calls are issued from a dedicated
@@ -180,12 +185,10 @@ class Client {
     bool stop_print(int printer_id);
     bool set_chamber_light(int printer_id, bool on);
 
-    // AMS drying control. The exact Bambuddy route hasn't shipped upstream
-    // at the time of writing — these issue a POST to
-    //   /api/v1/printers/{id}/ams/{unit_id}/dry  (body {"minutes":N,"temp":C})
-    //   /api/v1/printers/{id}/ams/{unit_id}/dry/stop
-    // and report success/failure to the UI. Once Bambuddy lands an official
-    // dryer endpoint we re-point these without UI changes.
+    // AMS drying control — Bambuddy's real routes, params in the query string:
+    //   POST /api/v1/printers/{id}/drying/start?ams_id=N&duration=M&temp=C
+    //   POST /api/v1/printers/{id}/drying/stop?ams_id=N
+    // and report success/failure to the UI.
     bool start_ams_drying(int printer_id, uint8_t unit_id,
                           uint16_t minutes, uint8_t temp_c);
     bool stop_ams_drying (int printer_id, uint8_t unit_id);
