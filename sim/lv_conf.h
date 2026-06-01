@@ -17,9 +17,9 @@
 
 #define LV_DISP_DEF_REFR_PERIOD 16
 #define LV_INDEV_DEF_READ_PERIOD 30
-#define LV_TICK_CUSTOM 1
-#define LV_TICK_CUSTOM_INCLUDE "Arduino.h"
-#define LV_TICK_CUSTOM_SYS_TIME_EXPR (millis())
+/* No custom tick (don't couple LVGL core to the Arduino shim) — the harness
+ * drives time via lv_tick_inc(). */
+#define LV_TICK_CUSTOM 0
 
 #define LV_USE_LOG 0
 #define LV_USE_ASSERT_NULL   0

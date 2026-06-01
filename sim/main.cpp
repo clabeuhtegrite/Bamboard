@@ -53,6 +53,7 @@ static void dump_png(const std::string& dir, const char* name) {
 
 static void pump(int frames) {
     for (int i = 0; i < frames; ++i) {
+        lv_tick_inc(8);           // LV_TICK_CUSTOM is off in the sim
         ui::g_ui.refresh();
         lv_timer_handler();
         delay(8);
