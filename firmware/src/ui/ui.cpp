@@ -133,18 +133,18 @@ void Manager::refresh() {
     // Finish (✓) or Failed/Error. Skipped on the first sight of a printer
     // (no known previous state) so an already-finished job doesn't toast at boot.
     {
-        using PS = ::bambuddy::PrinterState;
+        using PState = ::bambuddy::PrinterState;   // 'PS' clashes with the Xtensa register macro
         for (uint8_t i = 0; i < n; ++i) {
-            PS prev = PS::Unknown; bool known = false;
+            PState prev = PState::Unknown; bool known = false;
             for (uint8_t k = 0; k < s_prev_state_n; ++k)
                 if (s_prev_state[k].id == ps[i].id) { prev = s_prev_state[k].state; known = true; break; }
-            if (known && (prev == PS::Printing || prev == PS::Paused)) {
+            if (known && (prev == PState::Printing || prev == PState::Paused)) {
                 char m[64];
-                if (ps[i].state == PS::Finish) {
+                if (ps[i].state == PState::Finish) {
                     snprintf(m, sizeof(m), "%s  " LV_SYMBOL_OK " %s",
                              ps[i].name.c_str(), ::i18n::tr(::i18n::Str::PRINT_DONE));
                     screens::show_toast(m, lv_color_hex(::ui::C_OK));
-                } else if (ps[i].state == PS::Failed || ps[i].state == PS::Error) {
+                } else if (ps[i].state == PState::Failed || ps[i].state == PState::Error) {
                     snprintf(m, sizeof(m), "%s  " LV_SYMBOL_WARNING " %s",
                              ps[i].name.c_str(), ::i18n::tr(::i18n::Str::PRINT_FAILED));
                     screens::show_toast(m, lv_color_hex(::ui::C_ERR));

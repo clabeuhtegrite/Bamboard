@@ -163,8 +163,8 @@ void update_printers(int focused_id) {
         lv_obj_set_style_bg_color(r.dot, lv_color_hex(state_color(ps[i].state)), 0);
         lv_label_set_text(r.name, ps[i].name.c_str());
 
-        using PS = ::bambuddy::PrinterState;
-        bool active = (ps[i].state == PS::Printing || ps[i].state == PS::Paused);
+        using PState = ::bambuddy::PrinterState;   // 'PS' clashes with the Xtensa register macro
+        bool active = (ps[i].state == PState::Printing || ps[i].state == PState::Paused);
         char sub[80];
         if (active) {
             // Live at-a-glance status: nozzle/bed temps + remaining ETA.
