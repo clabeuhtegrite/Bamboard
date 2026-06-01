@@ -20,5 +20,8 @@ pip install --quiet cryptography
 mkdir -p data/cert
 curl -fsSL "$CACERT_URL" -o cacert.pem
 curl -fsSL "$GEN_URL"    -o gen_crt_bundle.py
-python gen_crt_bundle.py -i cacert.pem -o data/cert/x509_crt_bundle.bin
+# This gen_crt_bundle.py takes only --input and writes a fixed-name file
+# (./x509_crt_bundle) in the cwd — it has no --output flag — so move it into place.
+python gen_crt_bundle.py --input cacert.pem
+mv x509_crt_bundle data/cert/x509_crt_bundle.bin
 ls -l data/cert/x509_crt_bundle.bin
