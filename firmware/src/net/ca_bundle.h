@@ -13,5 +13,5 @@
 //
 // The host simulator can't embed a file, so it provides a stub definition of
 // this symbol and validates over libcurl's system trust store instead
-// (see sim/shim/ca_bundle_stub.cpp).
+// (see sim/shim/shims.cpp).
 extern const uint8_t ca_bundle_start[] asm("_binary_data_cert_x509_crt_bundle_bin_start");

@@ -5,12 +5,12 @@ name: sim
 # an artifact. With the Bambuddy + Cloudflare-Access secrets set it renders on
 # REAL data; without them it renders the empty states (still validates layout).
 #
-# Triggers on push to the sim branch / main and on manual dispatch — NOT on
-# pull_request, so fork PRs can never read the secrets.
+# Triggers on push to main and on manual dispatch — NOT on pull_request, so
+# fork PRs can never read the secrets.
 
 on:
   push:
-    branches: [main, feat/host-sim]
+    branches: [main]
   workflow_dispatch:
 
 jobs:

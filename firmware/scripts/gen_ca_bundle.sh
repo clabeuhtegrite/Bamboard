@@ -14,7 +14,9 @@
 set -euo pipefail
 
 CACERT_URL="https://curl.se/ca/cacert.pem"
-GEN_URL="https://raw.githubusercontent.com/espressif/esp-idf/release/v5.1/components/mbedtls/esp_crt_bundle/gen_crt_bundle.py"
+# Pinned to a tagged esp-idf release (not the moving release/v5.1 branch) so an
+# upstream change to gen_crt_bundle.py can't silently break every firmware build.
+GEN_URL="https://raw.githubusercontent.com/espressif/esp-idf/v5.1.5/components/mbedtls/esp_crt_bundle/gen_crt_bundle.py"
 
 pip install --quiet cryptography
 mkdir -p data/cert
