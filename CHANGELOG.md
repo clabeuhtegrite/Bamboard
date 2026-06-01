@@ -5,6 +5,36 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.14.1 — 2026-06
+
+Hardening pass from a full-project audit — correctness/robustness/safety only
+(the audit confirmed the v0.13/v0.14 AMS work itself is correct).
+
+### Fixed
+
+- **OTA refuses to flash an unverified image.** `check_and_update` aborts if the
+  release manifest carries no valid 32-char `md5` — the manifest + binary travel
+  over a `setInsecure()` TLS channel, so the MD5 bound into `Update.end()` is the
+  integrity check. Previously a manifest without `md5` flashed unverified.
+- **No boot reboot-loop when Wi-Fi is down.** With stored credentials but an
+  unreachable AP (router/ISP outage), the device used to re-open the captive
+  portal and `ESP.restart()` on its timeout, forever. It now boots into the
+  normal UI offline with auto-reconnect armed; hold BOOT to re-provision.
+- **Camera viewer no longer stalls ~6 s per frame** — the snapshot reader waited
+  the full read timeout on chunked responses; it now ends a frame after a short
+  idle gap once bytes arrive, freeing the net task.
+- **AMS humidity tolerates float/string encodings** (was dropped to "unknown"
+  unless a strict integer); RFID drying temp/time are clamped before the `uint8`
+  cast so a garbage value can't wrap into a bogus setpoint.
+- **Stale HMS line** on Live is cleared when all printers drop out of the list.
+
+### Internal
+
+- Net-task stack raised to 16 KB for the TLS + JSON + JPEG-decode call path; AMS
+  unit-cycle index clamped to the chained-unit count; removed dead
+  `clear_children()` and a duplicate i18n entry; corrected the misleading
+  `LV_MEM_SIZE` comment (the pool is internal DRAM, not PSRAM).
+
 ## v0.14.0 — 2026-06
 
 ### Added

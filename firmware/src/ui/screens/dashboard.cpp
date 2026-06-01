@@ -371,6 +371,7 @@ void update_dashboard(int printer_id) {
         lv_obj_set_style_text_color(s_dash_state_lbl, lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_obj_set_style_bg_color(s_dash_state_dot, lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_label_set_text(s_dash_file_lbl, i18n::tr(i18n::Str::ADD_IN_BAMBUDDY));
+        lv_label_set_text(s_dash_hms, "");   // clear any stale HMS line on printer dropout
         header_set_printer_name("");
         speed_menu_close();
         lv_obj_add_flag(s_dash_speed_lbl_cap, LV_OBJ_FLAG_HIDDEN);

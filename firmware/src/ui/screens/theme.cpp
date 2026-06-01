@@ -108,15 +108,6 @@ void ensure_styles() {
     lv_style_set_text_font(&s_chip_on, &bb_font_14);
 }
 
-// ---------- Tiny widget tree helpers ---------------------------------------
-
-void clear_children(lv_obj_t* o) {
-    while (lv_obj_get_child_cnt(o) > 0) {
-        lv_obj_t* c = lv_obj_get_child(o, 0);
-        lv_obj_del(c);
-    }
-}
-
 // ---------- Printer-state cosmetics ----------------------------------------
 
 const char* state_name(::bambuddy::PrinterState s) {

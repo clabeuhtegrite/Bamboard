@@ -52,10 +52,6 @@ constexpr int body_h() {
     return ::display::HEIGHT - (int)::ui::HEADER_H - (int)::ui::TAB_BAR_H;
 }
 
-// ---------- Tiny widget tree helpers ---------------------------------------
-
-void clear_children(lv_obj_t* o);
-
 // ---------- Printer-state cosmetics -----------------------------------------
 //
 // Both the dashboard and the printers-list screens describe a printer

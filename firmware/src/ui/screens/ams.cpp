@@ -39,6 +39,7 @@ static lv_obj_t* s_ams_card_pct    [4] = {};
 static lv_obj_t* s_ams_card_bar    [4] = {};
 
 static int s_ams_visible_index = 0;
+static uint8_t s_ams_count_cache = 0;   // last-seen unit count, for cycle clamping
 
 uint8_t ams_visible_unit_index() {
     return (uint8_t)(s_ams_visible_index < 0 ? 0 : s_ams_visible_index);
@@ -382,6 +383,10 @@ static void render_ams_slot(uint8_t idx, const ::bambuddy::AmsSlot* s) {
 void ams_cycle_unit(int dir) {
     s_ams_visible_index += dir;
     if (s_ams_visible_index < 0) s_ams_visible_index = 0;
+    // Clamp to the last-seen unit count so the getter can't return an index past
+    // the chained-unit count between this tap and the next refresh.
+    if (s_ams_count_cache > 0 && s_ams_visible_index >= s_ams_count_cache)
+        s_ams_visible_index = s_ams_count_cache - 1;
 }
 
 void update_ams(int printer_id) {
@@ -394,6 +399,7 @@ void update_ams(int printer_id) {
     if (!sel && n > 0) sel = &ps[0];
 
     bool has_ams = (sel != nullptr) && sel->ams_exists && sel->ams_count > 0;
+    s_ams_count_cache = has_ams ? sel->ams_count : 0;
     if (!has_ams) {
         lv_obj_clear_flag(s_ams_empty, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_ams_row,      LV_OBJ_FLAG_HIDDEN);

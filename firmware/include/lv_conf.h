@@ -19,7 +19,7 @@
 
 /* -------- Memory -------- */
 #define LV_MEM_CUSTOM 0
-#define LV_MEM_SIZE (64U * 1024U)   /* PSRAM-friendly; S3 has plenty */
+#define LV_MEM_SIZE (64U * 1024U)   /* internal-DRAM pool (LV_MEM_CUSTOM 0 is not PSRAM); ample for this object tree */
 
 /* -------- HAL settings -------- */
 #define LV_DISP_DEF_REFR_PERIOD 16   /* ~60 fps cap */
