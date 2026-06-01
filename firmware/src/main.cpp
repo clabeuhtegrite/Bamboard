@@ -15,6 +15,7 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <esp_system.h>   // esp_reset_reason() for boot diagnostics
+#include <esp_task_wdt.h> // task watchdog on the UI task
 #include <lvgl.h>
 #include <time.h>
 
@@ -334,7 +335,13 @@ static void net_task(void*) {
 static void ui_task(void*) {
     uint32_t last_refresh       = 0;
     uint32_t last_touch_seen_ms = millis();
+    // Watch the UI task: a frozen screen is the worst failure for a desk
+    // monitor, and this loop never blocks (LVGL tick + an 8 ms delay), so it
+    // can't false-trip the way the HTTP-bound net task would. If LVGL ever
+    // deadlocks, the task WDT panics and the device reboots into a fresh UI.
+    esp_task_wdt_add(nullptr);
     for (;;) {
+        esp_task_wdt_reset();
         // LVGL pumps both the display flush and the touch input device.
         // The touch driver bumps `consume_touch_activity()` whenever the
         // GT911 reports a press; we use that to reset the auto-dim timer.
@@ -504,6 +511,14 @@ void setup() {
 
     bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key);
     bambuddy::g_ws.begin    (g_cfg_bambuddy_url);  // /ws is unauthenticated
+
+    // Arm the task watchdog (10 s, panic+reboot on timeout) before the UI task
+    // subscribes itself. Best-effort: if the Arduino runtime already initialised
+    // the TWDT this is a no-op and the existing timeout stands — the UI loop
+    // feeds it every few ms either way, so it only fires on a real hang. The
+    // net task is intentionally NOT watched (its HTTP calls block for seconds
+    // by design).
+    esp_task_wdt_init(10, true);
 
     // Tasks: net on core 0, UI on core 1.
     xTaskCreatePinnedToCore(net_task, "net", 8192, nullptr, 1, nullptr, 0);
