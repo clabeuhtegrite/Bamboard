@@ -35,19 +35,19 @@ lv_obj_t* build_header(lv_obj_t* parent) {
     lv_label_set_text(s_hdr_title, "Bamboard");
     lv_obj_align(s_hdr_title, LV_ALIGN_LEFT_MID, 12, 0);
     lv_obj_set_style_text_color(s_hdr_title, lv_color_hex(::ui::C_ACCENT), 0);
-    lv_obj_set_style_text_font(s_hdr_title, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(s_hdr_title, &bb_font_20, 0);
 
     s_hdr_printer = lv_label_create(hdr);
     lv_label_set_text(s_hdr_printer, "");
     lv_obj_align(s_hdr_printer, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_text_color(s_hdr_printer, lv_color_hex(::ui::C_TEXT), 0);
-    lv_obj_set_style_text_font(s_hdr_printer, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_hdr_printer, &bb_font_16, 0);
 
     s_hdr_conn = lv_label_create(hdr);
     lv_label_set_text(s_hdr_conn, LV_SYMBOL_WIFI " --");
     lv_obj_align(s_hdr_conn, LV_ALIGN_RIGHT_MID, -12, 0);
     lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_TEXT_DIM), 0);
-    lv_obj_set_style_text_font(s_hdr_conn, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(s_hdr_conn, &bb_font_14, 0);
     return hdr;
 }
 
@@ -63,7 +63,9 @@ void header_set_online(bool online, uint32_t latency_ms) {
         lv_label_set_text(s_hdr_conn, buf);
         lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_OK), 0);
     } else {
-        lv_label_set_text(s_hdr_conn, LV_SYMBOL_WARNING " offline");
+        lv_label_set_text(s_hdr_conn,
+                          (String(LV_SYMBOL_WARNING " ") +
+                           i18n::tr(i18n::Str::OFFLINE_SHORT)).c_str());
         lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_ERR), 0);
     }
 }

@@ -18,6 +18,8 @@
 #include <Arduino.h>
 
 #include "../../config.h"
+#include "../fonts.h"
+#include "../i18n.h"
 #include "../../net/bambuddy_client.h"
 #include "../screens.h"
 #include "../ui.h"

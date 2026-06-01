@@ -55,7 +55,7 @@ static lv_obj_t* make_temp_cell(lv_obj_t* parent, const char* title,
     lv_obj_t* v = lv_label_create(cell);
     lv_label_set_text(v, "-- °C");
     lv_obj_set_style_text_color(v, lv_color_hex(::ui::C_TEXT), 0);
-    lv_obj_set_style_text_font(v, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(v, &bb_font_16, 0);
     lv_obj_align(v, LV_ALIGN_RIGHT_MID, 0, 0);
     return v;
 }
@@ -70,7 +70,7 @@ static void speed_seg_clicked(lv_event_t* e) {
     if (mode < 1 || mode > 4) return;
     bool ok = ::bambuddy::g_client.set_print_speed(id, mode);
     String msg = String(LV_SYMBOL_OK " ") + speed_mode_name(mode);
-    show_toast(ok ? msg.c_str() : "Speed change failed",
+    show_toast(ok ? msg.c_str() : i18n::tr(i18n::Str::SPEED_CHANGE_FAILED),
                lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
 }
 
@@ -78,7 +78,8 @@ static void btn_plate_clicked(lv_event_t*) {
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0) return;
     bool ok = ::bambuddy::g_client.clear_plate(id);
-    show_toast(ok ? "Plate cleared" : "Clear plate failed",
+    show_toast(ok ? i18n::tr(i18n::Str::PLATE_CLEARED)
+                  : i18n::tr(i18n::Str::CLEAR_PLATE_FAILED),
                lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
 }
 
@@ -86,7 +87,8 @@ static void btn_hms_clicked(lv_event_t*) {
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0) return;
     bool ok = ::bambuddy::g_client.clear_hms(id);
-    show_toast(ok ? "HMS cleared" : "Clear HMS failed",
+    show_toast(ok ? i18n::tr(i18n::Str::HMS_CLEARED)
+                  : i18n::tr(i18n::Str::CLEAR_HMS_FAILED),
                lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
 }
 
@@ -108,14 +110,14 @@ static lv_obj_t* make_action_btn(lv_obj_t* parent, int x, int y, int w,
 
     lv_obj_t* lbl = lv_label_create(btn);
     lv_label_set_text(lbl, text);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(lbl, &bb_font_16, 0);
     lv_obj_center(lbl);
     return btn;
 }
 
 static void build_speed_segmented(lv_obj_t* parent, int x, int y, int w) {
     s_dash_speed_caption = lv_label_create(parent);
-    lv_label_set_text(s_dash_speed_caption, "SPEED");
+    lv_label_set_text(s_dash_speed_caption, i18n::tr(i18n::Str::SPEED));
     lv_obj_add_style(s_dash_speed_caption, &s_label_dim, 0);
     lv_obj_set_pos(s_dash_speed_caption, x + 4, y - 14);
 
@@ -148,7 +150,7 @@ static void build_speed_segmented(lv_obj_t* parent, int x, int y, int w) {
                             (void*)(uintptr_t)(i + 1));
         lv_obj_t* lbl = lv_label_create(seg);
         lv_label_set_text(lbl, k_short[i]);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(lbl, &bb_font_14, 0);
         lv_obj_center(lbl);
         s_dash_speed_seg[i] = seg;
         s_dash_speed_lbl[i] = lbl;
@@ -197,38 +199,39 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
 
     s_dash_progress_lbl = lv_label_create(s_dash_progress_arc);
     lv_label_set_text(s_dash_progress_lbl, "--%");
-    lv_obj_set_style_text_font(s_dash_progress_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_dash_progress_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(s_dash_progress_lbl, lv_color_hex(::ui::C_TEXT), 0);
     lv_obj_center(s_dash_progress_lbl);
 
     s_dash_state_lbl = lv_label_create(s_dash_root);
     lv_label_set_text(s_dash_state_lbl, "—");
     lv_obj_set_pos(s_dash_state_lbl, 88, 0);
-    lv_obj_set_style_text_font(s_dash_state_lbl, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(s_dash_state_lbl, &bb_font_20, 0);
     lv_obj_set_style_text_color(s_dash_state_lbl, lv_color_hex(::ui::C_ACCENT), 0);
 
     s_dash_eta_lbl = lv_label_create(s_dash_root);
-    lv_label_set_text(s_dash_eta_lbl, "ETA --:--");
+    lv_label_set_text(s_dash_eta_lbl, i18n::tr(i18n::Str::ETA_NONE));
     lv_obj_set_pos(s_dash_eta_lbl, 320, 0);
-    lv_obj_set_style_text_font(s_dash_eta_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_dash_eta_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(s_dash_eta_lbl, lv_color_hex(::ui::C_TEXT), 0);
 
     s_dash_file_lbl = lv_label_create(s_dash_root);
-    lv_label_set_text(s_dash_file_lbl, "no file");
+    lv_label_set_text(s_dash_file_lbl, i18n::tr(i18n::Str::NO_FILE));
     lv_obj_set_width(s_dash_file_lbl, 220);
     lv_label_set_long_mode(s_dash_file_lbl, LV_LABEL_LONG_DOT);
     lv_obj_set_pos(s_dash_file_lbl, 88, 26);
     lv_obj_add_style(s_dash_file_lbl, &s_label_dim, 0);
 
     s_dash_layer_lbl = lv_label_create(s_dash_root);
-    lv_label_set_text(s_dash_layer_lbl, "layer --/--");
+    lv_label_set_text(s_dash_layer_lbl,
+                      (String(i18n::tr(i18n::Str::LAYER)) + " --/--").c_str());
     lv_obj_set_pos(s_dash_layer_lbl, 320, 26);
     lv_obj_add_style(s_dash_layer_lbl, &s_label_dim, 0);
 
     // --- Temp row ---
-    s_dash_t_noz  = make_temp_cell(s_dash_root, "NOZZLE",   12, 142);
-    s_dash_t_bed  = make_temp_cell(s_dash_root, "BED",     162, 142);
-    s_dash_t_cham = make_temp_cell(s_dash_root, "CHAMBER", 312, 156);
+    s_dash_t_noz  = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::NOZZLE),   12, 142);
+    s_dash_t_bed  = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::BED),     162, 142);
+    s_dash_t_cham = make_temp_cell(s_dash_root, i18n::tr(i18n::Str::CHAMBER), 312, 156);
 
     // --- HMS line (hidden when "ok") ---
     s_dash_hms = lv_label_create(s_dash_root);
@@ -237,15 +240,17 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_label_set_long_mode(s_dash_hms, LV_LABEL_LONG_DOT);
     lv_obj_set_pos(s_dash_hms, 12, 108);
     lv_obj_set_style_text_color(s_dash_hms, lv_color_hex(::ui::C_ERR), 0);
-    lv_obj_set_style_text_font(s_dash_hms, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(s_dash_hms, &bb_font_14, 0);
 
     // --- Inline action area ---
     build_speed_segmented(s_dash_root, 12, 128, LV_HOR_RES - 24);
     s_dash_btn_plate = make_action_btn(s_dash_root, 12, 128, LV_HOR_RES - 24,
-                                       LV_SYMBOL_OK "  Clear plate",
+                                       (String(LV_SYMBOL_OK "  ") +
+                                        i18n::tr(i18n::Str::CLEAR_PLATE)).c_str(),
                                        btn_plate_clicked);
     s_dash_btn_hms   = make_action_btn(s_dash_root, 12, 128, LV_HOR_RES - 24,
-                                       LV_SYMBOL_WARNING "  Clear HMS",
+                                       (String(LV_SYMBOL_WARNING "  ") +
+                                        i18n::tr(i18n::Str::CLEAR_HMS)).c_str(),
                                        btn_hms_clicked, ::ui::C_ERR);
 
     lv_obj_add_flag(s_dash_speed_bar,     LV_OBJ_FLAG_HIDDEN);
@@ -272,8 +277,8 @@ void update_dashboard(int printer_id) {
     ::bambuddy::Printer ps[8]; uint8_t n = 0;
     ::bambuddy::g_client.snapshot_printers(ps, n);
     if (n == 0) {
-        lv_label_set_text(s_dash_state_lbl, "NO PRINTER");
-        lv_label_set_text(s_dash_file_lbl, "Add one in Bambuddy");
+        lv_label_set_text(s_dash_state_lbl, i18n::tr(i18n::Str::NO_PRINTER));
+        lv_label_set_text(s_dash_file_lbl, i18n::tr(i18n::Str::ADD_IN_BAMBUDDY));
         header_set_printer_name("");
         lv_obj_add_flag(s_dash_speed_bar,     LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_dash_speed_caption, LV_OBJ_FLAG_HIDDEN);
@@ -292,27 +297,29 @@ void update_dashboard(int printer_id) {
                                  lv_color_hex(state_color(sel->state)), 0);
 
     lv_label_set_text(s_dash_file_lbl,
-                       sel->filename.length() ? sel->filename.c_str() : "(idle)");
+                       sel->filename.length() ? sel->filename.c_str()
+                                              : i18n::tr(i18n::Str::IDLE_PAREN));
 
     lv_arc_set_value(s_dash_progress_arc, sel->progress);
     char pbuf[8];
     snprintf(pbuf, sizeof(pbuf), "%u%%", (unsigned)sel->progress);
     lv_label_set_text(s_dash_progress_lbl, pbuf);
 
-    String eta = String("ETA ") + fmt_eta(sel->remaining_s);
+    String eta = String(i18n::tr(i18n::Str::ETA)) + fmt_eta(sel->remaining_s);
     lv_label_set_text(s_dash_eta_lbl, eta.c_str());
 
     char lay[24];
     if (sel->total_layers > 0)
-        snprintf(lay, sizeof(lay), "layer %u/%u",
+        snprintf(lay, sizeof(lay), "%s %u/%u", i18n::tr(i18n::Str::LAYER),
                  (unsigned)sel->current_layer, (unsigned)sel->total_layers);
     else
-        snprintf(lay, sizeof(lay), "layer —");
+        snprintf(lay, sizeof(lay), "%s —", i18n::tr(i18n::Str::LAYER));
     lv_label_set_text(s_dash_layer_lbl, lay);
 
     bool hms_active = sel->hms.length() && sel->hms != "ok";
     if (hms_active) {
-        String h = String(LV_SYMBOL_WARNING " HMS: ") + sel->hms;
+        String h = String(LV_SYMBOL_WARNING " ") +
+                   i18n::tr(i18n::Str::HMS_PREFIX) + sel->hms;
         lv_label_set_text(s_dash_hms, h.c_str());
     } else {
         lv_label_set_text(s_dash_hms, "");

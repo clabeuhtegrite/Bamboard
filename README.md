@@ -54,7 +54,7 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 ### Connectivity
 
 - **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames. REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop.
-- **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy URL + API key + timezone / daily-reboot-hour setup; no re-flash needed to change them. Hold the side **BOOT** button at boot to re-run it.
+- **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy URL + API key + timezone / daily-reboot-hour + **interface language** (EN / ES / FR / PT / DE) setup; no re-flash needed to change them. Hold the side **BOOT** button at boot to re-run it.
 - **Auto-dim** — backlight drops after 60 s without a touch, wakes on the next tap.
 
 ### Install & updates
@@ -94,7 +94,7 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
    for details (and the esptool fallback for Firefox / Safari / Linux).
 5. First boot: device exposes a `Bamboard-setup` Wi-Fi AP, connect, and via
    the captive portal fill in your Wi-Fi credentials, your Bambuddy URL +
-   API key, and your timezone + daily-reboot hour.
+   API key, your timezone + daily-reboot hour, and the interface language.
 6. Enjoy.
 
 ## Requirements

@@ -50,16 +50,16 @@ void update_history() {
         lv_obj_t* vl = lv_label_create(s_hist_stats);
         lv_label_set_text(vl, v.c_str());
         lv_obj_align(vl, LV_ALIGN_TOP_LEFT, x, 14);
-        lv_obj_set_style_text_font(vl, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_font(vl, &bb_font_16, 0);
         lv_obj_set_style_text_color(vl, c, 0);
     };
-    add_kpi("PRINTS",   String(st.total_prints),
+    add_kpi(i18n::tr(i18n::Str::PRINTS),   String(st.total_prints),
             lv_color_hex(::ui::C_TEXT), 0);
-    add_kpi("SUCCESS",  String(st.success_rate, 1) + "%",
+    add_kpi(i18n::tr(i18n::Str::SUCCESS),  String(st.success_rate, 1) + "%",
             lv_color_hex(::ui::C_OK), 110);
-    add_kpi("FILAMENT", String((int)(st.total_filament_g)) + " g",
+    add_kpi(i18n::tr(i18n::Str::FILAMENT), String((int)(st.total_filament_g)) + " g",
             lv_color_hex(::ui::C_TEXT), 230);
-    add_kpi("TIME",     String(st.total_time_s / 3600) + " h",
+    add_kpi(i18n::tr(i18n::Str::TIME),     String(st.total_time_s / 3600) + " h",
             lv_color_hex(::ui::C_TEXT), 350);
 
     clear_children(s_hist_list);
@@ -67,7 +67,7 @@ void update_history() {
     ::bambuddy::g_client.snapshot_recent(ar, n);
     if (n == 0) {
         lv_obj_t* lbl = lv_label_create(s_hist_list);
-        lv_label_set_text(lbl, "No prints yet.");
+        lv_label_set_text(lbl, i18n::tr(i18n::Str::NO_PRINTS));
         lv_obj_add_style(lbl, &s_label_dim, 0);
         return;
     }
@@ -97,7 +97,7 @@ void update_history() {
         lv_label_set_long_mode(nm, LV_LABEL_LONG_DOT);
         lv_obj_align(nm, LV_ALIGN_LEFT_MID, 16, 0);
         lv_obj_set_style_text_color(nm, lv_color_hex(::ui::C_TEXT), 0);
-        lv_obj_set_style_text_font(nm, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(nm, &bb_font_14, 0);
 
         char buf[24];
         snprintf(buf, sizeof(buf), "%lum • %.0fg",

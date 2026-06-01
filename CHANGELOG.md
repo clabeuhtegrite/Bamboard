@@ -5,6 +5,33 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.9.0 — 2026-06
+
+Multilingual UI. The interface language is now picked in the captive portal,
+in five languages.
+
+### Added
+
+- **UI language selection (EN / ES / FR / PT / DE).** A `Language` field in the
+  captive portal sets the interface language (NVS key `lang`); it's applied at
+  boot before the screens are built. New `i18n` module (`firmware/src/ui/i18n.*`)
+  holds the `Str` enum + the five-language table and `tr()`; every user-facing
+  string goes through it.
+- **Extended fonts.** The built-in Montserrat fonts (ASCII only) are replaced by
+  `bb_font_*` — Montserrat regenerated (`lv_font_conv`) with the Latin-1 range so
+  accented characters (é, ñ, ü, ç, ã…) render, plus the FontAwesome symbol glyphs
+  the UI uses. Sources in `firmware/src/ui/fonts/`.
+
+### Notes
+
+- Latin-script languages only: Chinese / Hindi / Arabic are out of scope (they'd
+  need multi-MB CJK/Devanagari fonts, and Arabic needs RTL). French is included
+  as requested.
+- Brand / acronym terms (Bamboard, Bambuddy, AMS, HMS), units and the Bambu
+  speed-mode names (Silent / Standard / Sport / Ludicrous) are kept verbatim.
+- The first-boot setup portal itself stays in English (it's where you pick the
+  language). Existing devices default to English until the portal is re-run.
+
 ## v0.8.0 — 2026-06
 
 Timezone + reboot hour are now set in the captive portal, so one firmware build

@@ -5,6 +5,7 @@
 #include "../config.h"
 #include "../hw/display.h"
 #include "../net/bambuddy_client.h"
+#include "i18n.h"
 #include "screens.h"
 
 namespace ui {
@@ -29,13 +30,19 @@ static lv_obj_t* s_root        = nullptr;
 static lv_obj_t* s_screens[(uint8_t)Screen::_Count] = {};
 static lv_obj_t* s_header      = nullptr;
 
-static const char* screen_titles[(uint8_t)Screen::_Count] = {
-    "Live",
-    "AMS",
-    "Printers",
-    "History",
-    "Settings",
-};
+// Header titles are produced at the point of use (not as a static array)
+// because the active language is only known at runtime. Index 1 is the
+// "AMS" acronym, which is never translated.
+static const char* screen_title(uint8_t i) {
+    switch (i) {
+        case 0:  return i18n::tr(i18n::Str::TAB_LIVE);
+        case 1:  return "AMS";
+        case 2:  return i18n::tr(i18n::Str::TAB_PRINTERS);
+        case 3:  return i18n::tr(i18n::Str::TAB_HISTORY);
+        case 4:  return i18n::tr(i18n::Str::TAB_SETTINGS);
+        default: return "";
+    }
+}
 
 // Forward declaration — the swipe handler attached to each screen needs
 // to call go_to_next / go_to_prev on the manager.
@@ -81,7 +88,7 @@ void Manager::go_to(Screen s) {
     lv_obj_add_flag(s_screens[(uint8_t)current_], LV_OBJ_FLAG_HIDDEN);
     current_ = s;
     lv_obj_clear_flag(s_screens[(uint8_t)current_], LV_OBJ_FLAG_HIDDEN);
-    screens::header_set_title(screen_titles[(uint8_t)current_]);
+    screens::header_set_title(screen_title((uint8_t)current_));
     screens::tab_bar_set_active((uint8_t)current_);
 }
 

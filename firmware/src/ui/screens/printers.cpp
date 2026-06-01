@@ -49,9 +49,7 @@ void update_printers(int focused_id) {
 
     if (n == 0) {
         lv_obj_t* lbl = lv_label_create(s_pr_list);
-        lv_label_set_text(lbl,
-            "No printers found in Bambuddy.\n"
-            "Add one in the Bambuddy web UI first.");
+        lv_label_set_text(lbl, i18n::tr(i18n::Str::NO_PRINTERS_FOUND));
         lv_obj_add_style(lbl, &s_label_dim, 0);
         return;
     }
@@ -83,7 +81,7 @@ void update_printers(int focused_id) {
         lv_obj_t* name = lv_label_create(row);
         lv_label_set_text(name, ps[i].name.c_str());
         lv_obj_align(name, LV_ALIGN_LEFT_MID, 26, -8);
-        lv_obj_set_style_text_font(name, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_font(name, &bb_font_16, 0);
         lv_obj_set_style_text_color(name, lv_color_hex(::ui::C_TEXT), 0);
 
         lv_obj_t* sub = lv_label_create(row);
@@ -98,7 +96,7 @@ void update_printers(int focused_id) {
             lv_obj_t* prog = lv_label_create(row);
             lv_label_set_text(prog, pbuf);
             lv_obj_align(prog, LV_ALIGN_RIGHT_MID, -12, 0);
-            lv_obj_set_style_text_font(prog, &lv_font_montserrat_20, 0);
+            lv_obj_set_style_text_font(prog, &bb_font_20, 0);
             lv_obj_set_style_text_color(prog, lv_color_hex(::ui::C_ACCENT), 0);
         }
     }

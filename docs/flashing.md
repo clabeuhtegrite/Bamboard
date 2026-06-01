@@ -79,6 +79,7 @@ On a fresh device with no saved settings:
      examples); sets the clock for the daily reboot. Defaults to Europe/Paris.
    - **Daily reboot hour** — `0`–`23` local time, or leave blank to turn the
      daily auto-reboot off.
+   - **Language** — interface language: `en`, `es`, `fr`, `pt` or `de`.
 5. The device reboots and connects.
 
 ## Re-configuring later
