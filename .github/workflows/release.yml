@@ -131,6 +131,10 @@ jobs:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: Bamboard ${{ steps.ver.outputs.full }}
           generate_release_notes: true
+          # A tag with a pre-release suffix (v1.2.3-rc1, -beta…) is published as a
+          # prerelease so it never becomes the "latest" release the device OTA and
+          # the Pages installer resolve to. Plain vX.Y.Z tags ship to the fleet.
+          prerelease: ${{ contains(steps.ver.outputs.tag, '-') }}
           files: |
             dist/firmware.bin
             dist/bamboard-factory.bin

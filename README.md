@@ -78,6 +78,7 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 │   ├── include/     lv_conf overrides
 │   └── platformio.ini
 ├── .github/         CI: build-check every push; publish release + web installer on v* tags
+├── sim/             Host LVGL simulator — CI renders every screen to PNG for review
 ├── web/             Browser-based flasher (ESP Web Tools → GitHub Pages)
 ├── hardware/        Bill of materials, wiring diagram
 ├── case/            Parametric OpenSCAD enclosure + STL exports
@@ -89,7 +90,7 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 1. Order the parts from `hardware/bom.md` (~20 €).
 2. Print the enclosure: `case/bamboard.scad` → export STL → slice → print PLA / PETG.
 3. Drop the Guition board into the front shell, clip the back shell on,
-   drive four M3 × 8 mm screws. (No wiring — everything's on the one PCB.)
+   drive four M3 × 6 mm screws. (No wiring — everything's on the one PCB.)
 4. Flash the firmware: plug the board in via USB-C, open the
    [web installer](https://clabeuhtegrite.github.io/Bamboard/) in Chrome /
    Edge / Opera and click **Connect**. See [docs/flashing.md](docs/flashing.md)

@@ -106,13 +106,15 @@ How it works:
 
 - The device fetches
   `https://github.com/clabeuhtegrite/Bamboard/releases/latest/download/manifest.json`
-  — a tiny file (`{version, tag, url, sha256, size}`) attached to every
+  — a tiny file (`{version, tag, url, sha256, md5, size}`) attached to every
   release. The `latest/download/...` URL always resolves to the newest
   release, so nothing on the device has to change between versions.
 - It compares `manifest.version` against its own build version (shown at
   the bottom of the Settings screen). If the release is newer, it
   downloads the `firmware.bin` asset (the app image, not the factory image),
-  flashes it into the spare OTA partition, and reboots into it.
+  flashes it into the spare OTA partition, and reboots into it. The image is
+  verified against the manifest's `md5` at flash time — a release without a
+  valid `md5` is refused rather than flashed unverified.
 - Dev builds — compiled locally with no version tag — skip the check, so a
   USB-flashed work-in-progress isn't immediately pulled back to the
   published release. (You can also force-disable the check with
