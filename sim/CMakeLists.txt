@@ -69,9 +69,12 @@ target_include_directories(bamboard_sim BEFORE PRIVATE
 )
 target_compile_definitions(bamboard_sim PRIVATE
   BAMBOARD_SIM=1
-  # Make ArduinoJson take its Arduino path so it accepts our String + Stream
-  # shims (HTTPClient::getStream()); disable the bits we don't provide.
-  ARDUINO=10812
+  # Turn on ONLY ArduinoJson's Arduino-Stream adapter (so deserializeJson can
+  # read HTTPClient::getStream(), our ::Stream shim). Leave its Arduino String
+  # / Print / PROGMEM glue off — our shims don't implement concat()/Printable
+  # and the firmware never asks ArduinoJson to produce a String anyway.
+  ARDUINOJSON_ENABLE_ARDUINO_STREAM=1
+  ARDUINOJSON_ENABLE_ARDUINO_STRING=0
   ARDUINOJSON_ENABLE_ARDUINO_PRINT=0
   ARDUINOJSON_ENABLE_PROGMEM=0
 )
