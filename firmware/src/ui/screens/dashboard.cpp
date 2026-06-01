@@ -598,7 +598,9 @@ void update_dashboard(int printer_id) {
     bool can_speed = (sel->state == PState::Printing ||
                       sel->state == PState::Paused   ||
                       sel->state == PState::Prepare);
-    bool can_plate = (sel->state == PState::Finish || sel->state == PState::Failed);
+    // Show "Clear plate" only when Bambuddy is actually awaiting the ack — not for
+    // every FINISH/FAILED print (an already-cleared plate shouldn't prompt again).
+    bool can_plate = sel->awaiting_plate_clear;
     bool can_hms   = hms_active;
     bool can_ctrl  = (sel->state == PState::Printing || sel->state == PState::Paused);
 

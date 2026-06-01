@@ -100,6 +100,7 @@ struct Printer {
     int16_t  fan_cooling = -1;      // part-cooling fan (cooling_fan_speed)
     int16_t  fan_aux     = -1;      // auxiliary fan    (big_fan1_speed)
     int16_t  fan_chamber = -1;      // chamber/exhaust  (big_fan2_speed)
+    bool     awaiting_plate_clear = false;  // Bambuddy is waiting for a plate-clear ack
 
     // populated by /status (ams subtree):
     bool     ams_exists = false;

@@ -295,6 +295,9 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
         p.fan_cooling   = (int16_t)(doc["cooling_fan_speed"] | -1);
         p.fan_aux       = (int16_t)(doc["big_fan1_speed"]    | -1);
         p.fan_chamber   = (int16_t)(doc["big_fan2_speed"]    | -1);
+        // Bambuddy reports whether it's actually waiting for a plate-clear ack
+        // separately from the FINISH/FAILED state — this drives the Clear-plate pill.
+        p.awaiting_plate_clear = doc["awaiting_plate_clear"] | false;
 
         // --- AMS ---
         p.ams_exists = doc["ams_exists"] | false;
