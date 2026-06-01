@@ -21,23 +21,6 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 | **Queue** | **History** | **Settings** |
 | ![Queue](docs/screenshots/queue.png) | ![History](docs/screenshots/history.png) | ![Settings](docs/screenshots/settings.png) |
 
-> Real 480 × 272 screen captures rendered by the host simulator on live Bambuddy
-> data — the same harness CI runs on every change. Every screen carries the
-> **Bamboard** wordmark header (focused printer + Wi-Fi link badge) and a
-> permanent **six-tab** bar whose active tab lights up (icon, label, a 3 px accent
-> strip). On **Live**, while a print runs, inline **Pause / Resume** and **Stop**
-> controls plus a **chamber-light** toggle sit next to the print-speed button,
-> above a fan-speed readout and a tappable camera thumbnail; **AMS** outlines every
-> slot and checkerboards clear filament, with a per-filament **Dry** pill on
-> heater units; **Queue** lists Bambuddy's pending jobs; **Settings** shows the
-> Bambuddy server version beside the device diagnostics and a 1–5 brightness
-> selector. (The Live shot above is a *finished* print — the Pause/Stop controls
-> appear only while one is running.)
-
-Tap the progress ring (or the Live thumbnail) to open the printer **camera** full-screen:
-
-![Camera](docs/screenshots/camera.png)
-
 ## Features
 
 ### What you see on the screen
@@ -77,6 +60,21 @@ Tap the progress ring (or the Live thumbnail) to open the printer **camera** ful
 - **Browser-based install** — flash the latest firmware straight from the [web installer](https://clabeuhtegrite.github.io/Bamboard/) in Chrome / Edge / Opera (no CLI, no toolchain). Only needed for the very first install — everything after lands over the air. Firefox / Safari / Linux users can flash `bamboard-factory.bin` from the latest release with `esptool` instead.
 - **Over-the-air updates from GitHub** — on every boot the device checks this repo's latest GitHub Release. If it carries a newer firmware than the one running, the device downloads and flashes it (with a full-screen progress overlay) before coming up — no PC, no LAN tooling, no being on the same network. If it's offline or already current, boot continues normally. The device also **reboots itself once a day at local midnight**, so this check runs unattended — new releases land overnight with no power-cycle (timezone configurable in `config.h`). Releases are built and published automatically by [`.github/workflows/release.yml`](.github/workflows/release.yml) on every pushed `v*` tag. See [docs/flashing.md](docs/flashing.md).
 
+## Quick start
+
+1. Order the parts from `hardware/bom.md` (~20 €).
+2. Print the enclosure: `case/bamboard.scad` → export STL → slice → print PLA / PETG.
+3. Drop the Guition board into the front shell, clip the back shell on,
+   drive four M3 × 6 mm screws. (No wiring — everything's on the one PCB.)
+4. Flash the firmware: plug the board in via USB-C, open the
+   [web installer](https://clabeuhtegrite.github.io/Bamboard/) in Chrome /
+   Edge / Opera and click **Connect**. See [docs/flashing.md](docs/flashing.md)
+   for details (and the esptool fallback for Firefox / Safari / Linux).
+5. First boot: device exposes a `Bamboard-setup` Wi-Fi AP, connect, and via
+   the captive portal fill in your Wi-Fi credentials, your Bambuddy URL +
+   API key, your timezone + daily-reboot hour, and the interface language.
+6. Enjoy.
+
 ## Repo layout
 
 ```
@@ -97,21 +95,6 @@ Tap the progress ring (or the Live thumbnail) to open the printer **camera** ful
 ├── case/            Parametric OpenSCAD enclosure + STL exports
 └── docs/            Assembly, flashing, configuration guides
 ```
-
-## Quick start
-
-1. Order the parts from `hardware/bom.md` (~20 €).
-2. Print the enclosure: `case/bamboard.scad` → export STL → slice → print PLA / PETG.
-3. Drop the Guition board into the front shell, clip the back shell on,
-   drive four M3 × 6 mm screws. (No wiring — everything's on the one PCB.)
-4. Flash the firmware: plug the board in via USB-C, open the
-   [web installer](https://clabeuhtegrite.github.io/Bamboard/) in Chrome /
-   Edge / Opera and click **Connect**. See [docs/flashing.md](docs/flashing.md)
-   for details (and the esptool fallback for Firefox / Safari / Linux).
-5. First boot: device exposes a `Bamboard-setup` Wi-Fi AP, connect, and via
-   the captive portal fill in your Wi-Fi credentials, your Bambuddy URL +
-   API key, your timezone + daily-reboot hour, and the interface language.
-6. Enjoy.
 
 ## Requirements
 
