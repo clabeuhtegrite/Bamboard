@@ -9,7 +9,7 @@ name: release
 #   firmware.bin           the app image the device flashes over the air
 #   bamboard-factory.bin   bootloader + partitions + boot_app0 + app, the full
 #                          image the web installer / esptool writes at 0x0
-#   manifest.json          {version,url,sha256,size} the device reads for OTA
+#   manifest.json          {version,url,sha256,md5,size} the device reads for OTA
 #
 # The web installer (GitHub Pages) is deployed by pages.yml; this workflow
 # kicks it via workflow_dispatch once the release is published — a `release`
@@ -108,13 +108,17 @@ jobs:
           cp "$BD/firmware.bin"          dist/firmware.bin
           cp "$BD/bamboard-factory.bin"  dist/bamboard-factory.bin
           SHA="$(sha256sum dist/firmware.bin | cut -d' ' -f1)"
+          MD5="$(md5sum    dist/firmware.bin | cut -d' ' -f1)"
           SIZE="$(stat -c%s dist/firmware.bin)"
+          # md5 is what the device validates at flash time (ESP32 Update.setMD5);
+          # sha256 stays for out-of-band human verification.
           cat > dist/manifest.json <<EOF
           {
             "version": "${FULL}",
             "tag": "${TAG}",
             "url": "https://github.com/${REPO}/releases/download/${TAG}/firmware.bin",
             "sha256": "${SHA}",
+            "md5": "${MD5}",
             "size": ${SIZE}
           }
           EOF
