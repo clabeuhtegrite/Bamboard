@@ -42,15 +42,15 @@ void ensure_styles() {
 
     lv_style_init(&s_label_dim);
     lv_style_set_text_color(&s_label_dim, lv_color_hex(::ui::C_TEXT_DIM));
-    lv_style_set_text_font(&s_label_dim, &lv_font_montserrat_12);
+    lv_style_set_text_font(&s_label_dim, &bb_font_12);
 
     lv_style_init(&s_label_value);
     lv_style_set_text_color(&s_label_value, lv_color_hex(::ui::C_TEXT));
-    lv_style_set_text_font(&s_label_value, &lv_font_montserrat_20);
+    lv_style_set_text_font(&s_label_value, &bb_font_20);
 
     lv_style_init(&s_label_big);
     lv_style_set_text_color(&s_label_big, lv_color_hex(::ui::C_TEXT));
-    lv_style_set_text_font(&s_label_big, &lv_font_montserrat_28);
+    lv_style_set_text_font(&s_label_big, &bb_font_28);
 
     // Base touch button — neutral pill, used for secondary actions like
     // AMS prev/next chevrons or the Factory-reset row.
@@ -63,7 +63,7 @@ void ensure_styles() {
     lv_style_set_border_opa(&s_btn, LV_OPA_80);
     lv_style_set_pad_all(&s_btn, 8);
     lv_style_set_text_color(&s_btn, lv_color_hex(::ui::C_TEXT));
-    lv_style_set_text_font(&s_btn, &lv_font_montserrat_16);
+    lv_style_set_text_font(&s_btn, &bb_font_16);
 
     // Accent variant — the "do the thing" primary action.
     lv_style_init(&s_btn_accent);
@@ -90,12 +90,12 @@ void ensure_styles() {
     lv_style_set_radius(&s_chip_off, ::ui::R_CHIP);
     lv_style_set_pad_all(&s_chip_off, 0);
     lv_style_set_text_color(&s_chip_off, lv_color_hex(::ui::C_TEXT_DIM));
-    lv_style_set_text_font(&s_chip_off, &lv_font_montserrat_14);
+    lv_style_set_text_font(&s_chip_off, &bb_font_14);
 
     lv_style_init(&s_chip_on);
     lv_style_set_bg_color(&s_chip_on, lv_color_hex(::ui::C_ACCENT));
     lv_style_set_text_color(&s_chip_on, lv_color_hex(::ui::C_TEXT_INV));
-    lv_style_set_text_font(&s_chip_on, &lv_font_montserrat_14);
+    lv_style_set_text_font(&s_chip_on, &bb_font_14);
 }
 
 // ---------- Tiny widget tree helpers ---------------------------------------

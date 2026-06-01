@@ -22,6 +22,8 @@
 #include "net/bambuddy_client.h"
 #include "net/bambuddy_ws.h"
 #include "net/github_ota.h"
+#include "ui/fonts.h"
+#include "ui/i18n.h"
 #include "ui/screens.h"
 #include "ui/ui.h"
 
@@ -121,7 +123,7 @@ static void start_provisioning() {
     lv_obj_t* title = lv_label_create(scr);
     lv_label_set_text(title, "Bamboard setup");
     lv_obj_set_style_text_color(title, lv_color_hex(::ui::C_ACCENT), 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_36, 0);
+    lv_obj_set_style_text_font(title, &bb_font_36, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 24);
 
     lv_obj_t* sub = lv_label_create(scr);
@@ -132,7 +134,7 @@ static void start_provisioning() {
         "Then open http://192.168.4.1 in a browser\n"
         "and fill in Wi-Fi, Bambuddy + timezone details.");
     lv_obj_set_style_text_color(sub, lv_color_hex(::ui::C_TEXT), 0);
-    lv_obj_set_style_text_font(sub, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(sub, &bb_font_20, 0);
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 0);
     lv_timer_handler();
 

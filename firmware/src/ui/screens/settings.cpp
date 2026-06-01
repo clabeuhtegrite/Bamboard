@@ -98,7 +98,7 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
         lv_label_set_long_mode(vl, LV_LABEL_LONG_DOT);
         lv_obj_align(vl, LV_ALIGN_TOP_LEFT, 130, y);
         lv_obj_set_style_text_color(vl, lv_color_hex(::ui::C_TEXT), 0);
-        lv_obj_set_style_text_font(vl, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(vl, &bb_font_14, 0);
         return vl;
     };
 
@@ -144,7 +144,7 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
         lv_obj_t* l = lv_label_create(seg);
         char buf[4]; snprintf(buf, sizeof(buf), "%u", (unsigned)(i + 1));
         lv_label_set_text(l, buf);
-        lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(l, &bb_font_14, 0);
         lv_obj_center(l);
         s_set_bright_seg[i] = seg;
     }
@@ -164,7 +164,7 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
 
     s_set_reset_lbl = lv_label_create(s_set_reset_btn);
     lv_label_set_text(s_set_reset_lbl, LV_SYMBOL_TRASH "  Factory reset");
-    lv_obj_set_style_text_font(s_set_reset_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_set_reset_lbl, &bb_font_16, 0);
     lv_obj_center(s_set_reset_lbl);
 
     // --- Firmware version line (just above the reset pill) --------------
@@ -173,7 +173,7 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
     lv_obj_t* ver = lv_label_create(s_set_root);
     lv_label_set_text(ver, "Firmware " BAMBOARD_VERSION);
     lv_obj_add_style(ver, &s_label_dim, 0);
-    lv_obj_set_style_text_font(ver, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(ver, &bb_font_14, 0);
     lv_obj_align(ver, LV_ALIGN_BOTTOM_MID, 0, -56);
 
     return s_set_root;

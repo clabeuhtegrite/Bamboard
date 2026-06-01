@@ -55,7 +55,7 @@ static lv_obj_t* make_temp_cell(lv_obj_t* parent, const char* title,
     lv_obj_t* v = lv_label_create(cell);
     lv_label_set_text(v, "-- °C");
     lv_obj_set_style_text_color(v, lv_color_hex(::ui::C_TEXT), 0);
-    lv_obj_set_style_text_font(v, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(v, &bb_font_16, 0);
     lv_obj_align(v, LV_ALIGN_RIGHT_MID, 0, 0);
     return v;
 }
@@ -108,7 +108,7 @@ static lv_obj_t* make_action_btn(lv_obj_t* parent, int x, int y, int w,
 
     lv_obj_t* lbl = lv_label_create(btn);
     lv_label_set_text(lbl, text);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(lbl, &bb_font_16, 0);
     lv_obj_center(lbl);
     return btn;
 }
@@ -148,7 +148,7 @@ static void build_speed_segmented(lv_obj_t* parent, int x, int y, int w) {
                             (void*)(uintptr_t)(i + 1));
         lv_obj_t* lbl = lv_label_create(seg);
         lv_label_set_text(lbl, k_short[i]);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(lbl, &bb_font_14, 0);
         lv_obj_center(lbl);
         s_dash_speed_seg[i] = seg;
         s_dash_speed_lbl[i] = lbl;
@@ -197,20 +197,20 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
 
     s_dash_progress_lbl = lv_label_create(s_dash_progress_arc);
     lv_label_set_text(s_dash_progress_lbl, "--%");
-    lv_obj_set_style_text_font(s_dash_progress_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_dash_progress_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(s_dash_progress_lbl, lv_color_hex(::ui::C_TEXT), 0);
     lv_obj_center(s_dash_progress_lbl);
 
     s_dash_state_lbl = lv_label_create(s_dash_root);
     lv_label_set_text(s_dash_state_lbl, "—");
     lv_obj_set_pos(s_dash_state_lbl, 88, 0);
-    lv_obj_set_style_text_font(s_dash_state_lbl, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(s_dash_state_lbl, &bb_font_20, 0);
     lv_obj_set_style_text_color(s_dash_state_lbl, lv_color_hex(::ui::C_ACCENT), 0);
 
     s_dash_eta_lbl = lv_label_create(s_dash_root);
     lv_label_set_text(s_dash_eta_lbl, "ETA --:--");
     lv_obj_set_pos(s_dash_eta_lbl, 320, 0);
-    lv_obj_set_style_text_font(s_dash_eta_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_dash_eta_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(s_dash_eta_lbl, lv_color_hex(::ui::C_TEXT), 0);
 
     s_dash_file_lbl = lv_label_create(s_dash_root);
@@ -237,7 +237,7 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     lv_label_set_long_mode(s_dash_hms, LV_LABEL_LONG_DOT);
     lv_obj_set_pos(s_dash_hms, 12, 108);
     lv_obj_set_style_text_color(s_dash_hms, lv_color_hex(::ui::C_ERR), 0);
-    lv_obj_set_style_text_font(s_dash_hms, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(s_dash_hms, &bb_font_14, 0);
 
     // --- Inline action area ---
     build_speed_segmented(s_dash_root, 12, 128, LV_HOR_RES - 24);

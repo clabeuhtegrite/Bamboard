@@ -61,13 +61,13 @@ static lv_obj_t* make_ams_slot_card(lv_obj_t* parent,
     *type_lbl = lv_label_create(card);
     lv_label_set_text(*type_lbl, "—");
     lv_obj_align(*type_lbl, LV_ALIGN_TOP_LEFT, 8, 60);
-    lv_obj_set_style_text_font(*type_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(*type_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(*type_lbl, lv_color_hex(::ui::C_TEXT), 0);
 
     *pct_lbl = lv_label_create(card);
     lv_label_set_text(*pct_lbl, "--%");
     lv_obj_align(*pct_lbl, LV_ALIGN_TOP_LEFT, 8, 86);
-    lv_obj_set_style_text_font(*pct_lbl, &lv_font_montserrat_28, 0);
+    lv_obj_set_style_text_font(*pct_lbl, &bb_font_28, 0);
     lv_obj_set_style_text_color(*pct_lbl, lv_color_hex(::ui::C_TEXT), 0);
 
     *bar = lv_bar_create(card);
@@ -140,14 +140,14 @@ lv_obj_t* build_ams(lv_obj_t* parent) {
     lv_obj_add_event_cb(s_ams_prev_btn, ams_prev_clicked, LV_EVENT_CLICKED, nullptr);
     lv_obj_t* p_lbl = lv_label_create(s_ams_prev_btn);
     lv_label_set_text(p_lbl, LV_SYMBOL_LEFT);
-    lv_obj_set_style_text_font(p_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(p_lbl, &bb_font_16, 0);
     lv_obj_center(p_lbl);
     lv_obj_add_flag(s_ams_prev_btn, LV_OBJ_FLAG_HIDDEN);
 
     s_ams_unit_lbl = lv_label_create(s_ams_root);
     lv_label_set_text(s_ams_unit_lbl, "AMS");
     lv_obj_align(s_ams_unit_lbl, LV_ALIGN_TOP_LEFT, 56, 6);
-    lv_obj_set_style_text_font(s_ams_unit_lbl, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(s_ams_unit_lbl, &bb_font_20, 0);
     lv_obj_set_style_text_color(s_ams_unit_lbl, lv_color_hex(::ui::C_ACCENT), 0);
 
     s_ams_next_btn = lv_btn_create(s_ams_root);
@@ -161,25 +161,25 @@ lv_obj_t* build_ams(lv_obj_t* parent) {
     lv_obj_add_event_cb(s_ams_next_btn, ams_next_clicked, LV_EVENT_CLICKED, nullptr);
     lv_obj_t* n_lbl = lv_label_create(s_ams_next_btn);
     lv_label_set_text(n_lbl, LV_SYMBOL_RIGHT);
-    lv_obj_set_style_text_font(n_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(n_lbl, &bb_font_16, 0);
     lv_obj_center(n_lbl);
     lv_obj_add_flag(s_ams_next_btn, LV_OBJ_FLAG_HIDDEN);
 
     s_ams_humid_lbl = lv_label_create(s_ams_root);
     lv_label_set_text(s_ams_humid_lbl, "");
     lv_obj_align(s_ams_humid_lbl, LV_ALIGN_TOP_LEFT, 186, 8);
-    lv_obj_set_style_text_font(s_ams_humid_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_ams_humid_lbl, &bb_font_16, 0);
 
     s_ams_temp_lbl = lv_label_create(s_ams_root);
     lv_label_set_text(s_ams_temp_lbl, "");
     lv_obj_align(s_ams_temp_lbl, LV_ALIGN_TOP_LEFT, 260, 8);
-    lv_obj_set_style_text_font(s_ams_temp_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_ams_temp_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(s_ams_temp_lbl, lv_color_hex(::ui::C_TEXT), 0);
 
     s_ams_dry_lbl = lv_label_create(s_ams_root);
     lv_label_set_text(s_ams_dry_lbl, "");
     lv_obj_align(s_ams_dry_lbl, LV_ALIGN_TOP_LEFT, 316, 8);
-    lv_obj_set_style_text_font(s_ams_dry_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_ams_dry_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(s_ams_dry_lbl, lv_color_hex(::ui::C_WARN), 0);
 
     // Right-side drying control.
@@ -193,7 +193,7 @@ lv_obj_t* build_ams(lv_obj_t* parent) {
     lv_obj_add_event_cb(s_ams_dry_btn, ams_dry_clicked, LV_EVENT_CLICKED, nullptr);
     s_ams_dry_btn_lbl = lv_label_create(s_ams_dry_btn);
     lv_label_set_text(s_ams_dry_btn_lbl, "Dry");
-    lv_obj_set_style_text_font(s_ams_dry_btn_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(s_ams_dry_btn_lbl, &bb_font_14, 0);
     lv_obj_center(s_ams_dry_btn_lbl);
     lv_obj_add_flag(s_ams_dry_btn, LV_OBJ_FLAG_HIDDEN);
 

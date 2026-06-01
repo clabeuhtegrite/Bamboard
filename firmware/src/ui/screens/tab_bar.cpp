@@ -71,13 +71,13 @@ lv_obj_t* build_tab_bar(lv_obj_t* parent) {
 
         lv_obj_t* icon = lv_label_create(btn);
         lv_label_set_text(icon, k_tab_icons[i]);
-        lv_obj_set_style_text_font(icon, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_font(icon, &bb_font_20, 0);
         lv_obj_set_style_text_color(icon, lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 6);
 
         lv_obj_t* lbl = lv_label_create(btn);
         lv_label_set_text(lbl, k_tab_labels[i]);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_font(lbl, &bb_font_12, 0);
         lv_obj_set_style_text_color(lbl, lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, -3);
 

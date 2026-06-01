@@ -50,7 +50,7 @@ void update_history() {
         lv_obj_t* vl = lv_label_create(s_hist_stats);
         lv_label_set_text(vl, v.c_str());
         lv_obj_align(vl, LV_ALIGN_TOP_LEFT, x, 14);
-        lv_obj_set_style_text_font(vl, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_font(vl, &bb_font_16, 0);
         lv_obj_set_style_text_color(vl, c, 0);
     };
     add_kpi("PRINTS",   String(st.total_prints),
@@ -97,7 +97,7 @@ void update_history() {
         lv_label_set_long_mode(nm, LV_LABEL_LONG_DOT);
         lv_obj_align(nm, LV_ALIGN_LEFT_MID, 16, 0);
         lv_obj_set_style_text_color(nm, lv_color_hex(::ui::C_TEXT), 0);
-        lv_obj_set_style_text_font(nm, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(nm, &bb_font_14, 0);
 
         char buf[24];
         snprintf(buf, sizeof(buf), "%lum • %.0fg",
