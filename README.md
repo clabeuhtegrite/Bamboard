@@ -25,15 +25,15 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 > bar whose active screen lights up — icon, label and a 3 px accent strip.
 > On Live a single **print-speed** button opens a four-way speed menu, on
 > AMS the chevrons flank the unit label and each slot is a colour-swatch
-> card, and on Settings a 1–5 segmented selector controls the panel
-> brightness.
+> card (clear filament shown as a checkerboard, dark filament outlined),
+> and on Settings a 1–5 segmented selector controls the panel brightness.
 
 ## Features
 
 ### What you see on the screen
 
 - **Live dashboard** — nozzle / bed / chamber temperature, layer progress, ETA, filename.
-- **AMS overview** — per-slot filament colour / type / remaining %, plus AMS humidity, temperature and active drying countdown. Big ◀ / ▶ side buttons cycle through chained AMS / AMS-HT units, and a one-tap **Dry / Stop** pill on AMS-HT units kicks off (or aborts) a 60 min @ 55 °C drying cycle.
+- **AMS overview** — per-slot filament colour / type / remaining %, plus AMS humidity, temperature and active drying countdown. Each slot is a colour swatch: every swatch is outlined so even **black** filament reads on the dark panel, and **clear / translucent** filament shows a **checkerboard** instead of a flat square. Big ◀ / ▶ side buttons cycle through chained AMS units, and a one-tap **Dry / Stop** pill on heater-equipped units (**AMS-HT and AMS 2 Pro**) starts (or aborts) a drying cycle whose **temperature and duration are taken from the loaded filament** — Bambu's per-spool RFID profile when present, a per-filament-type fallback otherwise.
 - **Printers list** — every printer Bambuddy knows about, highlighted by state. **Tap a row** to focus that printer and jump to Live.
 - **History & stats** — last 10 prints, success rate, total filament, total time.
 - **Settings** — Bambuddy URL, local IP, Wi-Fi RSSI, uptime, **brightness 1–5** segmented selector, and a two-tap **Factory reset** button.
