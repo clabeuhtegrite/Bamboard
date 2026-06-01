@@ -52,6 +52,8 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*START_DRYING_FAILED*/  {"Start drying failed", "Error al iniciar secado", "Échec démarrage séchage", "Falha ao secar", "Trocknen-Start fehlgeschlagen"},
     /*STOP_DRYING_FAILED*/   {"Stop drying failed", "Error al detener secado", "Échec arrêt séchage", "Falha ao parar", "Trocknen-Stopp fehlgeschlagen"},
     /*CONTROL_FAILED*/       {"Command failed", "Error de comando", "Échec de la commande", "Falha no comando", "Befehl fehlgeschlagen"},
+    /*PRINT_DONE*/           {"Print done", "Impresión lista", "Impression terminée", "Impressão concluída", "Druck fertig"},
+    /*PRINT_FAILED*/         {"Print failed", "Impresión fallida", "Impression échouée", "Impressão falhou", "Druck fehlgeschlagen"},
     // -- AMS --
     /*DRY*/           {"Dry", "Secar", "Sécher", "Secar", "Trocknen"},
     /*STOP*/          {"Stop", "Parar", "Arrêter", "Parar", "Stopp"},

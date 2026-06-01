@@ -538,7 +538,9 @@ static void net_task(void*) {
                     cam_fail++;
                 }
             }
-            next_cam_ms = now + 5000;
+            // Snappier while the full-screen viewer is open (more "live"),
+            // gentle while it only feeds the Live thumbnail.
+            next_cam_ms = now + (ui::screens::camera_overlay_is_open() ? 2000u : 5000u);
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));

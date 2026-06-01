@@ -111,7 +111,7 @@ bool Client::begin_request(HTTPClient& http, WiFiClientSecure& secure,
 
 // --- HTTP plumbing ----------------------------------------------------------
 
-bool Client::do_get(const String& path, JsonDocument& out_doc) {
+bool Client::do_get(const String& path, JsonDocument& out_doc, JsonDocument* filter) {
     if (!is_configured()) {
         last_error_ = "not configured";
         return false;
@@ -141,7 +141,9 @@ bool Client::do_get(const String& path, JsonDocument& out_doc) {
         http.end();
         return false;
     }
-    DeserializationError err = deserializeJson(out_doc, http.getStream());
+    DeserializationError err = filter
+        ? deserializeJson(out_doc, http.getStream(), DeserializationOption::Filter(*filter))
+        : deserializeJson(out_doc, http.getStream());
     http.end();
     if (err) {
         last_error_ = String("JSON: ") + err.c_str();
@@ -216,10 +218,43 @@ bool Client::fetch_printers() {
     return true;
 }
 
+// Whitelist of the /status fields apply_status_payload actually reads. Bambuddy
+// mirrors the entire MQTT report under /status; parsing only these (ArduinoJson
+// Filter) keeps the PSRAM doc small and the parse fast. Built once; net-task only.
+// MUST stay in sync with the field accesses in apply_status_payload below.
+static JsonDocument& status_filter() {
+    static JsonDocument f(&psram_json_allocator());
+    if (f.isNull()) {
+        f["state"]                = true;
+        f["progress"]             = true;
+        f["remaining_time"]       = true;
+        f["layer_num"]            = true;
+        f["total_layers"]         = true;
+        f["temperatures"]         = true;   // small sub-object; keep it whole
+        f["hms_errors"][0]["code"] = true;  // element filter → applies to all
+        f["subtask_name"]         = true;
+        f["gcode_file"]           = true;
+        f["speed_level"]          = true;
+        f["chamber_light"]        = true;
+        f["cooling_fan_speed"]    = true;
+        f["big_fan1_speed"]       = true;
+        f["big_fan2_speed"]       = true;
+        f["awaiting_plate_clear"] = true;
+        f["ams_exists"]           = true;
+        JsonObject a = f["ams"][0].to<JsonObject>();
+        a["id"] = true; a["is_ams_ht"] = true; a["humidity"] = true;
+        a["temp"] = true; a["dry_time"] = true;
+        JsonObject tr = a["tray"][0].to<JsonObject>();
+        tr["id"] = true; tr["tray_color"] = true; tr["tray_type"] = true;
+        tr["remain"] = true; tr["drying_temp"] = true; tr["drying_time"] = true;
+    }
+    return f;
+}
+
 bool Client::fetch_printer_status(int printer_id) {
     String path = String("/api/v1/printers/") + printer_id + "/status";
     JsonDocument doc(&psram_json_allocator());
-    if (!do_get(path, doc)) return false;
+    if (!do_get(path, doc, &status_filter())) return false;
     return apply_status_payload(printer_id, doc.as<JsonVariantConst>());
 }
 
