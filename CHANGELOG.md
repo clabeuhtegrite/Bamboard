@@ -5,6 +5,25 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.15.0 — 2026-06
+
+### Added / Changed
+
+- **Inline camera thumbnail on Live.** The printer-camera snapshot now also
+  shows as a small live thumbnail in the top row (between the state pill and the
+  ETA), tappable to open the existing full-screen viewer. It's revealed only once
+  a frame has actually decoded — a Bambuddy without a camera leaves the dashboard
+  exactly as before. The net task refreshes it while the Live screen is up (or
+  the full-screen viewer is open) and backs off after repeated fetch failures.
+- **Camera refresh slowed to every 5 s** (was 2 s) — gentler on the printer
+  camera and the network for an always-on desk monitor.
+
+### Notes
+
+- The thumbnail picture is **hardware-only**: the host simulator stubs out JPEG
+  decode, so CI can't render a frame — the layout degrades to the pre-existing
+  dashboard there, and only a real device shows the live image.
+
 ## v0.14.1 — 2026-06
 
 Hardening pass from a full-project audit — correctness/robustness/safety only
