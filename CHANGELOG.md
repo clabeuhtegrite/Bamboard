@@ -5,6 +5,43 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.17.3 — 2026-06
+
+A second full-project audit pass. No critical or major bugs surfaced — the
+v0.17.2 pass had already cleared those — so this is minor robustness + cleanup,
+mostly in the boot/display and OTA paths the first pass under-covered.
+
+### Fixed
+
+- **No bright flash on boot.** The display HAL lit the backlight to full at the
+  end of `Display::begin()` — before LVGL had drawn anything and before the
+  user's saved brightness was applied — so the panel briefly showed the black
+  pre-render fill, then the first frame, at full brightness before dimming. The
+  backlight now stays dark through init; `main.cpp` raises it to the saved level
+  only after the first frame, which is what the code comment already claimed.
+- **OTA: a broken release manifest is no longer reported as "offline".** A
+  fetched-but-unparseable manifest returned `NoNetwork` (the `BadManifest`
+  result was declared but never produced), conflating a corrupt release with a
+  down link. `check_and_update` now returns `BadManifest` when the server
+  answered but the body was bad. Boot still continues either way.
+- **OTA: the expected MD5 is validated as 32 hex characters,** not merely 32
+  characters of any kind — what the code comment already promised. A malformed
+  hash still fails safe at flash time; this rejects it earlier and makes the
+  guard honest.
+- **The Live speed picker blocks the swipe gesture while open** (like the camera
+  / HMS / OTA overlays already do), so a stray flick can't navigate out from
+  under the open modal.
+
+### Internal
+
+- `Manager::selected_printer_id_` marked `volatile`: written on the UI task,
+  read on the net task (focused-printer polling + camera). The access is a
+  single aligned 32-bit scalar, so volatile (fresh reads, no caching) documents
+  and enforces the cross-task contract.
+- Removed the unused `display::BL_RES` constant — the PWM resolution was never
+  wired into `Light_PWM` (which keeps its 8-bit default). Corrected the OTA-slot
+  size note in `platformio.ini` (~1.875 MB, not ~1.9 MB).
+
 ## v0.17.2 — 2026-06
 
 Hardening + cleanup pass from a full-project audit — correctness, safety and

@@ -92,6 +92,11 @@ static void speed_menu_close() {
     if (s_speed_menu)  lv_obj_add_flag(s_speed_menu,  LV_OBJ_FLAG_HIDDEN);
     if (s_speed_scrim) lv_obj_add_flag(s_speed_scrim, LV_OBJ_FLAG_HIDDEN);
 }
+// Exposed (screens.h) so the swipe-gesture handler treats the open picker like
+// the other modal overlays and doesn't navigate out from under it.
+bool speed_menu_is_open() {
+    return s_speed_menu && !lv_obj_has_flag(s_speed_menu, LV_OBJ_FLAG_HIDDEN);
+}
 static void speed_scrim_clicked(lv_event_t*) { speed_menu_close(); }
 static void speed_opt_clicked(lv_event_t* e) {
     uint8_t mode = (uint8_t)(uintptr_t)lv_event_get_user_data(e);

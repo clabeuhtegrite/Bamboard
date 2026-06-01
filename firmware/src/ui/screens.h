@@ -28,6 +28,11 @@ void update_settings ();
 // Cycle visible AMS unit when the selected printer has more than one.
 void ams_cycle_unit(int dir);
 
+// True while the Live speed-picker modal is open. The swipe-gesture handler
+// checks it so a flick can't navigate out from under the open picker (the
+// other full-screen overlays are guarded the same way).
+bool speed_menu_is_open();
+
 // Currently visible AMS unit index inside the focused printer. Used by
 // the AMS drying-button event handler to address the right unit when it
 // fires the POST.

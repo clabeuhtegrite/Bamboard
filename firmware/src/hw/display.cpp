@@ -173,7 +173,11 @@ bool Display::begin() {
     }
     s_tft.setRotation(0);
     s_tft.fillScreen(0x0000);   // black
-    set_backlight(0);     // stay dark until LVGL has drawn at least one frame
+    // Stay dark. main.cpp lights the backlight to the user's saved level only
+    // after ui::begin() + the first lv_timer_handler() frame, so the panel never
+    // flashes the pre-render black fill (nor a full-brightness frame before the
+    // user's dimmer level is applied).
+    set_backlight(0);
 
     lv_init();
 
@@ -199,8 +203,6 @@ bool Display::begin() {
     s_indev_drv.type    = LV_INDEV_TYPE_POINTER;
     s_indev_drv.read_cb = touch_read_cb;
     lv_indev_drv_register(&s_indev_drv);
-
-    set_backlight(::display::BL_FULL);
     return true;
 }
 

@@ -63,7 +63,8 @@ int semver_cmp(const char* a, const char* b) {
 // version + firmware-binary URL + expected MD5. Returns false on any
 // network / parse error.
 static bool fetch_manifest(String& out_version, String& out_bin_url,
-                           String& out_md5) {
+                           String& out_md5, bool& server_replied) {
+    server_replied = false;
     WiFiClientSecure client;
     // GitHub + its asset CDN (objects.githubusercontent.com) are HTTPS, and
     // the asset host changes across redirects. We skip cert-chain validation
@@ -93,6 +94,9 @@ static bool fetch_manifest(String& out_version, String& out_bin_url,
         http.end();
         return false;
     }
+    // The server answered 200 — from here on, any failure is a bad manifest
+    // (unparseable / missing fields), not a network problem.
+    server_replied = true;
 
     String body = http.getString();
     http.end();
@@ -123,8 +127,11 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
     }
 
     String latest, bin_url, expected_md5;
-    if (!fetch_manifest(latest, bin_url, expected_md5)) {
-        return CheckResult::NoNetwork;
+    bool server_replied = false;
+    if (!fetch_manifest(latest, bin_url, expected_md5, server_replied)) {
+        // Distinguish "couldn't reach the server" from "reached it but the
+        // manifest was unparseable / missing fields" so the cause is diagnosable.
+        return server_replied ? CheckResult::BadManifest : CheckResult::NoNetwork;
     }
 
     log_i("OTA: running %s, latest release %s", BAMBOARD_VERSION, latest.c_str());
@@ -139,9 +146,15 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
     // the channel. (release.yml always publishes one; this guards a tampered or
     // legacy manifest.) Checked here, before on_start(), so we never pop the
     // update overlay for an image we won't flash.
-    if (expected_md5.length() != 32) {
-        log_e("OTA: newer release %s but md5 missing/invalid (len %u) — refusing to flash",
-              latest.c_str(), (unsigned)expected_md5.length());
+    bool md5_valid = (expected_md5.length() == 32);
+    for (size_t i = 0; md5_valid && i < 32; ++i) {
+        char c = expected_md5[i];
+        md5_valid = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+                    (c >= 'A' && c <= 'F');
+    }
+    if (!md5_valid) {
+        log_e("OTA: newer release %s but md5 missing/invalid — refusing to flash",
+              latest.c_str());
         return CheckResult::Failed;
     }
 
