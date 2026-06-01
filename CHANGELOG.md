@@ -5,6 +5,49 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.9.1 — 2026-06
+
+Hardening + performance pass from a full-project audit. No new features —
+correctness, safety and internal cleanup. Like every release it lands
+automatically over the air on the next boot / daily reboot.
+
+### Fixed
+
+- **UI thread-safety.** The header connectivity readout was mutated directly
+  from the network task (core 0) while the UI task (core 1) was rendering —
+  LVGL is not reentrant, so a redraw could race a label write. The net task now
+  parks the state and the UI task applies it (`header_apply()`).
+- **OTA integrity.** The boot updater verified the downloaded image only with
+  Update's ESP-magic-byte check. The release manifest now carries an `md5`
+  (alongside the existing `sha256`) and the device binds it via
+  `Update.setMD5()`, so a corrupted or tampered binary is rejected at flash
+  time instead of half-writing an app slot.
+- **No reboot-loop on low memory.** `LV_USE_ASSERT_NULL` / `LV_USE_ASSERT_MALLOC`
+  are gated to dev builds; release firmware no longer panics (and silently
+  reboot-loops on a headless device) on a transient allocation failure.
+
+### Changed
+
+- **Lighter UI refresh.** The Printers and History screens reuse a fixed widget
+  pool instead of destroying and rebuilding every row each tick, and the
+  per-frame `String` allocations across the dashboard / settings / AMS screens
+  are replaced with stack `snprintf`. Much less heap churn over long uptimes.
+- **Less redundant polling.** While the WebSocket is pushing live status, REST
+  polling drops to a single focused-printer safety-net request instead of
+  re-fetching every printer.
+- **Reproducible builds.** LovyanGFX and LVGL are pinned to exact versions
+  rather than caret ranges.
+
+### Docs
+
+- `docs/assembly.md` rewritten for the integrated Guition board (it still
+  described the retired v0.x ILI9488 + jumpers + WS2812 build).
+- Factory-reset notes corrected: the reset wipes *all* persisted settings
+  (Wi-Fi + Bambuddy creds, timezone, reboot hour, brightness, language), not
+  just the network credentials.
+- The web installer hides its Install button when the manifest still reports
+  the `0.0.0-dev` placeholder (a Pages deploy that ran before release CI).
+
 ## v0.9.0 — 2026-06
 
 Multilingual UI. The interface language is now picked in the captive portal,
