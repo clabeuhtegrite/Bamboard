@@ -308,7 +308,7 @@ static volatile bool s_cam_open  = false;
 static volatile bool s_cam_dirty = false;
 static uint16_t s_cam_w = 0, s_cam_h = 0;
 // Optional inline thumbnail (the Live dashboard registers one). It shows the
-// same decoded frame, contain-fit into a small box. s_cam_have_frame gates the
+// same decoded frame, scaled to fill (cover) a small box. s_cam_have_frame gates the
 // dashboard's reveal so the box stays hidden until a real frame has arrived
 // (e.g. a Bambuddy with no camera never shows an empty box).
 static lv_obj_t* s_cam_thumb       = nullptr;
@@ -363,8 +363,15 @@ lv_obj_t* build_camera_overlay(lv_obj_t* parent) {
     s_cam_hint = lv_label_create(s_cam_overlay);
     lv_label_set_text(s_cam_hint, i18n::tr(i18n::Str::TAP_DISMISS));
     lv_obj_set_style_text_font(s_cam_hint, &bb_font_14, 0);
-    lv_obj_set_style_text_color(s_cam_hint, lv_color_hex(::ui::C_TEXT_DIM), 0);
-    lv_obj_align(s_cam_hint, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_set_style_text_color(s_cam_hint, lv_color_hex(::ui::C_TEXT), 0);
+    // The frame now fills the screen, so the hint sits over the picture — give
+    // it a translucent pill so it stays legible on any background.
+    lv_obj_set_style_bg_color(s_cam_hint, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(s_cam_hint, LV_OPA_50, 0);
+    lv_obj_set_style_pad_hor(s_cam_hint, 8, 0);
+    lv_obj_set_style_pad_ver(s_cam_hint, 3, 0);
+    lv_obj_set_style_radius(s_cam_hint, ::ui::R_PILL, 0);
+    lv_obj_align(s_cam_hint, LV_ALIGN_BOTTOM_MID, 0, -8);
 
     lv_obj_add_flag(s_cam_overlay, LV_OBJ_FLAG_HIDDEN);
     return s_cam_overlay;
@@ -409,6 +416,25 @@ void camera_decode_frame(const uint8_t* jpeg, size_t len) {
     xSemaphoreGive(s_cam_mtx);
 }
 
+// Show the decoded frame in `img` so it FILLS the boxw x boxh area ("cover"):
+// zoom by the LARGER of the two axis ratios and let the parent clip the
+// overflow — rather than the smaller ratio ("contain"), which would letterbox
+// the frame inside black bars. Shared by the viewer and the dashboard thumb.
+static void cam_show_cover(lv_obj_t* img, uint16_t srcw, uint16_t srch,
+                           uint16_t boxw, uint16_t boxh) {
+    if (!img || !srcw || !srch) return;
+    uint16_t zw = (uint32_t)boxw * 256u / srcw;
+    uint16_t zh = (uint32_t)boxh * 256u / srch;
+    uint16_t z  = zw > zh ? zw : zh;   // cover — fill, crop the overflow
+    if (z == 0) z = 1;
+    lv_img_set_src(img, &s_cam_dsc);
+    lv_img_set_pivot(img, 0, 0);
+    lv_img_set_zoom(img, z);
+    lv_obj_set_size(img, (uint32_t)srcw * z / 256u, (uint32_t)srch * z / 256u);
+    lv_obj_center(img);
+    lv_obj_invalidate(img);
+}
+
 // UI task: publish the latest decoded frame to the on-screen image.
 void camera_apply() {
     if (!s_cam_overlay || !s_cam_dirty) return;
@@ -423,28 +449,17 @@ void camera_apply() {
     s_cam_dsc.data_size   = (uint32_t)w * h * 2;
     xSemaphoreGive(s_cam_mtx);
     if (w == 0 || h == 0) return;
-    lv_img_set_src(s_cam_img, &s_cam_dsc);
-    lv_obj_set_size(s_cam_img, w, h);
-    lv_obj_center(s_cam_img);
-    lv_obj_invalidate(s_cam_img);
 
-    // Inline dashboard thumbnail (if attached): same frame, contain-fit + centred.
-    if (s_cam_thumb && s_cam_thumb_w && s_cam_thumb_h) {
-        uint16_t zw = (uint32_t)s_cam_thumb_w * 256u / w;
-        uint16_t zh = (uint32_t)s_cam_thumb_h * 256u / h;
-        uint16_t z  = zw < zh ? zw : zh;        // contain — no crop
-        if (z == 0) z = 1;
-        lv_img_set_src(s_cam_thumb, &s_cam_dsc);
-        lv_img_set_pivot(s_cam_thumb, 0, 0);
-        lv_img_set_zoom(s_cam_thumb, z);
-        lv_obj_set_size(s_cam_thumb, (uint32_t)w * z / 256u, (uint32_t)h * z / 256u);
-        lv_obj_center(s_cam_thumb);
-        lv_obj_invalidate(s_cam_thumb);
-    }
+    // Show both the full-screen viewer and the inline thumbnail "cover": each
+    // is scaled to FILL its box (the box clips the overflow) instead of being
+    // letterboxed inside black bars.
+    cam_show_cover(s_cam_img, w, h, LV_HOR_RES, LV_VER_RES);
+    if (s_cam_thumb && s_cam_thumb_w && s_cam_thumb_h)
+        cam_show_cover(s_cam_thumb, w, h, s_cam_thumb_w, s_cam_thumb_h);
 }
 
 // Register an lv_img (owned by another screen) to receive the decoded frame as
-// a contain-fit thumbnail of at most w x h. camera_apply() updates it.
+// a cover-fit thumbnail filling w x h. camera_apply() updates it.
 void camera_attach_thumbnail(lv_obj_t* img, uint16_t w, uint16_t h) {
     s_cam_thumb   = img;
     s_cam_thumb_w = w;

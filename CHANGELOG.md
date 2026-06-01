@@ -5,6 +5,25 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.15.2 — 2026-06
+
+### Changed
+
+- **The camera now fills the frame.** Both the full-screen viewer and the Live
+  thumbnail scaled the snapshot to *fit inside* their area (contain), so a
+  ~16:9 frame sat in a small box ringed by thick black bars. They now scale it
+  to *fill* the area (cover): the frame is enlarged until it covers the box and
+  the slight overflow is clipped — no distortion, no letterbox. The full-screen
+  "Tap to dismiss" hint gained a translucent pill so it stays legible now that
+  it sits over the picture instead of a black bar.
+
+### Internal
+
+- One shared `cam_show_cover()` helper drives both the viewer and the thumbnail
+  (the thumbnail's contain-fit zoom math was generalised to cover). On-panel
+  colour order / byte-swap stays hardware-only as before — only the framing
+  changed, which the host sim renders faithfully.
+
 ## v0.15.1 — 2026-06
 
 ### Fixed
