@@ -24,6 +24,10 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
+// Forward-declared so the heavy networking headers stay in the .cpp.
+class HTTPClient;
+class WiFiClientSecure;
+
 namespace bambuddy {
 
 // ---------- Data model ----------------------------------------------------
@@ -118,10 +122,15 @@ struct Archive {
 
 class Client {
    public:
-    void begin(const String& base_url, const String& api_key);
+    // cf_id/cf_secret are an optional Cloudflare Access service token, sent as
+    // CF-Access-Client-Id/Secret on every request when the scheme is https://
+    // (LAN/http deployments leave them empty). The scheme is read from base_url.
+    void begin(const String& base_url, const String& api_key,
+               const String& cf_id = "", const String& cf_secret = "");
 
-    // Updates the URL/key at runtime (e.g. after captive-portal config).
-    void set_credentials(const String& base_url, const String& api_key);
+    // Updates the URL/key/CF-token at runtime (e.g. after captive-portal config).
+    void set_credentials(const String& base_url, const String& api_key,
+                         const String& cf_id = "", const String& cf_secret = "");
 
     bool is_configured() const { return base_url_.length() && api_key_.length(); }
 
@@ -170,6 +179,12 @@ class Client {
     bool do_get(const String& path, JsonDocument& out_doc);
     bool do_post(const String& path, const String& body, JsonDocument* out_doc);
 
+    // Configure `http` for `url`: pick the transport by scheme (https → validate
+    // the cert against the embedded CA bundle, tunnelled through `secure`, which
+    // the caller owns and keeps alive for the request) and attach the shared
+    // X-API-Key + optional Cloudflare Access headers. False if begin() fails.
+    bool begin_request(HTTPClient& http, WiFiClientSecure& secure, const String& url);
+
     // Fetch + cache a camera stream token (required as ?token= on snapshot/stream).
     bool fetch_camera_token();
 
@@ -177,6 +192,8 @@ class Client {
 
     String base_url_;
     String api_key_;
+    String cf_id_;        // Cloudflare Access service-token id     (https only)
+    String cf_secret_;    // Cloudflare Access service-token secret (https only)
 
     // Camera stream token (?token= for snapshot/stream). Touched only on the net
     // task, so no mutex. camera_token_ms_ is the millis() it was obtained.

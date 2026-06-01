@@ -5,6 +5,53 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.16.0 — 2026-06
+
+Configurable connection: keep talking to Bambuddy over plain HTTP on the LAN, or
+reach it by domain over HTTPS — optionally through Cloudflare Access. One build
+covers a local box and remote/secured access; the HTTPS + Cloudflare path used to
+exist only in the host simulator.
+
+### Added
+
+- **HTTP / HTTPS choice in the captive portal, with optional Cloudflare Access.**
+  First-boot setup (and "hold BOOT" re-provisioning) gains a **Use HTTPS** toggle
+  next to the Bambuddy host field:
+  - **HTTP** (the default — existing devices are unchanged) accepts only a
+    **private IPv4** (`192.168.x` / `10.x` / `172.16-31.x`) or an **`*.local`**
+    mDNS name, optional `:port`. The LAN-direct path; the API key travels in clear.
+  - **HTTPS** accepts a **domain** or IP and **validates the server certificate**
+    against a root-CA bundle baked into the firmware. Ticking it reveals two extra
+    fields for an optional **Cloudflare Access service token**
+    (`CF-Access-Client-Id` / `CF-Access-Client-Secret`), sent on every REST,
+    camera and stream-token request **and on the WebSocket handshake** — so a
+    Bambuddy published behind Cloudflare Access is reachable from the device, not
+    just from the sim.
+
+### Changed
+
+- The REST client (including the camera snapshot + stream-token) routes `https://`
+  through a `WiFiClientSecure` validated by the embedded bundle; `http://` is the
+  byte-for-byte previous path. The host is validated when the portal saves, so an
+  HTTP box can't be pointed at a public domain by mistake (the CF token is also
+  dropped on HTTP so it can't leak onto a clear-text link).
+
+### Internal
+
+- The root-CA bundle is **regenerated on every CI build** from the current Mozilla
+  set (`firmware/scripts/gen_ca_bundle.sh` → `curl.se/ca/cacert.pem` +
+  Espressif's `gen_crt_bundle.py`) and embedded via `board_build.embed_files`, so
+  the trusted roots stay fresh without committing a CA list that goes stale. The
+  simulator stubs the bundle symbol + the secure-client/WS shims and keeps
+  reaching the real Bambuddy over libcurl, so CI still renders every screen.
+
+### Notes
+
+- A Bambuddy with a **self-signed** HTTPS cert won't validate against the public
+  CA bundle — use HTTP on the LAN for that. The TLS handshake, the live Cloudflare
+  round-trip (REST + WebSocket) and the portal's HTTPS/CF fields are
+  **hardware-only**: CI compiles + renders, the secure path is confirmed on the board.
+
 ## v0.15.3 — 2026-06
 
 ### Fixed

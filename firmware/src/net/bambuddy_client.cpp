@@ -2,8 +2,10 @@
 
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 #include "../config.h"
+#include "ca_bundle.h"    // embedded root-CA bundle (https cert validation)
 #include "psram_json.h"   // JSON docs allocate from PSRAM, not scarce DRAM
 
 namespace bambuddy {
@@ -56,19 +58,52 @@ PrinterState Client::parse_state(const char* s) {
 
 // --- lifecycle --------------------------------------------------------------
 
-void Client::begin(const String& base_url, const String& api_key) {
+void Client::begin(const String& base_url, const String& api_key,
+                   const String& cf_id, const String& cf_secret) {
     if (!mtx_) mtx_ = xSemaphoreCreateMutex();
-    set_credentials(base_url, api_key);
+    set_credentials(base_url, api_key, cf_id, cf_secret);
 }
 
-void Client::set_credentials(const String& base_url, const String& api_key) {
+void Client::set_credentials(const String& base_url, const String& api_key,
+                             const String& cf_id, const String& cf_secret) {
     if (!mtx_) mtx_ = xSemaphoreCreateMutex();
     xSemaphoreTake(mtx_, portMAX_DELAY);
     base_url_ = base_url;
     // Strip trailing slash so we can append "/api/v1/..."
     while (base_url_.endsWith("/")) base_url_.remove(base_url_.length() - 1);
-    api_key_ = api_key;
+    api_key_   = api_key;
+    cf_id_     = cf_id;
+    cf_secret_ = cf_secret;
     xSemaphoreGive(mtx_);
+}
+
+// Configure an HTTPClient for one request: choose the transport by scheme and
+// attach the headers every Bambuddy call shares. For https:// the certificate
+// is validated against the embedded root-CA bundle; `secure` is owned by the
+// caller so it outlives the request (HTTPClient keeps a reference to it). For
+// http:// the bare-WiFiClient path is used exactly as before — `secure` stays
+// idle (no TLS context is allocated until a secure client actually connects).
+bool Client::begin_request(HTTPClient& http, WiFiClientSecure& secure,
+                           const String& url) {
+    http.setConnectTimeout(::bambuddy::CONNECT_TIMEOUT_MS);
+    http.setTimeout(::bambuddy::READ_TIMEOUT_MS);
+
+    bool ok;
+    if (base_url_.startsWith("https://")) {
+        secure.setCACertBundle(ca_bundle_start);
+        ok = http.begin(secure, url);
+    } else {
+        ok = http.begin(url);
+    }
+    if (!ok) return false;
+
+    http.addHeader("X-API-Key", api_key_);
+    // Cloudflare Access service token — only set for https deployments behind CF.
+    if (cf_id_.length() && cf_secret_.length()) {
+        http.addHeader("CF-Access-Client-Id", cf_id_);
+        http.addHeader("CF-Access-Client-Secret", cf_secret_);
+    }
+    return true;
 }
 
 // --- HTTP plumbing ----------------------------------------------------------
@@ -82,16 +117,14 @@ bool Client::do_get(const String& path, JsonDocument& out_doc) {
         last_error_ = "wifi down";
         return false;
     }
+    // Declare `secure` before `http`: HTTPClient holds a pointer to it and
+    // touches it in its destructor, so it must outlive http (destroyed first).
+    WiFiClientSecure secure;
     HTTPClient http;
-    http.setConnectTimeout(::bambuddy::CONNECT_TIMEOUT_MS);
-    http.setTimeout(::bambuddy::READ_TIMEOUT_MS);
-
-    String full = base_url_ + path;
-    if (!http.begin(full)) {
+    if (!begin_request(http, secure, base_url_ + path)) {
         last_error_ = "begin() failed";
         return false;
     }
-    http.addHeader("X-API-Key", api_key_);
     http.addHeader("Accept", "application/json");
 
     int code = http.GET();
@@ -119,15 +152,12 @@ bool Client::do_post(const String& path, const String& body, JsonDocument* out_d
         last_error_ = "not ready";
         return false;
     }
+    WiFiClientSecure secure;   // must outlive http (see do_get)
     HTTPClient http;
-    http.setConnectTimeout(::bambuddy::CONNECT_TIMEOUT_MS);
-    http.setTimeout(::bambuddy::READ_TIMEOUT_MS);
-
-    if (!http.begin(base_url_ + path)) {
+    if (!begin_request(http, secure, base_url_ + path)) {
         last_error_ = "begin() failed";
         return false;
     }
-    http.addHeader("X-API-Key", api_key_);
     http.addHeader("Content-Type", "application/json");
 
     int code = body.length() ? http.POST(body) : http.POST((uint8_t*)nullptr, 0);
@@ -401,13 +431,11 @@ bool Client::fetch_camera_jpeg(int printer_id, uint8_t** out_buf, size_t* out_le
             if (!fetch_camera_token()) return false;   // last_error_ set by helper
         }
 
+        WiFiClientSecure secure;   // must outlive http (see do_get)
         HTTPClient http;
-        http.setConnectTimeout(::bambuddy::CONNECT_TIMEOUT_MS);
-        http.setTimeout(::bambuddy::READ_TIMEOUT_MS);
         String path = base_url_ + "/api/v1/printers/" + printer_id +
                       "/camera/snapshot?token=" + camera_token_;
-        if (!http.begin(path)) { last_error_ = "cam: begin failed"; return false; }
-        http.addHeader("X-API-Key", api_key_);
+        if (!begin_request(http, secure, path)) { last_error_ = "cam: begin failed"; return false; }
 
         int code = http.GET();
         if (code == 401 && attempt == 0) {   // stale/invalid token → refresh once

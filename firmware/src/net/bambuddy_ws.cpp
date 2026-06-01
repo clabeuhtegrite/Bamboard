@@ -50,6 +50,17 @@ void WsClient::apply_url(const String& base_url) {
 
     if (configured_) client_.disconnect();
 
+    // Behind Cloudflare Access the /ws handshake must carry the service token,
+    // or CF rejects it before it reaches Bambuddy. Held in extra_headers_ since
+    // setExtraHeaders() keeps the pointer. No token → clear any previous one.
+    if (cf_id_.length() && cf_secret_.length()) {
+        extra_headers_ = "CF-Access-Client-Id: " + cf_id_ +
+                         "\r\nCF-Access-Client-Secret: " + cf_secret_;
+        client_.setExtraHeaders(extra_headers_.c_str());
+    } else {
+        client_.setExtraHeaders();
+    }
+
     if (secure_) client_.beginSSL(host_.c_str(), port_, "/ws");
     else         client_.begin   (host_.c_str(), port_, "/ws");
 
@@ -59,14 +70,20 @@ void WsClient::apply_url(const String& base_url) {
     configured_ = true;
 }
 
-void WsClient::begin(const String& base_url) {
+void WsClient::begin(const String& base_url,
+                     const String& cf_id, const String& cf_secret) {
     client_.onEvent([this](WStype_t type, uint8_t* payload, size_t length) {
         handle_event(type, payload, length);
     });
+    cf_id_     = cf_id;
+    cf_secret_ = cf_secret;
     apply_url(base_url);
 }
 
-void WsClient::set_credentials(const String& base_url) {
+void WsClient::set_credentials(const String& base_url,
+                               const String& cf_id, const String& cf_secret) {
+    cf_id_     = cf_id;
+    cf_secret_ = cf_secret;
     apply_url(base_url);
 }
 

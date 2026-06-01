@@ -56,7 +56,8 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 ### Connectivity
 
 - **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames. REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop.
-- **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy URL + API key + timezone / daily-reboot-hour + **interface language** (EN / ES / FR / PT / DE) setup; no re-flash needed to change them. Hold the side **BOOT** button at boot to re-run it.
+- **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy host + API key + timezone / daily-reboot-hour + **interface language** (EN / ES / FR / PT / DE) setup; no re-flash needed to change them. Hold the side **BOOT** button at boot to re-run it.
+- **HTTP (LAN) or HTTPS (remote)** — by default the device talks to Bambuddy over plain HTTP on your LAN (a private IP or an `*.local` name). Tick **Use HTTPS** in the portal to reach it by **domain** over TLS instead — the server certificate is validated against a built-in, CI-refreshed root-CA bundle — with optional **Cloudflare Access** service-token fields for a Bambuddy published behind Cloudflare. One firmware build covers both.
 - **Auto-dim** — backlight drops after 60 s without a touch, wakes on the next tap.
 
 ### Install & updates
