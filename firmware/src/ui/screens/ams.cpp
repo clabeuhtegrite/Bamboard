@@ -17,6 +17,8 @@
 
 #include "theme.h"
 
+#include <cstring>   // strncmp for the filament-type drying fallback table
+
 namespace ui::screens {
 
 static lv_obj_t* s_ams_root          = nullptr;
@@ -69,6 +71,56 @@ static const lv_img_dsc_t kChecker = {
 // report is_ams_ht=false.
 static bool ams_unit_can_dry(const ::bambuddy::AmsUnit& u) {
     return u.is_ht || u.temp > 0.5f;
+}
+
+// Per-filament drying defaults for spools that carry no RFID profile (third-
+// party filament). Bambu's own spools report drying_temp / drying_time over
+// RFID and take precedence; this is the fallback. Prefix-matched against the
+// tray_type tag, so more specific prefixes must come first (PETG before PET,
+// PPS before PP); "PA" intentionally catches all nylons (PA, PAHT, PA-CF…).
+struct DryDefault { const char* prefix; uint8_t temp_c; uint8_t hours; };
+static const DryDefault kDryTable[] = {
+    {"PETG", 65, 8}, {"PET", 65, 8},
+    {"PLA",  55, 8},
+    {"TPU",  50, 12},
+    {"ABS",  80, 8}, {"ASA", 80, 8},
+    {"PA",   80, 12},
+    {"PC",   90, 10},
+    {"PVA",  45, 12},
+    {"HIPS", 70, 8},
+    {"PPS",  90, 10}, {"PP", 65, 8},
+};
+static DryDefault dry_default_for(const char* type) {
+    if (type && *type)
+        for (const auto& d : kDryTable)
+            if (strncmp(type, d.prefix, strlen(d.prefix)) == 0) return d;
+    return { nullptr, 0, 0 };
+}
+
+// Drying setpoint for a whole unit. One heater warms the shared chamber, so we
+// protect the most heat-sensitive loaded spool: temperature is the LOWEST
+// recommendation across present slots; time is the LONGEST. RFID values win;
+// spools without a tag fall back to the type table, then a generic 55 °C / 6 h.
+static void unit_dry_params(const ::bambuddy::AmsUnit& u,
+                            uint16_t& minutes_out, uint8_t& temp_out) {
+    uint8_t temp = 0;    // running MIN
+    uint8_t hours = 0;   // running MAX
+    for (uint8_t i = 0; i < u.slot_count; ++i) {
+        const ::bambuddy::AmsSlot& s = u.slots[i];
+        if (!s.present) continue;
+        uint8_t t = s.dry_temp_c, h = s.dry_time_h;
+        if (!t || !h) {
+            DryDefault d = dry_default_for(s.type);
+            if (!t) t = d.temp_c;
+            if (!h) h = d.hours;
+        }
+        if (t) temp  = temp ? (t < temp ? t : temp) : t;
+        if (h) hours = h > hours ? h : hours;
+    }
+    if (!temp)  temp  = 55;
+    if (!hours) hours = 6;
+    temp_out    = temp;
+    minutes_out = (uint16_t)hours * 60;
 }
 
 // ---- slot card --------------------------------------------------------------
@@ -130,35 +182,43 @@ static lv_obj_t* make_ams_slot_card(lv_obj_t* parent,
 static void ams_prev_clicked(lv_event_t*) { ams_cycle_unit(-1); }
 static void ams_next_clicked(lv_event_t*) { ams_cycle_unit(+1); }
 
-// Drying toggle. The button label is updated each refresh based on the
-// `dry_time_min` field — when the unit reports a non-zero countdown,
-// tapping fires Stop; otherwise it starts a default-shaped cycle
-// (60 min @ 55 °C — a reasonable PLA / PETG dry).
+// Drying toggle. When the unit reports a non-zero countdown, tapping fires
+// Stop; otherwise it starts a cycle whose temperature + duration are derived
+// from the loaded filament (unit_dry_params), and the toast reports them.
 static void ams_dry_clicked(lv_event_t*) {
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0) return;
     uint8_t unit = ams_visible_unit_index();
     ::bambuddy::Printer ps[8]; uint8_t n = 0;
     ::bambuddy::g_client.snapshot_printers(ps, n);
-    bool currently_drying = false;
-    for (uint8_t i = 0; i < n; ++i) {
-        if (ps[i].id == id && ps[i].ams_count > unit &&
-            ps[i].ams[unit].dry_time_min > 0) {
-            currently_drying = true; break;
-        }
-    }
-    bool ok;
-    if (currently_drying) {
-        ok = ::bambuddy::g_client.stop_ams_drying(id, unit);
+    const ::bambuddy::AmsUnit* u = nullptr;
+    for (uint8_t i = 0; i < n; ++i)
+        if (ps[i].id == id && ps[i].ams_count > unit) { u = &ps[i].ams[unit]; break; }
+    if (!u) return;
+
+    if (u->dry_time_min > 0) {            // a cycle is running → Stop
+        bool ok = ::bambuddy::g_client.stop_ams_drying(id, unit);
         show_toast(ok ? i18n::tr(i18n::Str::DRYING_STOPPED)
                       : i18n::tr(i18n::Str::STOP_DRYING_FAILED),
                    lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
-    } else {
-        ok = ::bambuddy::g_client.start_ams_drying(id, unit, 60, 55);
-        show_toast(ok ? i18n::tr(i18n::Str::DRYING_STARTED)
-                      : i18n::tr(i18n::Str::START_DRYING_FAILED),
-                   lv_color_hex(ok ? ::ui::C_WARN : ::ui::C_ERR));
+        return;
     }
+
+    uint16_t minutes; uint8_t temp_c;
+    unit_dry_params(*u, minutes, temp_c);
+    bool ok = ::bambuddy::g_client.start_ams_drying(id, unit, minutes, temp_c);
+    if (!ok) {
+        show_toast(i18n::tr(i18n::Str::START_DRYING_FAILED), lv_color_hex(::ui::C_ERR));
+        return;
+    }
+    char dur[12];
+    if (minutes % 60 == 0)   snprintf(dur, sizeof(dur), "%uh", (unsigned)(minutes / 60));
+    else if (minutes > 60)   snprintf(dur, sizeof(dur), "%uh%02u",
+                                      (unsigned)(minutes / 60), (unsigned)(minutes % 60));
+    else                     snprintf(dur, sizeof(dur), "%u min", (unsigned)minutes);
+    char msg[48];
+    snprintf(msg, sizeof(msg), i18n::tr(i18n::Str::DRYING_STARTED), dur, (int)temp_c);
+    show_toast(msg, lv_color_hex(::ui::C_WARN));
 }
 
 // ---- builder ----------------------------------------------------------------

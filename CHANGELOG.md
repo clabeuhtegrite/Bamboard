@@ -5,6 +5,20 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.14.0 — 2026-06
+
+### Added
+
+- **Filament-aware drying.** The Dry button no longer starts a fixed 60 min @
+  55 °C cycle — it now derives the temperature and duration from the loaded
+  filament. Bambu's per-spool RFID profile (`drying_temp` / `drying_time`) is
+  used when present, with a per-type fallback table (PLA, PETG/PET, TPU, ABS,
+  ASA, PA/nylon, PC, PVA, HIPS, PP/PPS) for spools without a tag. Because one
+  heater warms the whole unit, the setpoint protects the most heat-sensitive
+  loaded spool — the **lowest** recommended temperature across present slots,
+  for the **longest** recommended time. The confirmation toast reports the
+  actual values chosen (e.g. "Drying 8h @ 65 °C").
+
 ## v0.13.0 — 2026-06
 
 AMS readability + drying reach. Both issues were seen on the host simulator

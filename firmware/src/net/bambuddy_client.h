@@ -44,6 +44,10 @@ struct AmsSlot {
     bool     translucent = false;    // tray_color alpha < 0x80 → clear/see-through
     char     type[12]    = {};       // "PLA", "PETG", "" — short tag for the slot
     uint8_t  remain      = 0;        // 0..100, Bambu's RFID estimate
+    // RFID-recommended drying params for this spool (0 = unknown / no tag).
+    // The UI uses these to pick a per-filament drying setpoint.
+    uint8_t  dry_temp_c  = 0;        // °C
+    uint8_t  dry_time_h  = 0;        // hours
 };
 
 // One AMS (or AMS-HT) unit. Bambu chains up to 4 units per printer; we cap at

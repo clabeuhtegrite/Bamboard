@@ -286,6 +286,11 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
                         s.translucent = parse_tray_alpha(col) < 0x80;
                         copy_short(s.type, sizeof(s.type), tr["tray_type"] | "");
                         s.remain    = tr["remain"] | 0;
+                        // Bambu's RFID carries the filament's recommended drying
+                        // profile (drying_temp °C, drying_time h); the UI uses it
+                        // to set a per-filament dry cycle.
+                        s.dry_temp_c = (uint8_t)(tr["drying_temp"] | 0);
+                        s.dry_time_h = (uint8_t)(tr["drying_time"] | 0);
                         s.present   = (s.type[0] != '\0') || (s.color_rgb != 0) ||
                                       (s.remain > 0) || s.translucent;
                     }
