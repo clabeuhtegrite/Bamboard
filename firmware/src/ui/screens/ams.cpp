@@ -59,7 +59,7 @@ static lv_obj_t* make_ams_slot_card(lv_obj_t* parent,
     lv_obj_set_style_bg_color(*swatch, lv_color_hex(::ui::C_PANEL_HI), 0);
 
     *type_lbl = lv_label_create(card);
-    lv_label_set_text(*type_lbl, "—");
+    lv_label_set_text(*type_lbl, "-");
     lv_obj_align(*type_lbl, LV_ALIGN_TOP_LEFT, 8, 60);
     lv_obj_set_style_text_font(*type_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(*type_lbl, lv_color_hex(::ui::C_TEXT), 0);
@@ -237,7 +237,7 @@ static void render_ams_slot(uint8_t idx, const ::bambuddy::AmsSlot* s) {
         lv_label_set_text(s_ams_card_type[idx], i18n::tr(i18n::Str::EMPTY));
         lv_obj_set_style_text_color(s_ams_card_type[idx],
                                      lv_color_hex(::ui::C_TEXT_DIM), 0);
-        lv_label_set_text(s_ams_card_pct[idx], "—");
+        lv_label_set_text(s_ams_card_pct[idx], "-");
         lv_obj_set_style_text_color(s_ams_card_pct[idx],
                                      lv_color_hex(::ui::C_TEXT_DIM), 0);
         lv_bar_set_value(s_ams_card_bar[idx], 0, LV_ANIM_OFF);
@@ -245,7 +245,7 @@ static void render_ams_slot(uint8_t idx, const ::bambuddy::AmsSlot* s) {
     }
     uint32_t rgb = s->color_rgb ? s->color_rgb : ::ui::C_PANEL_HI;
     lv_obj_set_style_bg_color(s_ams_card_swatch[idx], lv_color_hex(rgb), 0);
-    lv_label_set_text(s_ams_card_type[idx], s->type[0] ? s->type : "—");
+    lv_label_set_text(s_ams_card_type[idx], s->type[0] ? s->type : "-");
     lv_obj_set_style_text_color(s_ams_card_type[idx],
                                  lv_color_hex(::ui::C_TEXT), 0);
     char buf[8];

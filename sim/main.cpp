@@ -88,8 +88,16 @@ int main(int argc, char** argv) {
         bambuddy::g_client.begin(surl, skey);
         bambuddy::g_ws.begin(surl);
         fprintf(stderr, "[sim] fetching from %s\n", url);
+        uint32_t lat = 0;
+        bool h = bambuddy::g_client.ping_health(&lat);
+        fprintf(stderr, "[sim] /health: %s (%u ms)\n", h ? "ok" : "FAIL", (unsigned)lat);
         bool ok = bambuddy::g_client.fetch_printers();
         fprintf(stderr, "[sim] fetch_printers: %s\n", ok ? "ok" : "FAILED");
+        if (!ok) {
+            String e;
+            bambuddy::g_client.last_error(e);
+            fprintf(stderr, "[sim] last_error: %s\n", e.c_str());
+        }
         bambuddy::Printer ps[8]; uint8_t n = 0;
         bambuddy::g_client.snapshot_printers(ps, n);
         fprintf(stderr, "[sim] %u printer(s)\n", (unsigned)n);
