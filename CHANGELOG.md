@@ -5,6 +5,32 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.11.0 — 2026-06
+
+Observability + robustness pass. No visual change to speak of; the device just
+tells you more about itself and recovers better.
+
+### Added
+
+- **Wall-clock ETA.** Live now shows the estimated finish time of day
+  ("ETA 1h12 · 14:32") alongside the countdown, from SNTP local time.
+- **On-screen heap.** The Settings uptime row appends free heap — the cheapest
+  at-a-glance signal that something's leaking.
+- **Serial diagnostics.** Boot logs the reset cause (panic / brownout / watchdog
+  vs a clean restart); the net task logs heap / PSRAM / WebSocket / RSSI /
+  latency at the health cadence.
+- **UI task watchdog.** A frozen screen now auto-recovers: the UI task feeds a
+  10 s task watchdog and the device reboots itself if LVGL ever wedges. The
+  HTTP-bound net task is intentionally left unwatched.
+
+### Changed
+
+- **JSON parsing moved to PSRAM.** All ArduinoJson documents (REST + WebSocket)
+  allocate from PSRAM via a custom allocator instead of the scarce internal
+  DRAM, so large `/status` payloads no longer pressure or fragment it.
+- **Fewer flash writes.** Brightness changes only touch NVS when the level
+  actually changed (was writing on every tap and every Settings re-sync).
+
 ## v0.10.0 — 2026-06
 
 UI visual refresh. Same screens and controls, a more coherent and polished
