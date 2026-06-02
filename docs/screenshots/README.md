@@ -11,7 +11,7 @@ binaries. The README links them at
 |------------|----------------------------------------------------------------------------|
 | `live`     | Live dashboard mid-print — temps, progress, ETA, fans, light, Pause/Stop/speed |
 | `ams`      | Multi-unit AMS; a drying 4-slot unit (outlined black + clear-PETG checker)  |
-| `printers` | A 3-printer farm; printing rows show inline temps + ETA                     |
+| `printers` | A 3-printer farm grid; printing tiles show a progress ring + temps + ETA    |
 | `queue`    | Pending jobs with their target printer                                      |
 | `history`  | Lifetime stats KPIs + recent prints                                         |
 | `settings` | Diagnostics (incl. Bambuddy server version) + brightness + factory reset    |
