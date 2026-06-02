@@ -79,6 +79,9 @@ void Manager::begin() {
     // everything when shown; hidden (and inert) the rest of the time.
     screens::build_ambient_overlay(s_root);
 
+    // Live temperature graph — likewise a hidden overlay floated on demand.
+    screens::build_temp_graph_overlay(s_root);
+
     // Show the initial screen directly. We can't use go_to() here: current_
     // already starts at Dashboard, so go_to(Dashboard) would early-return on
     // its `s == current_` guard and leave the screen hidden (the loop above
@@ -173,6 +176,25 @@ void Manager::refresh() {
         default: break;
     }
 
+    // --- Live temperature graph sampling -----------------------------------
+    // Append the focused printer's temps to the graph's ring buffer every few
+    // seconds (the chart itself stores them, so the history is there when the
+    // overlay is opened). UI-task only — no cross-task buffer.
+    {
+        static uint32_t s_tg_last = 0;
+        uint32_t tnow = millis();
+        if (selected_printer_id_ >= 0 && (s_tg_last == 0 || tnow - s_tg_last >= 3000)) {
+            for (uint8_t i = 0; i < n; ++i) {
+                if (ps[i].id == selected_printer_id_) {
+                    screens::temp_graph_push(selected_printer_id_, ps[i].temps.nozzle,
+                                             ps[i].temps.bed, ps[i].temps.chamber);
+                    s_tg_last = tnow;
+                    break;
+                }
+            }
+        }
+    }
+
     // --- Ambient idle clock ------------------------------------------------
     // When the whole farm is quiet (nothing printing / paused / faulted) and the
     // panel has been untouched for a while, float a clock over the current
@@ -190,7 +212,8 @@ void Manager::refresh() {
             }
         }
         bool busy = screens::ota_is_active() || screens::camera_overlay_is_open() ||
-                    screens::hms_flash_is_visible() || screens::speed_menu_is_open();
+                    screens::hms_flash_is_visible() || screens::speed_menu_is_open() ||
+                    screens::temp_graph_is_open();
         bool idle = lv_disp_get_inactive_time(NULL) > ::display::AMBIENT_AFTER_MS;
         if (quiet && idle && !busy) {
             if (screens::ambient_is_visible()) screens::ambient_apply();
@@ -252,6 +275,7 @@ static void screen_gesture_cb(lv_event_t* e) {
     if (screens::ota_is_active())        return;
     if (screens::hms_flash_is_visible()) return;
     if (screens::camera_overlay_is_open()) return;
+    if (screens::temp_graph_is_open())     return;
     if (screens::speed_menu_is_open())     return;
 
     lv_indev_t* indev = lv_indev_get_act();

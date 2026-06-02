@@ -62,6 +62,9 @@ static uint8_t   s_dash_cur_speed     = 2;
 
 // ---- temp cell --------------------------------------------------------------
 
+// Tapping any temperature cell opens the live temperature graph overlay.
+static void temp_cell_clicked(lv_event_t*) { temp_graph_open(); }
+
 static lv_obj_t* make_temp_cell(lv_obj_t* parent, const char* title,
                                  int x, int w) {
     lv_obj_t* cell = lv_obj_create(parent);
@@ -70,6 +73,8 @@ static lv_obj_t* make_temp_cell(lv_obj_t* parent, const char* title,
     lv_obj_set_pos(cell, x, 64);
     lv_obj_set_style_pad_all(cell, 6, 0);
     lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(cell, temp_cell_clicked, LV_EVENT_CLICKED, nullptr);
 
     lv_obj_t* t = lv_label_create(cell);
     lv_label_set_text(t, title);

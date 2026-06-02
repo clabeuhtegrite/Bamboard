@@ -574,4 +574,128 @@ void ambient_hide() {
 
 bool ambient_is_visible() { return s_amb_visible; }
 
+// =============================================================================
+// TEMPERATURE GRAPH
+// =============================================================================
+// A full-screen line chart of the focused printer's recent nozzle / bed /
+// chamber temperatures. Opened by tapping the dashboard temperature row; tap
+// anywhere to close. The lv_chart IS the ring buffer: Manager::refresh() pushes
+// a sample every few seconds (UI task only — no cross-task buffer / mutex), so
+// opening it shows the history accumulated while it was closed.
+
+static constexpr uint16_t TG_POINTS = 90;   // ~4.5 min at one sample / 3 s
+
+static lv_obj_t*          s_tg_overlay = nullptr;
+static lv_obj_t*          s_tg_chart   = nullptr;
+static lv_chart_series_t* s_tg_noz     = nullptr;
+static lv_chart_series_t* s_tg_bed     = nullptr;
+static lv_chart_series_t* s_tg_cham    = nullptr;
+static bool               s_tg_open    = false;
+static int                s_tg_pid     = -1;
+
+static void tg_overlay_clicked(lv_event_t*) { temp_graph_close(); }
+
+static void tg_legend_item(lv_obj_t* parent, uint32_t color, const char* txt) {
+    lv_obj_t* row = lv_obj_create(parent);
+    lv_obj_remove_style_all(row);
+    lv_obj_set_size(row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(row, 7, 0);
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_clear_flag(row, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* dot = lv_obj_create(row);
+    lv_obj_remove_style_all(dot);
+    lv_obj_set_size(dot, 12, 12);
+    lv_obj_set_style_radius(dot, 6, 0);
+    lv_obj_set_style_bg_color(dot, lv_color_hex(color), 0);
+    lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
+
+    lv_obj_t* l = lv_label_create(row);
+    lv_label_set_text(l, txt);
+    lv_obj_set_style_text_font(l, &bb_font_14, 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(::ui::C_TEXT), 0);
+}
+
+lv_obj_t* build_temp_graph_overlay(lv_obj_t* parent) {
+    ensure_styles();
+    s_tg_overlay = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_tg_overlay);
+    lv_obj_set_size(s_tg_overlay, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(s_tg_overlay, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_bg_color(s_tg_overlay, lv_color_hex(::ui::C_BG), 0);
+    lv_obj_set_style_bg_opa(s_tg_overlay, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(s_tg_overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(s_tg_overlay, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_tg_overlay, tg_overlay_clicked, LV_EVENT_CLICKED, nullptr);
+
+    s_tg_chart = lv_chart_create(s_tg_overlay);
+    lv_obj_set_size(s_tg_chart, LV_HOR_RES - 40, LV_VER_RES - 80);
+    lv_obj_align(s_tg_chart, LV_ALIGN_TOP_MID, 0, 14);
+    lv_obj_clear_flag(s_tg_chart, LV_OBJ_FLAG_CLICKABLE);   // taps fall through to close
+    lv_chart_set_type(s_tg_chart, LV_CHART_TYPE_LINE);
+    lv_chart_set_point_count(s_tg_chart, TG_POINTS);
+    lv_chart_set_update_mode(s_tg_chart, LV_CHART_UPDATE_MODE_SHIFT);
+    lv_chart_set_range(s_tg_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 300);
+    lv_chart_set_div_line_count(s_tg_chart, 4, 0);
+    lv_obj_set_style_size(s_tg_chart, 0, LV_PART_INDICATOR);   // lines only, no point dots
+    lv_obj_set_style_bg_color(s_tg_chart, lv_color_hex(::ui::C_PANEL), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s_tg_chart, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(s_tg_chart, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_color(s_tg_chart, lv_color_hex(::ui::C_PANEL_LINE), LV_PART_MAIN);
+    lv_obj_set_style_radius(s_tg_chart, ::ui::R_PANEL, LV_PART_MAIN);
+    lv_obj_set_style_line_color(s_tg_chart, lv_color_hex(::ui::C_PANEL_LINE), LV_PART_MAIN);  // div lines
+
+    s_tg_noz  = lv_chart_add_series(s_tg_chart, lv_color_hex(::ui::C_ACCENT), LV_CHART_AXIS_PRIMARY_Y);
+    s_tg_bed  = lv_chart_add_series(s_tg_chart, lv_color_hex(::ui::C_WARN),   LV_CHART_AXIS_PRIMARY_Y);
+    s_tg_cham = lv_chart_add_series(s_tg_chart, lv_color_hex(::ui::C_OK),     LV_CHART_AXIS_PRIMARY_Y);
+    lv_chart_set_all_value(s_tg_chart, s_tg_noz,  LV_CHART_POINT_NONE);
+    lv_chart_set_all_value(s_tg_chart, s_tg_bed,  LV_CHART_POINT_NONE);
+    lv_chart_set_all_value(s_tg_chart, s_tg_cham, LV_CHART_POINT_NONE);
+
+    lv_obj_t* legend = lv_obj_create(s_tg_overlay);
+    lv_obj_remove_style_all(legend);
+    lv_obj_set_size(legend, LV_HOR_RES, 28);
+    lv_obj_align(legend, LV_ALIGN_BOTTOM_MID, 0, -18);
+    lv_obj_set_flex_flow(legend, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(legend, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(legend, 24, 0);
+    lv_obj_clear_flag(legend, LV_OBJ_FLAG_CLICKABLE);
+    tg_legend_item(legend, ::ui::C_ACCENT, i18n::tr(i18n::Str::NOZZLE));
+    tg_legend_item(legend, ::ui::C_WARN,   i18n::tr(i18n::Str::BED));
+    tg_legend_item(legend, ::ui::C_OK,     i18n::tr(i18n::Str::CHAMBER));
+
+    lv_obj_add_flag(s_tg_overlay, LV_OBJ_FLAG_HIDDEN);
+    return s_tg_overlay;
+}
+
+// UI task: append one sample. Clears the chart when the focused printer changes
+// so two printers' curves never mix.
+void temp_graph_push(int printer_id, float noz, float bed, float cham) {
+    if (!s_tg_chart) return;
+    if (printer_id != s_tg_pid) {
+        s_tg_pid = printer_id;
+        lv_chart_set_all_value(s_tg_chart, s_tg_noz,  LV_CHART_POINT_NONE);
+        lv_chart_set_all_value(s_tg_chart, s_tg_bed,  LV_CHART_POINT_NONE);
+        lv_chart_set_all_value(s_tg_chart, s_tg_cham, LV_CHART_POINT_NONE);
+    }
+    lv_chart_set_next_value(s_tg_chart, s_tg_noz,  (lv_coord_t)(noz  + 0.5f));
+    lv_chart_set_next_value(s_tg_chart, s_tg_bed,  (lv_coord_t)(bed  + 0.5f));
+    lv_chart_set_next_value(s_tg_chart, s_tg_cham, (lv_coord_t)(cham + 0.5f));
+}
+
+void temp_graph_open() {
+    if (!s_tg_overlay) return;
+    lv_chart_refresh(s_tg_chart);
+    lv_obj_clear_flag(s_tg_overlay, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_tg_overlay);
+    s_tg_open = true;
+}
+void temp_graph_close() {
+    if (!s_tg_overlay) return;
+    lv_obj_add_flag(s_tg_overlay, LV_OBJ_FLAG_HIDDEN);
+    s_tg_open = false;
+}
+bool temp_graph_is_open() { return s_tg_open; }
+
 }  // namespace ui::screens
