@@ -27,6 +27,14 @@ IM=convert; command -v convert >/dev/null 2>&1 || IM=magick
 # Use $(...) not `read < <(...)`: convert's info: output has no trailing newline,
 # which makes `read` return non-zero and `set -e` abort the script silently.
 W=$($IM "$CASE"  -format '%w' info:);  H=$($IM "$CASE"  -format '%h' info:)
+
+# The panel is natively 480x272, which looks soft when blown up into the hero.
+# Sharpen a touch, then Lanczos-upscale the screenshot before warping, so the
+# screen reads as crisp as the source allows instead of a mushy blow-up. (No
+# extra detail is invented; it just avoids a soft bilinear enlargement.)
+HDLIVE="${LIVE%.*}_hd.png"
+$IM "$LIVE" -unsharp 0x0.6+0.8+0 -filter Lanczos -resize 300% "$HDLIVE"
+LIVE="$HDLIVE"
 LW=$($IM "$LIVE" -format '%w' info:); LH=$($IM "$LIVE" -format '%h' info:)
 f2p(){ awk "BEGIN{printf \"%d\", ($1)*($2)+0.5}"; }
 tlx=$(f2p "$TLx" "$W"); tly=$(f2p "$TLy" "$H")
