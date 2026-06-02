@@ -51,7 +51,10 @@ jobs:
           cp docs/screenshots/device_render.svg _site/assets/device_render.svg
 
           # Rasterise the social card to PNG (crawlers don't read an SVG og:image).
-          sudo apt-get update && sudo apt-get install -y librsvg2-bin
+          # Install Inter so the card uses the site's exact typeface instead of
+          # librsvg's generic sans-serif fallback.
+          sudo apt-get update && sudo apt-get install -y librsvg2-bin fonts-inter
+          fc-cache -f
           rsvg-convert -w 1200 -h 630 web/assets/og-image.svg -o _site/assets/og-image.png
 
           # Pull the factory image + version from the latest published release.
