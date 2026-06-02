@@ -9,6 +9,7 @@
 #include "net/semver.h"
 #include "net/host_valid.h"
 #include "ui/i18n.h"
+#include "ui/dry_default.h"
 
 static int g_total = 0, g_fail = 0;
 #define CHECK(cond) do { ++g_total; if (!(cond)) { ++g_fail; \
@@ -109,10 +110,30 @@ static void test_i18n() {
     CHECK(i18n::lang_from_code("xx") < 0);             // unknown code
 }
 
+static void test_dry_default() {
+    using ui::dry_default_for;
+    // Known types map to their fallback setpoint.
+    CHECK(dry_default_for("PLA").temp_c == 55);
+    CHECK(dry_default_for("TPU").temp_c == 50 && dry_default_for("TPU").hours == 12);
+    CHECK(dry_default_for("ABS").temp_c == 80);
+    CHECK(dry_default_for("PETG").temp_c == 65);
+    // Prefix ordering: the more specific entry must win.
+    CHECK(dry_default_for("PPS").temp_c == 90);   // PPS listed before PP
+    CHECK(dry_default_for("PP").temp_c  == 65);   // bare PP
+    // "PA" is the nylon catch-all (PA, PAHT, PA-CF…).
+    CHECK(dry_default_for("PA-CF").temp_c == 80 && dry_default_for("PA-CF").hours == 12);
+    CHECK(dry_default_for("PAHT").temp_c == 80);
+    // Unknown / empty / null → no recommendation.
+    CHECK(dry_default_for("WOOD").prefix == nullptr);
+    CHECK(dry_default_for("").prefix     == nullptr);
+    CHECK(dry_default_for(nullptr).prefix == nullptr);
+}
+
 int main() {
     test_semver();
     test_host_valid();
     test_i18n();
+    test_dry_default();
     fprintf(stderr, "\n%d/%d checks passed\n", g_total - g_fail, g_total);
     return g_fail ? 1 : 0;
 }

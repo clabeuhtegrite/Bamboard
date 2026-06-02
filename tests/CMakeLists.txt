@@ -14,6 +14,7 @@ add_executable(bamboard_tests
   ${FW}/net/semver.cpp
   ${FW}/net/host_valid.cpp
   ${FW}/ui/i18n.cpp
+  ${FW}/ui/dry_default.cpp
 )
 # Shim dir first so <Arduino.h> resolves to the host String; then the firmware
 # tree so "net/..." / "ui/..." includes resolve.

@@ -19,7 +19,8 @@
 
 #include <cstring>   // strncmp for the filament-type drying fallback table
 
-#include "../control.h"   // marshal drying POSTs to the net task (never block UI)
+#include "../control.h"     // marshal drying POSTs to the net task (never block UI)
+#include "../dry_default.h"  // per-filament drying fallback table (host-tested)
 
 namespace ui::screens {
 
@@ -83,29 +84,11 @@ static bool ams_unit_can_dry(const ::bambuddy::AmsUnit& u) {
     return u.is_ht || u.temp > 0.5f;
 }
 
-// Per-filament drying defaults for spools that carry no RFID profile (third-
-// party filament). Bambu's own spools report drying_temp / drying_time over
-// RFID and take precedence; this is the fallback. Prefix-matched against the
-// tray_type tag, so more specific prefixes must come first (PETG before PET,
-// PPS before PP); "PA" intentionally catches all nylons (PA, PAHT, PA-CF…).
-struct DryDefault { const char* prefix; uint8_t temp_c; uint8_t hours; };
-static const DryDefault kDryTable[] = {
-    {"PETG", 65, 8}, {"PET", 65, 8},
-    {"PLA",  55, 8},
-    {"TPU",  50, 12},
-    {"ABS",  80, 8}, {"ASA", 80, 8},
-    {"PA",   80, 12},
-    {"PC",   90, 10},
-    {"PVA",  45, 12},
-    {"HIPS", 70, 8},
-    {"PPS",  90, 10}, {"PP", 65, 8},
-};
-static DryDefault dry_default_for(const char* type) {
-    if (type && *type)
-        for (const auto& d : kDryTable)
-            if (strncmp(type, d.prefix, strlen(d.prefix)) == 0) return d;
-    return { nullptr, 0, 0 };
-}
+// The per-filament drying fallback table + dry_default_for() now live in
+// ui/dry_default.{h,cpp} (pure, host-unit-tested); unit_dry_params() below
+// layers the RFID-then-fallback-then-generic selection on top.
+using ui::DryDefault;
+using ui::dry_default_for;
 
 // Drying setpoint for a whole unit. One heater warms the shared chamber, so we
 // protect the most heat-sensitive loaded spool: temperature is the LOWEST
