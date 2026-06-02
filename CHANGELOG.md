@@ -5,6 +5,20 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.19.0 — 2026-06
+
+A round of new at-a-glance features.
+
+### Added
+
+- **Printers screen is now a farm grid.** Instead of a single-column list, the
+  Printers tab shows a two-up grid of tiles — each with a progress ring (accent
+  arc + % while printing, a full state-coloured ring otherwise: idle grey,
+  finish green, failed red), the printer name and an at-a-glance status line
+  (nozzle/bed temps + ETA while printing, model + state otherwise). Tap a tile
+  to focus that printer and jump to Live, as before — a control-wall view for a
+  multi-printer farm.
+
 ## v0.18.2 — 2026-06
 
 ### Fixed
