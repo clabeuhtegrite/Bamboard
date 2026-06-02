@@ -19,6 +19,8 @@
 
 #include <cstring>   // strncmp for the filament-type drying fallback table
 
+#include "../control.h"   // marshal drying POSTs to the net task (never block UI)
+
 namespace ui::screens {
 
 static lv_obj_t* s_ams_root          = nullptr;
@@ -205,28 +207,16 @@ static void ams_dry_clicked(lv_event_t*) {
     if (!u) return;
 
     if (u->dry_time_min > 0) {            // a cycle is running → Stop
-        bool ok = ::bambuddy::g_client.stop_ams_drying(id, unit);
-        show_toast(ok ? i18n::tr(i18n::Str::DRYING_STOPPED)
-                      : i18n::tr(i18n::Str::STOP_DRYING_FAILED),
-                   lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
+        ::ui::ctrl::enqueue(::ui::ctrl::DryStop, id, unit);
         return;
     }
 
+    // Derive the setpoint from the loaded filament (RFID profile, else the
+    // per-type fallback) here — a cheap snapshot read on the UI task — then hand
+    // the blocking POST to the net task. (a = unit, b = temp °C, c = minutes.)
     uint16_t minutes; uint8_t temp_c;
     unit_dry_params(*u, minutes, temp_c);
-    bool ok = ::bambuddy::g_client.start_ams_drying(id, unit, minutes, temp_c);
-    if (!ok) {
-        show_toast(i18n::tr(i18n::Str::START_DRYING_FAILED), lv_color_hex(::ui::C_ERR));
-        return;
-    }
-    char dur[12];
-    if (minutes % 60 == 0)   snprintf(dur, sizeof(dur), "%uh", (unsigned)(minutes / 60));
-    else if (minutes > 60)   snprintf(dur, sizeof(dur), "%uh%02u",
-                                      (unsigned)(minutes / 60), (unsigned)(minutes % 60));
-    else                     snprintf(dur, sizeof(dur), "%u min", (unsigned)minutes);
-    char msg[48];
-    snprintf(msg, sizeof(msg), i18n::tr(i18n::Str::DRYING_STARTED), dur, (int)temp_c);
-    show_toast(msg, lv_color_hex(::ui::C_WARN));
+    ::ui::ctrl::enqueue(::ui::ctrl::DryStart, id, unit, (uint8_t)temp_c, minutes);
 }
 
 // ---- builder ----------------------------------------------------------------

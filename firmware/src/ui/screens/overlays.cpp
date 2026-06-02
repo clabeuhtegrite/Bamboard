@@ -71,6 +71,29 @@ void maybe_hide_toast() {
     }
 }
 
+// Toast requested off the UI task (the net task reporting a control result).
+// Parks the message + colour; pump_toast_request() (UI task) shows it. Same
+// park-and-apply discipline as header_set_online / ota_set_* — a single
+// volatile dirty flag gates a plain buffer, so the worst case is one torn
+// message that self-corrects on the next request (acceptable for a toast).
+static volatile bool     s_toast_req_dirty = false;
+static volatile uint32_t s_toast_req_bg    = 0;
+static char              s_toast_req_msg[48] = {};
+
+void request_toast(const char* msg, uint32_t bg_hex) {
+    if (!msg) return;
+    strncpy(s_toast_req_msg, msg, sizeof(s_toast_req_msg) - 1);
+    s_toast_req_msg[sizeof(s_toast_req_msg) - 1] = '\0';
+    s_toast_req_bg    = bg_hex;
+    s_toast_req_dirty = true;
+}
+
+void pump_toast_request() {
+    if (!s_toast_req_dirty) return;
+    s_toast_req_dirty = false;
+    show_toast(s_toast_req_msg, lv_color_hex(s_toast_req_bg));
+}
+
 // =============================================================================
 // HMS FULL-SCREEN FLASH
 // =============================================================================
