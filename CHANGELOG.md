@@ -5,6 +5,19 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.18.2 — 2026-06
+
+### Fixed
+
+- **Action pills no longer wear a teal halo.** Every inline action button
+  (`make_action_btn`) layered the accent style — which bakes in a teal vertical
+  gradient and a teal border — then overrode only the *fill* colour. A non-teal
+  pill therefore kept the teal gradient and outline, so the amber **Stop** and
+  red **Clear HMS** buttons rendered shaded and ringed in teal (an ugly blue
+  glow over the amber/red). Each pill now fades to a darker shade of its *own*
+  colour with a matching hairline, applied at build time and whenever the colour
+  changes (e.g. Stop arming to red).
+
 ## v0.18.1 — 2026-06
 
 ### Fixed
