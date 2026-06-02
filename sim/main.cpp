@@ -10,9 +10,11 @@
 
 #include <lvgl.h>
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 #include <sys/stat.h>
 
 #include "config.h"
@@ -139,6 +141,27 @@ static void render_fixtures(const std::string& out) {
 
     ui::g_ui.set_selected_printer(1);
     ui::screens::header_set_online(true, 24);
+
+    // Inject a demo camera frame so the Live thumbnail renders a real picture —
+    // deterministic fixtures have no network to fetch one. Decoded through the
+    // same TJpg_Decoder shim the device uses, from the committed demo asset, so
+    // the rendered "camera" tile is faithful to a real printer view.
+#ifdef BAMBOARD_SIM_DEMO_DIR
+    {
+        FILE* cf = fopen(BAMBOARD_SIM_DEMO_DIR "/camera.jpg", "rb");
+        if (cf) {
+            fseek(cf, 0, SEEK_END);
+            long n = ftell(cf);
+            fseek(cf, 0, SEEK_SET);
+            if (n > 0) {
+                std::vector<uint8_t> jpg((size_t)n);
+                if (fread(jpg.data(), 1, (size_t)n, cf) == (size_t)n)
+                    ui::screens::camera_decode_frame(jpg.data(), jpg.size());
+            }
+            fclose(cf);
+        }
+    }
+#endif
 
     // The six README screens, named to match docs/screenshots / the Pages deploy.
     ui::g_ui.go_to(ui::Screen::Dashboard); pump(30); dump_png(out, "live");

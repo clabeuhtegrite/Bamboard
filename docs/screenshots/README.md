@@ -20,7 +20,12 @@ Only the hero stays in this folder:
 
 | File                | Notes                                                                       |
 |---------------------|-----------------------------------------------------------------------------|
-| `device_render.svg` | Hand-authored vector product shot of the assembled device (the README hero) |
+| `device_render.svg` | Hand-authored vector product shot of the assembled device (the README hero). Its Live camera tile embeds `sim/demo/camera.jpg` (base64) so the hero shows a real frame. |
+
+The **demo camera frame** lives at `sim/demo/camera.jpg`. The sim decodes it (via
+the same TJpg_Decoder shim the device uses) and `render_fixtures()` injects it, so
+the **Live** screenshot shows the inline camera thumbnail; the hero embeds the same
+file. Replacing it changes the `live` baseline — refresh it like any UI change.
 
 ## How it works
 

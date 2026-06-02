@@ -82,6 +82,9 @@ target_include_directories(bamboard_sim BEFORE PRIVATE
 )
 target_compile_definitions(bamboard_sim PRIVATE
   BAMBOARD_SIM=1
+  # Absolute path to the demo asset dir (the deterministic camera frame), so
+  # render_fixtures() finds it regardless of the working directory.
+  BAMBOARD_SIM_DEMO_DIR="${CMAKE_CURRENT_SOURCE_DIR}/demo"
   # Turn on ONLY ArduinoJson's Arduino-Stream adapter (so deserializeJson can
   # read HTTPClient::getStream(), our ::Stream shim). Leave its Arduino String
   # / Print / PROGMEM glue off — our shims don't implement concat()/Printable
