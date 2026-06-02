@@ -476,7 +476,7 @@ static const char* fmt_eta(uint32_t secs, char* out, size_t out_n) {
 
 void update_dashboard(int printer_id) {
     maybe_hide_toast();
-    ::bambuddy::Printer ps[8]; uint8_t n = 0;
+    ::bambuddy::Printer ps[::bambuddy::MAX_PRINTERS]; uint8_t n = 0;
     ::bambuddy::g_client.snapshot_printers(ps, n);
     if (n == 0) {
         lv_label_set_text(s_dash_state_lbl, i18n::tr(i18n::Str::NO_PRINTER));

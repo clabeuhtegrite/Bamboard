@@ -129,7 +129,7 @@ void Manager::refresh() {
     screens::camera_apply();
 
     // Auto-pick the first printer the first time we know about one.
-    ::bambuddy::Printer ps[8];
+    ::bambuddy::Printer ps[::bambuddy::MAX_PRINTERS];
     uint8_t n = 0;
     ::bambuddy::g_client.snapshot_printers(ps, n);
     if (selected_printer_id_ < 0 && n > 0) {
@@ -256,8 +256,8 @@ void Manager::refresh() {
             screens::hms_flash_update_msg(hms_now.c_str());
             hms_last_msg_ = hms_now;
         }
-        if (now >= hms_hide_at_ms_) screens::hms_flash_hide();
-    } else if (now >= hms_next_show_ms_) {
+        if ((int32_t)(now - hms_hide_at_ms_) >= 0) screens::hms_flash_hide();
+    } else if ((int32_t)(now - hms_next_show_ms_) >= 0) {
         screens::hms_flash_show(hms_now.c_str());
         hms_hide_at_ms_   = now + ::bambuddy::HMS_FLASH_VISIBLE_MS;
         hms_next_show_ms_ = now + ::bambuddy::HMS_FLASH_COOLDOWN_MS;

@@ -50,7 +50,9 @@ class Manager {
    private:
     void show_toast(const char* text, lv_color_t colour);
 
-    Screen current_ = Screen::Dashboard;
+    // volatile: written on the UI task (go_to), read on the net task (current()
+    // gates camera fetches) — same atomic-scalar rationale as selected_printer_id_.
+    volatile Screen current_ = Screen::Dashboard;
     // Written on the UI task (tap-row / auto-pick), also read on the net task
     // (focused-printer polling + camera). A 32-bit aligned scalar is read/written
     // atomically on the ESP32, so `volatile` (no caching) is enough here — the
