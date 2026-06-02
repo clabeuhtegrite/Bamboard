@@ -199,7 +199,7 @@ static void ams_dry_clicked(lv_event_t*) {
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0) return;
     uint8_t unit = ams_visible_unit_index();
-    ::bambuddy::Printer ps[8]; uint8_t n = 0;
+    ::bambuddy::Printer ps[::bambuddy::MAX_PRINTERS]; uint8_t n = 0;
     ::bambuddy::g_client.snapshot_printers(ps, n);
     const ::bambuddy::AmsUnit* u = nullptr;
     for (uint8_t i = 0; i < n; ++i)
@@ -388,7 +388,7 @@ void ams_cycle_unit(int dir) {
 
 void update_ams(int printer_id) {
     maybe_hide_toast();
-    ::bambuddy::Printer ps[8]; uint8_t n = 0;
+    ::bambuddy::Printer ps[::bambuddy::MAX_PRINTERS]; uint8_t n = 0;
     ::bambuddy::g_client.snapshot_printers(ps, n);
 
     const ::bambuddy::Printer* sel = nullptr;

@@ -34,6 +34,17 @@ A project-audit pass — a reliability fix, a security fix, and hardening.
   via `beginSslWithBundle`. (The WebSockets library is pinned to an exact
   version, `=2.6.1`, because that call's signature changed across the 2.x line.)
 
+### Internal
+
+- **Audit hardening (low-severity).** Strip CR/LF from the Cloudflare-Access
+  token so a pasted newline can't inject extra WebSocket handshake headers;
+  double-buffer the camera frame so the net task's JPEG decode can no longer
+  tear the frame LVGL is drawing (and the slow decode no longer holds the
+  display mutex); mark `Manager::current_` `volatile` (it's read cross-task);
+  use wrap-safe tick comparisons for the toast and HMS-flash timers; and size
+  the per-screen printer / queue snapshot buffers from `MAX_PRINTERS` /
+  `MAX_QUEUE_ITEMS` instead of hardcoded `[8]` / `[10]` literals.
+
 ## v0.20.0 — 2026-06
 
 ### Added

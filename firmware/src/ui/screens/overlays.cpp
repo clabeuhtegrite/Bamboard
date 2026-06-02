@@ -66,7 +66,7 @@ void show_toast(const char* msg, lv_color_t bg) {
 // when the user doesn't touch anything.
 void maybe_hide_toast() {
     if (!s_toast || lv_obj_has_flag(s_toast, LV_OBJ_FLAG_HIDDEN)) return;
-    if (s_toast_hide_at && lv_tick_get() > s_toast_hide_at) {
+    if (s_toast_hide_at && (int32_t)(lv_tick_get() - s_toast_hide_at) > 0) {
         lv_obj_add_flag(s_toast, LV_OBJ_FLAG_HIDDEN);
     }
 }
@@ -326,11 +326,18 @@ static lv_obj_t*  s_cam_overlay = nullptr;
 static lv_obj_t*  s_cam_img     = nullptr;
 static lv_obj_t*  s_cam_hint    = nullptr;
 static lv_img_dsc_t s_cam_dsc   = {};
-static uint8_t*   s_cam_pix      = nullptr;   // PSRAM RGB565, CAM_W_MAX*CAM_H_MAX
+// Double-buffered PSRAM RGB565 frames: the net task decodes into the back
+// buffer (s_cam_front ^ 1) while the UI renders the front, then publishes the
+// swap under s_cam_mtx — so LVGL never samples a half-decoded frame (no tear).
+static uint8_t*   s_cam_buf[2]   = {nullptr, nullptr};
+static uint8_t*   s_cam_decode   = nullptr;   // back buffer cam_tjpg_cb writes (net task)
+static volatile uint8_t s_cam_front = 0;      // buffer index the UI renders
+static uint16_t   s_cam_bw[2]    = {0, 0};    // committed dims, per buffer
+static uint16_t   s_cam_bh[2]    = {0, 0};
 static SemaphoreHandle_t s_cam_mtx = nullptr;
 static volatile bool s_cam_open  = false;
 static volatile bool s_cam_dirty = false;
-static uint16_t s_cam_w = 0, s_cam_h = 0;
+static uint16_t s_cam_w = 0, s_cam_h = 0;     // current decode clip bounds (net task only)
 // Optional inline thumbnail (the Live dashboard registers one). It shows the
 // same decoded frame, scaled to fill (cover) a small box. s_cam_have_frame gates the
 // dashboard's reveal so the box stays hidden until a real frame has arrived
@@ -346,8 +353,8 @@ static const uint16_t CAM_H_MAX = 232;   // body height between header and tab b
 // TJpgDec block callback — runs on the net task during decode. Writes the
 // decoded RGB565 block into the shared buffer, clipped to its bounds.
 static bool cam_tjpg_cb(int16_t x, int16_t y, uint16_t bw, uint16_t bh, uint16_t* bmp) {
-    if (!s_cam_pix) return false;
-    uint16_t* dst = (uint16_t*)s_cam_pix;
+    if (!s_cam_decode) return false;
+    uint16_t* dst = (uint16_t*)s_cam_decode;
     for (uint16_t row = 0; row < bh; ++row) {
         int yy = y + row;
         if (yy < 0 || yy >= (int)s_cam_h) continue;
@@ -365,8 +372,10 @@ static void cam_overlay_clicked(lv_event_t*) { camera_overlay_close(); }
 lv_obj_t* build_camera_overlay(lv_obj_t* parent) {
     ensure_styles();
     s_cam_mtx = xSemaphoreCreateMutex();
-    s_cam_pix = (uint8_t*)heap_caps_malloc((size_t)CAM_W_MAX * CAM_H_MAX * 2,
-                                           MALLOC_CAP_SPIRAM);
+    s_cam_buf[0] = (uint8_t*)heap_caps_malloc((size_t)CAM_W_MAX * CAM_H_MAX * 2,
+                                              MALLOC_CAP_SPIRAM);
+    s_cam_buf[1] = (uint8_t*)heap_caps_malloc((size_t)CAM_W_MAX * CAM_H_MAX * 2,
+                                              MALLOC_CAP_SPIRAM);
     TJpgDec.setJpgScale(1);
     TJpgDec.setSwapBytes(true);   // match the LVGL RGB565 buffer byte order
     TJpgDec.setCallback(cam_tjpg_cb);
@@ -402,7 +411,7 @@ lv_obj_t* build_camera_overlay(lv_obj_t* parent) {
 }
 
 void camera_overlay_open() {
-    if (!s_cam_overlay || !s_cam_pix) return;   // no PSRAM buffer → feature off
+    if (!s_cam_overlay || !s_cam_buf[0] || !s_cam_buf[1]) return;  // no PSRAM → feature off
     s_cam_dirty = false;
     s_cam_open  = true;
     lv_obj_clear_flag(s_cam_overlay, LV_OBJ_FLAG_HIDDEN);
@@ -419,7 +428,7 @@ bool camera_overlay_is_open() { return s_cam_open; }
 
 // Net task: decode a freshly-fetched JPEG into the shared PSRAM buffer.
 void camera_decode_frame(const uint8_t* jpeg, size_t len) {
-    if (!s_cam_pix || !s_cam_mtx || !jpeg || !len) return;
+    if (!s_cam_buf[0] || !s_cam_buf[1] || !s_cam_mtx || !jpeg || !len) return;
     uint16_t w = 0, h = 0;
     if (TJpgDec.getJpgSize(&w, &h, jpeg, len) != JDR_OK || w == 0 || h == 0) return;
     // Native power-of-two downscale until it fits the on-screen area.
@@ -429,13 +438,23 @@ void camera_decode_frame(const uint8_t* jpeg, size_t len) {
     if (dw > CAM_W_MAX) dw = CAM_W_MAX;
     if (dh > CAM_H_MAX) dh = CAM_H_MAX;
 
-    xSemaphoreTake(s_cam_mtx, portMAX_DELAY);
-    s_cam_w = dw;
-    s_cam_h = dh;
-    memset(s_cam_pix, 0, (size_t)dw * dh * 2);
+    // Decode into the back buffer (the one the UI isn't rendering). The slow
+    // drawJpg runs WITHOUT the mutex — the UI only ever reads the front buffer —
+    // then the swap is published under the mutex so camera_apply picks up a
+    // whole frame, never a half-decoded one.
+    uint8_t back   = s_cam_front ^ 1;
+    s_cam_decode   = s_cam_buf[back];
+    s_cam_w        = dw;   // clip bounds for cam_tjpg_cb (net task only)
+    s_cam_h        = dh;
+    memset(s_cam_decode, 0, (size_t)dw * dh * 2);
     TJpgDec.setJpgScale(scale);
-    TJpgDec.drawJpg(0, 0, jpeg, len);   // → cam_tjpg_cb fills s_cam_pix
-    s_cam_dirty = true;
+    TJpgDec.drawJpg(0, 0, jpeg, len);   // → cam_tjpg_cb fills s_cam_decode
+    s_cam_bw[back] = dw;
+    s_cam_bh[back] = dh;
+
+    xSemaphoreTake(s_cam_mtx, portMAX_DELAY);
+    s_cam_front      = back;
+    s_cam_dirty      = true;
     s_cam_have_frame = true;
     xSemaphoreGive(s_cam_mtx);
 }
@@ -469,17 +488,23 @@ static void cam_show_cover(lv_obj_t* img, uint16_t srcw, uint16_t srch,
 // UI task: publish the latest decoded frame to the on-screen image.
 void camera_apply() {
     if (!s_cam_overlay || !s_cam_dirty) return;
+    // Snapshot the front buffer + its dims under the mutex, then build the
+    // descriptor outside it (s_cam_dsc is UI-task-only). LVGL renders this
+    // buffer; the net task only ever writes the other one.
     xSemaphoreTake(s_cam_mtx, portMAX_DELAY);
-    s_cam_dirty = false;
-    uint16_t w = s_cam_w, h = s_cam_h;
+    s_cam_dirty  = false;
+    uint8_t  f   = s_cam_front;
+    uint16_t w   = s_cam_bw[f], h = s_cam_bh[f];
+    uint8_t* pix = s_cam_buf[f];
+    xSemaphoreGive(s_cam_mtx);
+    if (!pix || w == 0 || h == 0) return;
+
     s_cam_dsc.header.always_zero = 0;
     s_cam_dsc.header.cf   = LV_IMG_CF_TRUE_COLOR;
     s_cam_dsc.header.w    = w;
     s_cam_dsc.header.h    = h;
-    s_cam_dsc.data        = s_cam_pix;
+    s_cam_dsc.data        = pix;
     s_cam_dsc.data_size   = (uint32_t)w * h * 2;
-    xSemaphoreGive(s_cam_mtx);
-    if (w == 0 || h == 0) return;
 
     // Show both the full-screen viewer and the inline thumbnail "cover": each
     // is scaled to FILL its box (the box clips the overflow) instead of being
@@ -566,7 +591,7 @@ void ambient_apply() {
         lv_label_set_text(s_amb_date, dt);
     }
     // Farm summary: the next queued job if any, else "<n> Printers · All idle".
-    ::bambuddy::QueueItem q[10]; uint8_t qn = 0;
+    ::bambuddy::QueueItem q[::bambuddy::MAX_QUEUE_ITEMS]; uint8_t qn = 0;
     ::bambuddy::g_client.snapshot_queue(q, qn);
     char sum[96];
     if (qn > 0) {

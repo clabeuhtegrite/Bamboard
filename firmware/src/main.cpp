@@ -309,6 +309,11 @@ static void start_provisioning() {
         g_cfg_cf_secret = p_cf_secret.getValue();
         g_cfg_cf_id.trim();
         g_cfg_cf_secret.trim();
+        // Strip CR/LF: the token rides the WebSocket handshake header block
+        // (joined with \r\n in bambuddy_ws.cpp), so a pasted newline must not be
+        // able to inject extra headers.
+        g_cfg_cf_id.replace("\r", "");     g_cfg_cf_id.replace("\n", "");
+        g_cfg_cf_secret.replace("\r", ""); g_cfg_cf_secret.replace("\n", "");
     } else {
         g_cfg_cf_id     = "";
         g_cfg_cf_secret = "";
