@@ -16,7 +16,7 @@ screws, ~120 g of filament for the case). The enclosure is a community
 design by **TomE1337** (CC BY-NC-SA 4.0), FDM-printable on any Bambu (or
 other) printer with a 0.4 mm nozzle.
 
-![Bamboard assembled](docs/screenshots/device_render.svg)
+![Bamboard — live UI in TomE1337's case](https://clabeuhtegrite.github.io/Bamboard/screenshots/hero.png)
 
 > The screen captures below are rendered by the host simulator from a built-in
 > **demo dataset** (a print running, a full queue, a drying AMS…) and published

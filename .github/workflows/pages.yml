@@ -47,8 +47,6 @@ jobs:
           # Static showcase site: page, styles, script and assets.
           cp web/index.html web/styles.css web/app.js _site/
           cp web/assets/favicon.svg web/assets/og-image.svg _site/assets/
-          # Hero product render is shared with the README — pull it from docs/.
-          cp docs/screenshots/device_render.svg _site/assets/device_render.svg
 
           # Rasterise the social card to PNG (crawlers don't read an SVG og:image).
           # Install Inter so the card uses the site's exact typeface instead of
@@ -90,6 +88,15 @@ jobs:
           mkdir -p _site/screenshots
           SIM_FIXTURES_ONLY=1 SIM_OUT=_site/screenshots ./sim/build/bamboard_sim
           echo "----- _site/screenshots -----" && ls -l _site/screenshots
+
+      # Hero render: composite the freshly-rendered live UI onto TomE1337's case
+      # photo (CC BY-NC-SA 4.0) in perspective — the project hero, regenerated on
+      # every deploy so it always reflects the current UI.
+      - name: Compose hero render
+        run: |
+          sudo apt-get install -y imagemagick
+          bash scripts/compose_hero.sh docs/screenshots/case.jpg _site/screenshots/live.png _site/screenshots/hero.png
+          echo "----- hero -----" && ls -l _site/screenshots/hero.png
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -7,37 +7,51 @@ release, so they always match the current UI without bloating the repo with
 binaries. The README links them at
 `https://clabeuhtegrite.github.io/Bamboard/screenshots/<screen>.png`.
 
-| Screen     | Demo state shown                                                            |
-|------------|----------------------------------------------------------------------------|
-| `live`     | Live dashboard mid-print — temps, progress, ETA, fans, light, Pause/Stop/speed |
-| `ams`      | Multi-unit AMS; a drying 4-slot unit (outlined black + clear-PETG checker)  |
-| `printers` | A 3-printer farm grid; printing tiles show a progress ring + temps + ETA    |
-| `queue`    | Pending jobs with their target printer                                      |
-| `history`  | Lifetime stats KPIs + recent prints                                         |
-| `settings` | Diagnostics (incl. Bambuddy server version) + brightness + factory reset    |
+| Screen      | Demo state shown                                                           |
+|-------------|---------------------------------------------------------------------------|
+| `live`      | Live dashboard mid-print — temps, progress, ETA, fans, light, Pause/Stop/speed |
+| `ams`       | Multi-unit AMS; a drying 4-slot unit (outlined black + clear-PETG checker) |
+| `printers`  | A 3-printer farm grid; printing tiles show a progress ring + temps + ETA   |
+| `queue`     | Pending jobs with their target printer                                     |
+| `history`   | Lifetime stats KPIs + recent prints                                        |
+| `settings`  | Diagnostics (incl. Bambuddy server version) + brightness + factory reset   |
+| `ambient`   | The idle ambient clock overlay                                            |
+| `tempgraph` | The live temperature graph overlay                                        |
 
-Only the hero stays in this folder:
+## Hero render
 
-| File                | Notes                                                                       |
-|---------------------|-----------------------------------------------------------------------------|
-| `device_render.svg` | Hand-authored vector product shot of the assembled device (the README hero). Its Live camera tile embeds `sim/demo/camera.jpg` (base64) so the hero shows a real frame. |
+The README/site hero is **composited in CI**, not committed: `scripts/compose_hero.sh`
+warps the freshly-rendered `live.png` onto **TomE1337's case photo** (`case.jpg`)
+in perspective, and Pages serves the result at `screenshots/hero.png`. So the
+hero always shows the current live UI on the real enclosure, refreshed on every
+deploy.
 
-The **demo camera frame** lives at `sim/demo/camera.jpg`. The sim decodes it (via
-the same TJpg_Decoder shim the device uses) and `render_fixtures()` injects it, so
-the **Live** screenshot shows the inline camera thumbnail; the hero embeds the same
-file. Replacing it changes the `live` baseline — refresh it like any UI change.
+| File       | Notes                                                                       |
+|------------|-----------------------------------------------------------------------------|
+| `case.jpg` | TomE1337's product photo of the enclosure — **CC BY-NC-SA 4.0** (see [`../../case/LICENSE`](../../case/LICENSE)). Base image for the composited hero. |
+
+The composited hero is a **derivative of `case.jpg`** and is therefore likewise
+CC BY-NC-SA 4.0, with attribution to TomE1337 — not MIT like the rest of the code.
+
+## Demo camera frame
+
+`sim/demo/camera.jpg` is a real printer-camera still. The sim decodes it (via the
+same TJpg_Decoder shim the device uses) and `render_fixtures()` injects it, so the
+**Live** screenshot — and therefore the hero — shows the inline camera thumbnail.
+Replacing it changes the `live` baseline.
 
 ## How it works
 
 - `sim/main.cpp` `render_fixtures()` drives the real `apply_*_payload` handlers
-  with deterministic demo JSON and dumps the six screens to PNG. `getLocalTime()`
-  and `millis()` are pinned in the shim so renders are byte-reproducible.
-- `.github/workflows/pages.yml` builds the sim and renders the demo screens into
-  the Pages site (`screenshots/`) — on `release: published`, `web/**` edits, and
-  manual dispatch.
+  with deterministic demo JSON and dumps each screen to PNG. `getLocalTime()` and
+  `millis()` are pinned in the shim so renders are byte-reproducible.
+- `.github/workflows/pages.yml` builds the sim, renders the demo screens into the
+  Pages site (`screenshots/`), and composites the hero (`compose_hero.sh`) — on
+  `release: published`, `web/**` / `pages.yml` edits, and manual dispatch.
 - `.github/workflows/tests.yml` (the `visual` job) renders the same demo screens
-  on every PR and byte-diffs them against the golden images in
-  `tests/fixtures_baseline/`, catching unintended UI changes.
+  on every PR, byte-diffs them against the golden images in
+  `tests/fixtures_baseline/`, and also composes the hero so the perspective warp
+  is exercised too.
 
 ## Updating after an intentional UI change
 

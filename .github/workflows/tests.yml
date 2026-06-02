@@ -53,6 +53,13 @@ jobs:
           cmake --build sim/build -j
       - name: Render fixtures (deterministic — no network, no secrets)
         run: SIM_FIXTURES_ONLY=1 SIM_OUT=fx_out ./sim/build/bamboard_sim
+      # Composite the live render onto TomE1337's case photo (the hero). Emitted
+      # into the fixture-renders artifact (HERO_DEBUG draws the screen quad) so
+      # the perspective corners can be calibrated without deploying anything.
+      - name: Compose hero render
+        run: |
+          sudo apt-get install -y imagemagick
+          bash scripts/compose_hero.sh docs/screenshots/case.jpg fx_out/live.png fx_out/hero.png
       - name: Compare against committed baselines (or seed them)
         run: |
           if ls tests/fixtures_baseline/*.png >/dev/null 2>&1; then
