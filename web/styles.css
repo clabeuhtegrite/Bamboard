@@ -147,7 +147,10 @@ section { padding-block: clamp(56px, 9vw, 110px); position: relative; }
 .pill.live { border-color: var(--accent-dark); color: var(--text-2); }
 
 .hero-art { position: relative; }
-.hero-art img { width: 100%; filter: drop-shadow(0 40px 60px rgba(0, 0, 0, 0.55)); border-radius: var(--r-lg); }
+/* Pin a 4:3 box (the case photo's ratio) and fit the bitmap into it, so a
+   stale/cached or mis-sized hero.png can never stretch the layout vertically —
+   object-fit defaults to "fill" (stretch), which is what distorted it before. */
+.hero-art img { width: 100%; height: auto; aspect-ratio: 1280 / 960; object-fit: cover; filter: drop-shadow(0 40px 60px rgba(0, 0, 0, 0.55)); border-radius: var(--r-lg); }
 
 /* ---- feature cards ("why") ---- */
 .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
