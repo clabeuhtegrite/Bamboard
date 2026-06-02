@@ -180,6 +180,18 @@ static void render_fixtures(const std::string& out) {
     lv_tick_inc(8); lv_timer_handler();
     dump_png(out, "ambient");
     ui::screens::ambient_hide();
+
+    // Temperature graph — pre-fill the chart with a demo warm-up ramp, then
+    // open + dump (same direct-redraw trick; refresh() isn't involved here).
+    for (int k = 0; k < 90; ++k) {
+        float t = (float)k / 89.0f;
+        ui::screens::temp_graph_push(1, 25.f + t * 195.f, 22.f + t * 38.f, 24.f + t * 14.f);
+    }
+    ui::screens::temp_graph_open();
+    lv_tick_inc(8); lv_timer_handler();
+    lv_tick_inc(8); lv_timer_handler();
+    dump_png(out, "tempgraph");
+    ui::screens::temp_graph_close();
 }
 
 int main(int argc, char** argv) {

@@ -87,6 +87,16 @@ void      ambient_hide();
 void      ambient_apply();
 bool      ambient_is_visible();
 
+// Live temperature graph overlay. Opened by tapping the dashboard temperature
+// row; tap to close. The lv_chart is the ring buffer — temp_graph_push() appends
+// a sample (UI task only, no cross-task buffer), called periodically by
+// ui::Manager::refresh() for the focused printer.
+lv_obj_t* build_temp_graph_overlay(lv_obj_t* parent);
+void      temp_graph_push(int printer_id, float noz, float bed, float cham);
+void      temp_graph_open();
+void      temp_graph_close();
+bool      temp_graph_is_open();
+
 // Shared header (title + connectivity indicator). Used by the carousel.
 // header_set_online() is safe to call from any task — it parks the new
 // state and header_apply() (pumped by the UI manager) syncs it into the

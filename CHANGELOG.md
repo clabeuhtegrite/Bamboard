@@ -23,6 +23,10 @@ A round of new at-a-glance features.
   clock floats over the current screen — big time, date and a one-line summary
   (the next queued job, or "N Printers · All idle"). Tap to dismiss; it re-arms
   after the idle delay. The auto-dim still dims the backlight underneath.
+- **Live temperature graph.** Tap the temperature row on Live to open a
+  full-screen chart of the focused printer's recent nozzle / bed / chamber
+  temperatures (a rolling ~4–5 min history, sampled every few seconds). Tap to
+  close. Handy for watching warm-up ramps and temperature stability at a glance.
 
 ## v0.18.2 — 2026-06
 
