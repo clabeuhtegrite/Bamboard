@@ -8,6 +8,7 @@
 #include <WiFiClientSecure.h>
 
 #include "../config.h"
+#include "ca_bundle.h"    // embedded root-CA bundle (validate GitHub's TLS)
 
 namespace ota {
 
@@ -25,22 +26,23 @@ static void (*s_on_progress)(uint8_t) = nullptr;
 // ---------------------------------------------------------------------------
 
 // Pulls manifest.json from the latest-release redirect and extracts the
-// version + firmware-binary URL + expected MD5. Returns false on any
+// version + firmware-binary URL + expected MD5 + size. Returns false on any
 // network / parse error.
 static bool fetch_manifest(String& out_version, String& out_bin_url,
-                           String& out_md5, bool& server_replied) {
+                           String& out_md5, size_t& out_size,
+                           bool& server_replied) {
     server_replied = false;
     WiFiClientSecure client;
-    // GitHub + its asset CDN (objects.githubusercontent.com) are HTTPS, and
-    // the asset host changes across redirects. We skip cert-chain validation
-    // rather than bundle and rotate multiple root CAs on the device. End-to-
-    // end integrity for the firmware binary itself is recovered by validating
-    // the MD5 published in the manifest against Update's running hash (see
-    // check_and_update below) — a MITM swapping the .bin would have to forge
-    // a matching MD5, which is infeasible without also tampering with the
-    // manifest in flight (and the user can still verify the sha256 published
-    // alongside out of band).
-    client.setInsecure();
+    // Validate GitHub's TLS chain against the embedded Mozilla root-CA bundle —
+    // the same bundle (and the same setCACertBundle path) the device already
+    // uses to reach Bambuddy over https. esp_crt_bundle is host-agnostic: it
+    // accepts any chain rooting in a bundled CA, so it covers both github.com
+    // and the asset CDN (objects.githubusercontent.com) the /latest/download
+    // redirect lands on. This closes the manifest-in-flight MITM that plain
+    // setInsecure() left open; the published MD5 (bound into Update.end()) and
+    // the release-path pin on the binary URL (see check_and_update) are
+    // defence-in-depth layered on top.
+    client.setCACertBundle(ca_bundle_start);
 
     HTTPClient http;
     http.setConnectTimeout(::ota::CHECK_TIMEOUT_MS);
@@ -76,6 +78,7 @@ static bool fetch_manifest(String& out_version, String& out_bin_url,
     out_version = (const char*)(doc["version"] | "");
     out_bin_url = (const char*)(doc["url"] | "");
     out_md5     = (const char*)(doc["md5"] | "");
+    out_size    = (size_t)(doc["size"] | 0);   // 0 if absent → size check skipped
     // md5 is optional for backwards compatibility with manifests published by
     // older release.yml workflows; an empty value just disables verification.
     return out_version.length() > 0 && out_bin_url.length() > 0;
@@ -92,8 +95,9 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
     }
 
     String latest, bin_url, expected_md5;
+    size_t expected_size = 0;
     bool server_replied = false;
-    if (!fetch_manifest(latest, bin_url, expected_md5, server_replied)) {
+    if (!fetch_manifest(latest, bin_url, expected_md5, expected_size, server_replied)) {
         // Distinguish "couldn't reach the server" from "reached it but the
         // manifest was unparseable / missing fields" so the cause is diagnosable.
         return server_replied ? CheckResult::BadManifest : CheckResult::NoNetwork;
@@ -104,13 +108,25 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
         return CheckResult::UpToDate;
     }
 
-    // Require a published MD5 before committing to a flash. The manifest and the
-    // binary both arrive over a setInsecure() TLS channel (see fetch_manifest),
-    // so the MD5 — bound into Update.end() below — is the only thing standing
-    // between us and an attacker-substituted image. No md5 ⇒ refuse, don't trust
-    // the channel. (release.yml always publishes one; this guards a tampered or
-    // legacy manifest.) Checked here, before on_start(), so we never pop the
-    // update overlay for an image we won't flash.
+    // Provenance pin: the binary must live under this repo's own release-download
+    // path (release.yml always publishes it there). A tampered manifest therefore
+    // can't aim the flash at an arbitrary host — and since the fetch is already
+    // validated against GitHub's TLS certs (CA bundle above), the download is both
+    // authenticated to GitHub and bound to our releases. Checked before on_start()
+    // so we never pop the overlay for an image we won't flash.
+    if (!bin_url.startsWith(::ota::BIN_URL_PREFIX)) {
+        log_e("OTA: bin url '%s' not under %s — refusing to flash",
+              bin_url.c_str(), ::ota::BIN_URL_PREFIX);
+        return CheckResult::Failed;
+    }
+
+    // Require a published MD5 before committing to a flash. The fetch is now
+    // TLS-validated and the URL pinned to our releases (above), but the MD5 —
+    // bound into Update.end() below — stays as an integrity belt-and-braces:
+    // it catches a corrupted download and refuses a legacy/tampered manifest
+    // that omitted it. No md5 ⇒ refuse. (release.yml always publishes one.)
+    // Checked here, before on_start(), so we never pop the update overlay for
+    // an image we won't flash.
     bool md5_valid = (expected_md5.length() == 32);
     for (size_t i = 0; md5_valid && i < 32; ++i) {
         char c = expected_md5[i];
@@ -120,6 +136,17 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
     if (!md5_valid) {
         log_e("OTA: newer release %s but md5 missing/invalid — refusing to flash",
               latest.c_str());
+        return CheckResult::Failed;
+    }
+
+    // Pre-flight capacity check: refuse early (clean log, no overlay) when the
+    // published size can't fit the inactive OTA slot, instead of starting a
+    // download that Update.begin() would only reject mid-stream. Conservative —
+    // gates solely when both numbers are known (size present, slot reported).
+    uint32_t free_slot = ESP.getFreeSketchSpace();
+    if (expected_size && free_slot && expected_size > free_slot) {
+        log_e("OTA: image %u B exceeds free OTA slot %u B — refusing",
+              (unsigned)expected_size, (unsigned)free_slot);
         return CheckResult::Failed;
     }
 
@@ -142,7 +169,10 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
     Update.setMD5(expected_md5.c_str());
 
     WiFiClientSecure client;
-    client.setInsecure();
+    // Same CA-bundle validation as the manifest fetch — covers the
+    // /releases/download redirect to the asset CDN (esp_crt_bundle is
+    // host-agnostic). The binary URL was pinned to our release path above.
+    client.setCACertBundle(ca_bundle_start);
 
     httpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
     httpUpdate.rebootOnUpdate(true);  // reboot into the new image on success

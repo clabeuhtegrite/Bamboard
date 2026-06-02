@@ -5,6 +5,36 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.19.1 — 2026-06
+
+### Security
+
+- **OTA now validates GitHub's TLS certificate.** The boot-time updater fetched
+  both `manifest.json` and `firmware.bin` over `setInsecure()` — no certificate
+  validation — leaning solely on the manifest's MD5 for integrity. Because that
+  MD5 travelled over the same unvalidated channel, a man-in-the-middle that
+  rewrote the manifest in flight could have served a matching malicious image.
+  The updater now validates the chain against the **embedded Mozilla root-CA
+  bundle** already shipped for Bambuddy's HTTPS mode (`setCACertBundle`), which
+  covers `github.com` and the `*.githubusercontent.com` asset CDN the
+  `/latest/download` redirect lands on. No new payload on the device — it reuses
+  the CA bundle that's regenerated on every release build.
+- **Firmware-binary URL is pinned to this repo's release path.** Before
+  flashing, the updater checks the manifest's `url` begins with
+  `https://github.com/clabeuhtegrite/Bamboard/releases/download/`, so a tampered
+  manifest can't aim the flash at an attacker-controlled host. The MD5 stays as
+  an integrity belt-and-braces on top.
+
+### Internal
+
+- **OTA size pre-flight.** The updater reads the manifest's `size` and bails out
+  early — clean log, no progress overlay — when the image can't fit the inactive
+  OTA slot, instead of letting `Update.begin()` reject it mid-download.
+
+> Note: a network that intercepts TLS (e.g. a corporate proxy presenting its own
+> certificate) will now block OTA rather than silently trusting it — the correct
+> posture, and the same one Bambuddy's HTTPS mode already takes.
+
 ## v0.19.0 — 2026-06
 
 A round of new at-a-glance features.
