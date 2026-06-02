@@ -94,6 +94,8 @@ without a prompt or a power-cycle.
    - `archives:read` *(for the recent prints list)*
    - `printers:control` *(only if you want the speed-change and refresh
      actions to work; safe to omit if you want a strictly read-only device)*
+   - *queue update* — Bambuddy's `QUEUE_UPDATE` *(only if you want the Queue
+     screen's two-tap **Remove** to cancel a pending job; omit otherwise)*
 4. Copy the key (it's shown only once) and paste it into the Bamboard
    captive portal.
 

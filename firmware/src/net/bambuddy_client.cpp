@@ -472,6 +472,7 @@ bool Client::apply_queue_payload(JsonVariantConst doc) {
         if (strcmp(st, "pending") != 0) continue;
         if (queue_count_ >= MAX_QUEUE_ITEMS) break;
         QueueItem& q = queue_[queue_count_++];
+        q.id         = obj["id"] | -1;
         q.name       = (const char*)(obj["archive_name"] | "");
         if (q.name.length() == 0) q.name = "(file)";
         q.status     = st;
@@ -667,6 +668,10 @@ bool Client::stop_ams_drying(int printer_id, uint8_t unit_id) {
     String path = String("/api/v1/printers/") + printer_id +
                   "/drying/stop?ams_id=" + (unsigned)unit_id;
     return do_post(path, "", nullptr);
+}
+
+bool Client::cancel_queue_item(int item_id) {
+    return do_post(String("/api/v1/queue/") + item_id + "/cancel", "", nullptr);
 }
 
 // --- Snapshots --------------------------------------------------------------

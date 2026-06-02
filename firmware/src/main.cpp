@@ -498,6 +498,10 @@ static void control_process() {
                 ok = cl.stop_ams_drying(c.pid, c.a);
                 ok_str = i18n::Str::DRYING_STOPPED;
                 fail_str = i18n::Str::STOP_DRYING_FAILED; break;
+            case ui::ctrl::QueueCancel:
+                ok = cl.cancel_queue_item(c.pid);   // pid carries the queue-item id
+                ok_str = i18n::Str::QUEUE_REMOVED;
+                fail_str = i18n::Str::QUEUE_REMOVE_FAILED; break;
         }
         i18n::Str s = ok ? ok_str : fail_str;
         if (s != i18n::Str::_COUNT) {

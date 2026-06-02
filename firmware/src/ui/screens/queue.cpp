@@ -11,6 +11,8 @@
 
 #include "theme.h"
 
+#include "../control.h"   // ui::ctrl::enqueue — cancel a queued job off the UI task
+
 namespace ui::screens {
 
 static lv_obj_t* s_q_root  = nullptr;
@@ -18,12 +20,36 @@ static lv_obj_t* s_q_list  = nullptr;
 static lv_obj_t* s_q_empty = nullptr;
 
 struct QueueRow {
-    lv_obj_t* row  = nullptr;
-    lv_obj_t* pos  = nullptr;
-    lv_obj_t* name = nullptr;
-    lv_obj_t* sub  = nullptr;
+    lv_obj_t* row     = nullptr;
+    lv_obj_t* pos     = nullptr;
+    lv_obj_t* name    = nullptr;
+    lv_obj_t* sub     = nullptr;
+    lv_obj_t* del     = nullptr;   // trash button (two-tap to remove the job)
+    lv_obj_t* del_lbl = nullptr;
 };
 static QueueRow s_qrows[::bambuddy::MAX_QUEUE_ITEMS];
+static int      s_qrow_id[::bambuddy::MAX_QUEUE_ITEMS] = {};  // item id shown per row
+static int      s_q_armed_id = -1;   // job armed for removal (by item id)
+static uint32_t s_q_armed_at = 0;
+
+// Two-tap remove: the first tap arms the job (its trash turns red), a second tap
+// on the SAME job within 3 s sends the cancel. Keyed by item id so a queue
+// reshuffle between taps can't remove the wrong job; update_queue disarms after 3 s.
+static void q_del_clicked(lv_event_t* e) {
+    int idx = (int)(intptr_t)lv_event_get_user_data(e);
+    if (idx < 0 || idx >= (int)::bambuddy::MAX_QUEUE_ITEMS) return;
+    int id = s_qrow_id[idx];
+    if (id < 0) return;
+    uint32_t now = lv_tick_get();
+    if (s_q_armed_id == id && (now - s_q_armed_at) < 3000) {
+        s_q_armed_id = -1;
+        ::ui::ctrl::enqueue(::ui::ctrl::QueueCancel, id);   // id carried in printer_id slot
+    } else {
+        s_q_armed_id = id;
+        s_q_armed_at = now;
+        show_toast(i18n::tr(i18n::Str::CONFIRM_RESET), lv_color_hex(::ui::C_WARN));
+    }
+}
 
 static void build_one_qrow(uint8_t idx) {
     QueueRow& r = s_qrows[idx];
@@ -44,7 +70,7 @@ static void build_one_qrow(uint8_t idx) {
 
     r.name = lv_label_create(r.row);
     lv_label_set_text(r.name, "");
-    lv_obj_set_width(r.name, LV_HOR_RES - 24 - 64);
+    lv_obj_set_width(r.name, LV_HOR_RES - 24 - 64 - 46);   // room for the trash button
     lv_label_set_long_mode(r.name, LV_LABEL_LONG_DOT);
     lv_obj_align(r.name, LV_ALIGN_LEFT_MID, 52, -8);
     lv_obj_set_style_text_font(r.name, &bb_font_16, 0);
@@ -52,10 +78,26 @@ static void build_one_qrow(uint8_t idx) {
 
     r.sub = lv_label_create(r.row);
     lv_label_set_text(r.sub, "");
-    lv_obj_set_width(r.sub, LV_HOR_RES - 24 - 64);
+    lv_obj_set_width(r.sub, LV_HOR_RES - 24 - 64 - 46);
     lv_label_set_long_mode(r.sub, LV_LABEL_LONG_DOT);
     lv_obj_align(r.sub, LV_ALIGN_LEFT_MID, 52, 10);
     lv_obj_add_style(r.sub, &s_label_dim, 0);
+
+    // Trash button (right): two-tap to remove the job from the queue.
+    r.del = lv_btn_create(r.row);
+    lv_obj_remove_style_all(r.del);
+    lv_obj_add_style(r.del, &s_btn_pressed, LV_STATE_PRESSED);
+    lv_obj_set_size(r.del, 36, 36);
+    lv_obj_align(r.del, LV_ALIGN_RIGHT_MID, -6, 0);
+    lv_obj_set_style_radius(r.del, ::ui::R_BUTTON, 0);
+    lv_obj_set_style_bg_color(r.del, lv_color_hex(::ui::C_PANEL_HI), 0);
+    lv_obj_set_style_bg_opa(r.del, LV_OPA_COVER, 0);
+    lv_obj_add_event_cb(r.del, q_del_clicked, LV_EVENT_CLICKED, (void*)(intptr_t)idx);
+    r.del_lbl = lv_label_create(r.del);
+    lv_label_set_text(r.del_lbl, LV_SYMBOL_TRASH);
+    lv_obj_set_style_text_font(r.del_lbl, &bb_font_16, 0);
+    lv_obj_set_style_text_color(r.del_lbl, lv_color_hex(::ui::C_TEXT_DIM), 0);
+    lv_obj_center(r.del_lbl);
 
     lv_obj_add_flag(r.row, LV_OBJ_FLAG_HIDDEN);
 }
@@ -88,6 +130,7 @@ lv_obj_t* build_queue(lv_obj_t* parent) {
 
 void update_queue() {
     maybe_hide_toast();
+    if (s_q_armed_id >= 0 && (lv_tick_get() - s_q_armed_at) > 3000) s_q_armed_id = -1;
     ::bambuddy::QueueItem q[::bambuddy::MAX_QUEUE_ITEMS]; uint8_t n = 0;
     ::bambuddy::g_client.snapshot_queue(q, n);
     // Resolve printer_id → name for the sub-line.
@@ -95,8 +138,10 @@ void update_queue() {
     ::bambuddy::g_client.snapshot_printers(ps, pn);
 
     if (n == 0) {
-        for (uint8_t i = 0; i < ::bambuddy::MAX_QUEUE_ITEMS; ++i)
+        for (uint8_t i = 0; i < ::bambuddy::MAX_QUEUE_ITEMS; ++i) {
             if (s_qrows[i].row) lv_obj_add_flag(s_qrows[i].row, LV_OBJ_FLAG_HIDDEN);
+            s_qrow_id[i] = -1;
+        }
         if (s_q_empty) lv_obj_clear_flag(s_q_empty, LV_OBJ_FLAG_HIDDEN);
         return;
     }
@@ -105,8 +150,9 @@ void update_queue() {
 
     for (uint8_t i = 0; i < ::bambuddy::MAX_QUEUE_ITEMS; ++i) {
         QueueRow& r = s_qrows[i];
-        if (i >= n) { lv_obj_add_flag(r.row, LV_OBJ_FLAG_HIDDEN); continue; }
+        if (i >= n) { lv_obj_add_flag(r.row, LV_OBJ_FLAG_HIDDEN); s_qrow_id[i] = -1; continue; }
         lv_obj_clear_flag(r.row, LV_OBJ_FLAG_HIDDEN);
+        s_qrow_id[i] = q[i].id;
 
         char pbuf[8];
         snprintf(pbuf, sizeof(pbuf), i18n::tr(i18n::Str::QUEUE_POS), (int)(i + 1));
@@ -118,6 +164,11 @@ void update_queue() {
             for (uint8_t k = 0; k < pn; ++k)
                 if (ps[k].id == q[i].printer_id) pname = ps[k].name.c_str();
         lv_label_set_text(r.sub, pname ? pname : "-");
+
+        // Trash turns red while this job is armed for removal (first tap).
+        bool armed = (q[i].id >= 0 && q[i].id == s_q_armed_id);
+        lv_obj_set_style_text_color(r.del_lbl,
+            lv_color_hex(armed ? ::ui::C_ERR : ::ui::C_TEXT_DIM), 0);
     }
 }
 
