@@ -16,10 +16,11 @@ set -euo pipefail
 CASE="${1:?case photo path}"; LIVE="${2:?live png path}"; OUT="${3:?output path}"
 
 # --- screen quad, fractions of the photo (x y in 0..1), clockwise from TL -----
-TLx=0.305; TLy=0.300
-TRx=0.715; TRy=0.305
-BRx=0.710; BRy=0.615
-BLx=0.300; BLy=0.600
+# Calibrated to the red frame the user drew on the 1280x960 case photo.
+TLx=0.295; TLy=0.243
+TRx=0.751; TRy=0.243
+BRx=0.751; BRy=0.619
+BLx=0.295; BLy=0.619
 
 IM=convert; command -v convert >/dev/null 2>&1 || IM=magick
 # Use $(...) not `read < <(...)`: convert's info: output has no trailing newline,
