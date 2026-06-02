@@ -52,6 +52,7 @@ uint8_t g_cfg_brightness_level = 3;
 void save_brightness_level(uint8_t level) { g_cfg_brightness_level = level; }
 void factory_reset() {}
 void reconfigure_wifi() {}
+const char* g_boot_reason = "power-on";  // main.cpp global; the sim shows a stable value
 // Control actions are no-ops in the sim — fixtures never tap the buttons and
 // there is no net task to marshal them to.
 namespace ui::ctrl {

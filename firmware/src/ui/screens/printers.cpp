@@ -16,6 +16,9 @@
 
 #include "theme.h"
 
+#include <algorithm>   // std::sort — farm-grid ordering
+#include <cstdint>     // UINT32_MAX
+
 namespace ui::screens {
 
 static lv_obj_t* s_pr_root = nullptr;
@@ -158,6 +161,31 @@ void update_printers(int focused_id) {
     if (n > ::bambuddy::MAX_PRINTERS) n = ::bambuddy::MAX_PRINTERS;
 
     using PState = ::bambuddy::PrinterState;   // 'PS' clashes with the Xtensa register macro
+
+    // Sort the tiles into a glanceable "control-wall" order: live prints first
+    // (next-to-finish at the top), then anything needing attention, then
+    // finished, idle, and offline last. Sorting the local snapshot is safe — the
+    // tiles are slot-reused and the focused border matches by printer id.
+    auto rank = [](PState s) -> int {
+        switch (s) {
+            case PState::Printing: case PState::Paused: case PState::Prepare: return 0;
+            case PState::Error:    case PState::Failed:                       return 1;
+            case PState::Finish:                                              return 2;
+            case PState::Idle:                                                return 3;
+            default:                                                          return 4;  // Offline/Unknown
+        }
+    };
+    std::sort(ps, ps + n, [&](const ::bambuddy::Printer& a, const ::bambuddy::Printer& b) {
+        int ra = rank(a.state), rb = rank(b.state);
+        if (ra != rb) return ra < rb;
+        if (ra == 0) {   // among live prints, next-to-finish first (unknown ETA last)
+            uint32_t ea = a.remaining_s ? a.remaining_s : UINT32_MAX;
+            uint32_t eb = b.remaining_s ? b.remaining_s : UINT32_MAX;
+            if (ea != eb) return ea < eb;
+        }
+        return a.id < b.id;   // stable tiebreak
+    });
+
     for (uint8_t i = 0; i < ::bambuddy::MAX_PRINTERS; ++i) {
         PrinterTile& t = s_tiles[i];
         if (i >= n) {
