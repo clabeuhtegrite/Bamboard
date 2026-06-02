@@ -1,119 +1,58 @@
-# Bamboard enclosure (v0.4)
+# Bamboard enclosure
 
-Compact two-part FDM-printable case for the Guition JC4827W543 board.
-Both parts print on a 0.4 mm nozzle in PLA or PETG (PETG preferred — the
-panel runs warm enough that you'll see PLA soften after a couple of
-weeks on a sunny desk).
+The enclosure is **not Bamboard's own design** — it's the excellent
+**"ESP32-S3 Klipper Dashboard Case"** by **TomE1337**, which fits the same
+Guition JC4827W543 board Bamboard runs on. Big thanks to TomE1337 for
+designing and sharing it.
 
-| Part           | What it holds / does                                                                                                                | Qty |
-|----------------|--------------------------------------------------------------------------------------------------------------------------------------|-----|
-| `front_shell`  | Slim 3 mm bezel around the active area, snug PCB pocket (0.3 mm clearance per side), four corner screw bosses, optional M3 standoffs aligning with the board's mounting holes. Chamfered top edge so the case reads as one piece. | 1 |
-| `back_shell`   | USB-C cut-out, BOOT + RST button windows, microSD slot, vertical vent slots grouped over the ESP module, four corner screw posts. Integrated 15° desk-stand tab — no accessory needed.                                            | 1 |
+- **Designer:** TomE1337 — <https://www.printables.com/@TomE1337_2178164>
+- **Model:** *ESP32-S3 Klipper Dashboard Case with Weather, Crypto & Moonraker*
+  — <https://www.printables.com/model/1716582-esp32-s3-klipper-dashboard-case-with-weather-crypt>
+- **License:** Creative Commons **Attribution-NonCommercial-ShareAlike 4.0**
+  (CC BY-NC-SA 4.0) — <https://creativecommons.org/licenses/by-nc-sa/4.0/>
 
-The shells screw together with **four M3 × 6 mm self-tapping screws**.
-(v0.3 used M3 × 8 mm — the new shells are thinner so the shorter screw
-seats fully without poking through.)
+The STLs here are **redistributed unmodified** under that license — see
+[`LICENSE`](LICENSE). **The Printables page is the source of truth** for the
+recommended print profile, orientation and any hardware (screws / heat-set
+inserts); follow it for the authoritative build.
 
-## What changed since v0.3
+## Parts
 
-| Dimension              | v0.3    | v0.4    |
-|------------------------|---------|---------|
-| Outer width            | 122 mm  | 112 mm  |
-| Outer height           | 92 mm   | 82 mm   |
-| Wall thickness         | 2.4 mm  | 1.8 mm  |
-| Top thickness          | 2.0 mm  | 1.6 mm  |
-| Bezel around screen    | ~6 mm   | ~3 mm   |
-| PCB pocket clearance   | 6 mm    | 0.6 mm  |
-| Front-edge geometry    | flat    | 0.6 mm chamfer |
-| Desk stand             | accessory | integrated tab @ 15° |
-| Total filament         | ~50 g   | ~32 g   |
+| File        | Role (as shipped)            | Bounding box (mm)   |
+|-------------|------------------------------|---------------------|
+| `case.stl`  | Main body — holds the board + screen | 129 × 79 × 41 |
+| `cover.stl` | Rear cover                   | 125 × 74 × 15       |
+| `stand.stl` | Desk stand the body sits in  | 139 × 63 × 52       |
 
-> **Heads-up — print a draft first.**
-> The JC4827W543 has shipped in several mechanical revisions. The
-> default board outline (108 × 78 mm) and connector offsets match the
-> most-common 2024–2025 batch; if your specific board is even a
-> millimetre off, tune `board_w / board_h / board_hole_pitch_* /
-> usb_y_offset / boot_btn_y` at the top of `bamboard.scad`. The new
-> snug pocket gives you almost no wiggle room — measure before slicing.
+*(Roles are inferred from the model and the product photo; defer to the
+Printables page for the designer's own description.)*
 
-## Render & export STL
+## Printing — generic guidance
 
-```bash
-# Front shell (display window + board pocket)
-openscad -D 'part="front"' -o exports/bamboard_front.stl bamboard.scad
+These are sensible defaults for a desk enclosure; **TomE1337's Printables
+page lists the recommended settings**, so prefer those if they differ.
 
-# Back shell (USB / BOOT / RST / SD / vents + stand)
-openscad -D 'part="back"'  -o exports/bamboard_back.stl  bamboard.scad
+| Setting       | Value                                                            |
+|---------------|-----------------------------------------------------------------|
+| Nozzle        | 0.4 mm                                                          |
+| Layer height  | 0.20 mm                                                         |
+| Walls         | 3 perimeters                                                    |
+| Infill        | 15–20 %                                                         |
+| Filament      | **PETG preferred** — the panel runs slightly warm; PLA is fine away from direct sun |
+| Supports      | Per the Printables page (orientation-dependent)                 |
 
-# Both on the same bed for a visual sanity check
-openscad -D 'part="all"'   -o exports/bamboard_all.stl   bamboard.scad
-```
+## Assembly
 
-(or open `bamboard.scad` in the OpenSCAD GUI, toggle `part` at the top,
-F6 → File → Export → STL.)
+The board is the same all-in-one Guition JC4827W543 as before (no wiring,
+no soldering — see [`../hardware/bom.md`](../hardware/bom.md)). Seat the
+board in `case.stl`, close it with `cover.stl`, and drop the assembly into
+`stand.stl`. **For the exact fit, fastener list and step-by-step, follow
+the [Printables page](https://www.printables.com/model/1716582-esp32-s3-klipper-dashboard-case-with-weather-crypt).**
 
-## Print settings
+## License & attribution
 
-| Setting              | Value                                                                                              |
-|----------------------|----------------------------------------------------------------------------------------------------|
-| Layer height         | 0.20 mm                                                                                            |
-| Nozzle               | 0.4 mm                                                                                             |
-| Perimeters           | 3                                                                                                  |
-| Top / bottom layers  | 4                                                                                                  |
-| Infill               | 20 % gyroid                                                                                        |
-| Supports             | None — both parts print face-down, and the back shell's stand tab is a single 15° overhang that bridges without supports. |
-| Filament             | PETG preferred (panel runs slightly warm). PLA is fine if your desk doesn't see direct sun.        |
-| Ironing              | **On** for the front shell's first layer — that's the visible bezel face.                          |
-
-Total print time on a Bambu X1 Carbon at default profile: **~1 h 40
-both shells, ~32 g of filament**.
-
-## Print orientation
-
-- **Front shell** → face-down on the bed (the flat, screen-facing side
-  becomes the visible outer surface). No supports needed.
-- **Back shell** → face-down on the bed. The integrated stand tab tucks
-  underneath in this orientation and prints clean without supports.
-
-## Assembly (zero soldering, single screwdriver)
-
-1. **Drop the Guition board into the front shell**: the friction-fit
-   pocket guides it; the four M3 standoffs (if you chose to print them)
-   align with the board's mounting holes. Press lightly until the FPC
-   shielding kisses the inside of the front face.
-2. **Optional**: secure the board with 4 × M2 × 4 mm screws into the
-   standoffs. Foam tape is fine too — the new tight pocket means the
-   board doesn't move regardless.
-3. **Clip the back shell on top**. The USB-C connector lines up with
-   the right-edge cut-out; the BOOT and RST buttons poke through their
-   own circular windows so they stay reachable for factory-reset and
-   OTA bootloader entry.
-4. Drive **four M3 × 6 mm self-tapping screws** through the back into
-   the front-shell corner bosses.
-5. Plug a USB-C cable into the side. That's the whole build.
-
-The integrated stand tab pivots out at the bottom of the back shell.
-Press it open to ~90° from the case body and the screen will tilt back
-15° toward you — comfortable viewing from a seated desk position.
-
-## Adapting to a different revision
-
-Variables at the top of `bamboard.scad` cover the common deviations:
-
-| Variable                              | What to set                                              |
-|---------------------------------------|----------------------------------------------------------|
-| `board_w` / `board_h`                 | PCB outline (calipers).                                  |
-| `board_hole_pitch_x / _y`             | Mounting hole pattern. Set `board_hole_d = 0` to skip.   |
-| `view_w` / `view_h` / `view_off_y`    | Visible active area of the display + its position on PCB.|
-| `usb_y_offset`                        | USB-C connector distance from the bottom short edge.     |
-| `boot_btn_y` / `reset_btn_y`          | BOOT / RST button positions on the side rail.            |
-| `sd_y_offset`                         | microSD slot position (skip the cut-out if absent).      |
-| `wall` / `top_thickness`              | Sturdier (2.4 mm) or lighter (1.5 mm) shells.            |
-| `pocket_clear`                        | Pocket clearance on every side. Bump to 1.0 mm if your panel is mounted out-of-square. |
-| `stand_enabled`                       | `false` to skip the desk-stand tab (wall-mount / printer-cart use cases). |
-| `stand_tilt_deg`                      | Stand angle. 15° works for a seated desk; bump to 25° for a low table. |
-
-If a connector isn't on your board (e.g. no microSD), comment its
-cut-out out of `back_shell()` or set its `y_offset` so far outside the
-case outline that the cut-out lands harmlessly in the wall — Boolean
-subtraction with nothing to cut is free.
+Everything in this `case/` directory is © **TomE1337** and licensed
+**CC BY-NC-SA 4.0**, which is **separate** from the MIT license covering
+Bamboard's own code. If you remix the enclosure you must credit TomE1337
+and keep the same license; **commercial use is not permitted**. See
+[`LICENSE`](LICENSE) for the full attribution.
