@@ -96,6 +96,7 @@ jobs:
         run: |
           fail=0
           for lang in es fr pt de; do
+            mkdir -p "fx_i18n/$lang"   # the sim's own mkdir(SIM_OUT) isn't recursive
             SIM_FIXTURES_ONLY=1 BAMBOARD_LANG=$lang SIM_OUT="fx_i18n/$lang" ./sim/build/bamboard_sim
             base="tests/fixtures_baseline/i18n/$lang"
             if ls "$base"/*.png >/dev/null 2>&1; then
