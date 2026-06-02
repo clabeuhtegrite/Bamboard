@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Open Graph / social share card (1200x630). Rasterised to og-image.png by
+  pages.yml at deploy time (crawlers want PNG/JPG, not SVG). Deliberately
+  filter-free so librsvg renders it faithfully.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img">
+  <title>Bamboard — a desk monitor for your Bambu Lab printers</title>
+  <defs>
+    <radialGradient id="bg" cx="28%" cy="0%" r="110%">
+      <stop offset="0%" stop-color="#1b2530"/>
+      <stop offset="55%" stop-color="#10161f"/>
+      <stop offset="100%" stop-color="#05080c"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="78%" cy="38%" r="46%">
+      <stop offset="0%" stop-color="#00B7C3" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#00B7C3" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00B7C3"/>
+      <stop offset="1" stop-color="#39D98A"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#202730"/>
+      <stop offset="1" stop-color="#171c23"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- Left: wordmark + tagline + badges -->
+  <g transform="translate(96,150)">
+    <g transform="translate(0,-44)">
+      <rect width="14" height="14" rx="4" fill="url(#acc)"/>
+      <text x="26" y="13" font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+            font-size="22" font-weight="700" letter-spacing="3" fill="#8A95A4">OPEN-SOURCE DESK MONITOR</text>
+    </g>
+    <text font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="92" font-weight="800" fill="#E9EEF3">Bam<tspan fill="#00B7C3">board</tspan></text>
+    <text y="84" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="34" font-weight="500" fill="#C2CCD8">A touch desk monitor for your</text>
+    <text y="128" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="34" font-weight="500" fill="#C2CCD8">Bambu&#160;Lab printers — via self-hosted Bambuddy.</text>
+
+    <g transform="translate(0,188)" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="24" font-weight="600">
+      <g>
+        <rect width="150" height="46" rx="12" fill="#171c23" stroke="#2F3742"/>
+        <text x="75" y="30" text-anchor="middle" fill="#39D98A">~20&#8364; BOM</text>
+      </g>
+      <g transform="translate(166,0)">
+        <rect width="156" height="46" rx="12" fill="#171c23" stroke="#2F3742"/>
+        <text x="78" y="30" text-anchor="middle" fill="#E9EEF3">ESP32-S3</text>
+      </g>
+      <g transform="translate(338,0)">
+        <rect width="200" height="46" rx="12" fill="#171c23" stroke="#2F3742"/>
+        <text x="100" y="30" text-anchor="middle" fill="#E9EEF3">OTA self-update</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Right: simplified Live screen card -->
+  <g transform="translate(742,150)">
+    <rect x="-14" y="-14" width="404" height="358" rx="26" fill="#0b0e12" stroke="#2F3742"/>
+    <rect width="376" height="330" rx="18" fill="#0E1116"/>
+    <!-- header -->
+    <rect width="376" height="40" rx="0" fill="#1A1F26"/>
+    <rect y="39" width="376" height="1" fill="#2F3742"/>
+    <rect x="14" y="14" width="12" height="12" rx="3" fill="url(#acc)"/>
+    <text x="34" y="27" font-family="Inter, system-ui, sans-serif" font-size="17" font-weight="700" fill="#E9EEF3">Bam<tspan fill="#00B7C3">board</tspan></text>
+    <!-- ring -->
+    <g transform="translate(60,108)">
+      <circle r="34" fill="none" stroke="#252B34" stroke-width="7"/>
+      <circle r="34" fill="none" stroke="url(#acc)" stroke-width="7" stroke-linecap="round" stroke-dasharray="132 213" transform="rotate(-90)"/>
+      <text font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" fill="#E9EEF3" text-anchor="middle" dominant-baseline="central">62%</text>
+    </g>
+    <g transform="translate(112,78)">
+      <rect width="116" height="26" rx="13" fill="#0E2A2E" stroke="#017782"/>
+      <circle cx="16" cy="13" r="4" fill="url(#acc)"/>
+      <text x="30" y="18" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#2BE0EC">PRINTING</text>
+    </g>
+    <text x="362" y="96" text-anchor="end" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="700" fill="#E9EEF3">ETA 1h12</text>
+    <!-- temp cells -->
+    <g font-family="Inter, system-ui, sans-serif">
+      <g transform="translate(14,158)">
+        <rect width="114" height="40" rx="12" fill="url(#panel)" stroke="#2F3742"/>
+        <text x="12" y="17" font-size="10" font-weight="700" letter-spacing="1" fill="#8A95A4">NOZZLE</text>
+        <text x="102" y="31" font-size="16" font-weight="700" text-anchor="end" fill="#E9EEF3">220&#176;</text>
+      </g>
+      <g transform="translate(132,158)">
+        <rect width="112" height="40" rx="12" fill="url(#panel)" stroke="#2F3742"/>
+        <text x="12" y="17" font-size="10" font-weight="700" letter-spacing="1" fill="#8A95A4">BED</text>
+        <text x="100" y="31" font-size="16" font-weight="700" text-anchor="end" fill="#E9EEF3">60&#176;</text>
+      </g>
+      <g transform="translate(248,158)">
+        <rect width="114" height="40" rx="12" fill="url(#panel)" stroke="#2F3742"/>
+        <text x="12" y="17" font-size="10" font-weight="700" letter-spacing="1" fill="#8A95A4">CHAMBER</text>
+        <text x="102" y="31" font-size="16" font-weight="700" text-anchor="end" fill="#E9EEF3">38&#176;</text>
+      </g>
+    </g>
+    <!-- action row -->
+    <g font-family="Inter, system-ui, sans-serif" font-weight="600">
+      <g transform="translate(14,214)">
+        <rect width="114" height="44" rx="18" fill="url(#acc)"/>
+        <text x="57" y="28" font-size="16" text-anchor="middle" fill="#0E1116">Pause</text>
+      </g>
+      <g transform="translate(134,214)">
+        <rect width="92" height="44" rx="18" fill="#F5A524"/>
+        <text x="46" y="28" font-size="16" text-anchor="middle" fill="#0E1116">Stop</text>
+      </g>
+      <g transform="translate(232,214)">
+        <rect width="130" height="44" rx="18" fill="url(#panel)" stroke="#2F3742"/>
+        <text x="18" y="28" font-size="15" fill="#E9EEF3">Standard</text>
+      </g>
+    </g>
+    <!-- tab bar -->
+    <rect y="290" width="376" height="40" fill="#1A1F26"/>
+    <rect y="290" width="376" height="1" fill="#2F3742"/>
+    <rect width="63" height="40" y="290" fill="#0E2A2E" opacity="0.55"/>
+    <rect x="10" y="290" width="44" height="3" rx="2" fill="url(#acc)"/>
+    <g font-family="Inter, system-ui, sans-serif" font-size="11" text-anchor="middle">
+      <text x="32" y="316" fill="#00B7C3">Live</text>
+      <text x="95" y="316" fill="#8A95A4">AMS</text>
+      <text x="158" y="316" fill="#8A95A4">Print</text>
+      <text x="221" y="316" fill="#8A95A4">Queue</text>
+      <text x="284" y="316" fill="#8A95A4">Hist</text>
+      <text x="347" y="316" fill="#8A95A4">Set</text>
+    </g>
+  </g>
+</svg>

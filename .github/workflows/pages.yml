@@ -42,8 +42,17 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          mkdir -p _site
-          cp web/index.html _site/index.html
+          mkdir -p _site/assets
+
+          # Static showcase site: page, styles, script and assets.
+          cp web/index.html web/styles.css web/app.js _site/
+          cp web/assets/favicon.svg web/assets/og-image.svg _site/assets/
+          # Hero product render is shared with the README — pull it from docs/.
+          cp docs/screenshots/device_render.svg _site/assets/device_render.svg
+
+          # Rasterise the social card to PNG (crawlers don't read an SVG og:image).
+          sudo apt-get update && sudo apt-get install -y librsvg2-bin
+          rsvg-convert -w 1200 -h 630 web/assets/og-image.svg -o _site/assets/og-image.png
 
           # Pull the factory image + version from the latest published release.
           TAG="$(gh release view --repo "$REPO" --json tagName -q .tagName)"
