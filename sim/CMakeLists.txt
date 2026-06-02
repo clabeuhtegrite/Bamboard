@@ -52,6 +52,7 @@ file(GLOB FW_FONTS ${FW}/ui/fonts/*.c)
 set(FW_SRC
   ${FW}/ui/ui.cpp
   ${FW}/ui/i18n.cpp
+  ${FW}/ui/dry_default.cpp
   ${FW}/ui/screens/dashboard.cpp
   ${FW}/ui/screens/ams.cpp
   ${FW}/ui/screens/printers.cpp

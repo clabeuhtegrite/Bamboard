@@ -28,6 +28,15 @@ change, not on every commit).
   (next-to-finish at the top), then anything needing attention (failed / error),
   then finished, then idle, then offline — instead of raw discovery order.
 
+### Internal
+
+- **Per-language visual fixtures.** CI renders the screens in all five languages
+  and byte-diffs each against `tests/fixtures_baseline/i18n/<lang>/`, catching
+  layout overflow when a translation runs longer than the English source.
+- **Drying-default table is host-unit-tested.** The per-filament-type drying
+  fallback (`ui::dry_default_for`) moved to its own dependency-free unit, covered
+  by `tests/` (prefix ordering, the nylon catch-all, unknown types).
+
 ## v0.22.0 — 2026-06
 
 ### Added

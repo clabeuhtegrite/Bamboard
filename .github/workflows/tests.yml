@@ -89,10 +89,41 @@ jobs:
             echo "::warning::no baselines in tests/fixtures_baseline — download the"
             echo "fixture-renders artifact and commit them to seed the baseline."
           fi
+      # Render the same deterministic screens in each non-English language and
+      # byte-diff them too — catches i18n layout overflow (a German/Spanish
+      # string longer than the English source spilling out of a button/row).
+      - name: Render + diff per-language fixtures (i18n layout regression)
+        run: |
+          fail=0
+          for lang in es fr pt de; do
+            mkdir -p "fx_i18n/$lang"   # the sim's own mkdir(SIM_OUT) isn't recursive
+            SIM_FIXTURES_ONLY=1 BAMBOARD_LANG=$lang SIM_OUT="fx_i18n/$lang" ./sim/build/bamboard_sim
+            base="tests/fixtures_baseline/i18n/$lang"
+            if ls "$base"/*.png >/dev/null 2>&1; then
+              for b in "$base"/*.png; do
+                n=$(basename "$b")
+                if ! cmp -s "$b" "fx_i18n/$lang/$n"; then
+                  echo "::error::i18n regression in $lang/$n (differs from baseline)"; fail=1
+                fi
+              done
+            else
+              echo "::warning::no i18n baselines for $lang — download the"
+              echo "fixture-renders-i18n artifact and commit them under"
+              echo "tests/fixtures_baseline/i18n/$lang/"
+            fi
+          done
+          exit $fail
       - name: Upload fixture renders
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fixture-renders
           path: fx_out/*.png
+          if-no-files-found: warn
+      - name: Upload i18n fixture renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-renders-i18n
+          path: fx_i18n/**/*.png
           if-no-files-found: warn

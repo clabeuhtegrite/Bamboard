@@ -17,3 +17,10 @@ To intentionally update them (after a deliberate UI change): download the
 | `settings.png`  | Settings — diagnostics, brightness, Wi-Fi-setup + factory-reset pills |
 | `ambient.png`   | Ambient idle clock overlay (time, date, farm summary) |
 | `tempgraph.png` | Live nozzle / bed / chamber temperature graph |
+
+### Per-language baselines — `i18n/<lang>/`
+
+The same screens rendered in each non-English language (`i18n/{es,fr,pt,de}/`),
+byte-diffed by the `visual` job to catch layout overflow when a translation runs
+longer than the English source. Re-seed from the **`fixture-renders-i18n`**
+artifact (copy each `<lang>/*.png` into `i18n/<lang>/`).
