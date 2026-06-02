@@ -29,29 +29,31 @@
   <rect width="1200" height="630" fill="url(#bg)"/>
   <rect width="1200" height="630" fill="url(#glow)"/>
 
-  <!-- Left: wordmark + tagline + badges -->
-  <g transform="translate(96,150)">
-    <g transform="translate(0,-44)">
-      <rect width="14" height="14" rx="4" fill="url(#acc)"/>
-      <text x="26" y="13" font-family="Inter, 'Segoe UI', system-ui, sans-serif"
-            font-size="22" font-weight="700" letter-spacing="3" fill="#8A95A4">OPEN-SOURCE DESK MONITOR</text>
+  <!-- Left: wordmark + tagline + badges. Laid out for Inter (wider than the
+       fallback) and kept clear of the device card, which starts at x=742. -->
+  <g transform="translate(96,200)">
+    <g transform="translate(0,-96)">
+      <rect width="13" height="13" rx="4" fill="url(#acc)"/>
+      <text x="24" y="12" font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+            font-size="20" font-weight="700" letter-spacing="2.5" fill="#8A95A4">OPEN-SOURCE DESK MONITOR</text>
     </g>
-    <text font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="92" font-weight="800" fill="#E9EEF3">Bam<tspan fill="#00B7C3">board</tspan></text>
-    <text y="84" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="34" font-weight="500" fill="#C2CCD8">A touch desk monitor for your</text>
-    <text y="128" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="34" font-weight="500" fill="#C2CCD8">Bambu&#160;Lab printers — via self-hosted Bambuddy.</text>
+    <text font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="86" font-weight="800" fill="#E9EEF3">Bam<tspan fill="#00B7C3">board</tspan></text>
+    <text y="62"  font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="30" font-weight="500" fill="#C2CCD8">A touch desk monitor for your</text>
+    <text y="102" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="30" font-weight="500" fill="#C2CCD8">Bambu&#160;Lab printers, powered by</text>
+    <text y="142" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="30" font-weight="500" fill="#C2CCD8">self-hosted Bambuddy.</text>
 
-    <g transform="translate(0,188)" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="24" font-weight="600">
+    <g transform="translate(0,194)" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="23" font-weight="600">
       <g>
-        <rect width="150" height="46" rx="12" fill="#171c23" stroke="#2F3742"/>
-        <text x="75" y="30" text-anchor="middle" fill="#39D98A">~20&#8364; BOM</text>
+        <rect width="150" height="44" rx="12" fill="#171c23" stroke="#2F3742"/>
+        <text x="75" y="29" text-anchor="middle" fill="#39D98A">~20&#8364; BOM</text>
       </g>
-      <g transform="translate(166,0)">
-        <rect width="156" height="46" rx="12" fill="#171c23" stroke="#2F3742"/>
-        <text x="78" y="30" text-anchor="middle" fill="#E9EEF3">ESP32-S3</text>
+      <g transform="translate(162,0)">
+        <rect width="150" height="44" rx="12" fill="#171c23" stroke="#2F3742"/>
+        <text x="75" y="29" text-anchor="middle" fill="#E9EEF3">ESP32-S3</text>
       </g>
-      <g transform="translate(338,0)">
-        <rect width="200" height="46" rx="12" fill="#171c23" stroke="#2F3742"/>
-        <text x="100" y="30" text-anchor="middle" fill="#E9EEF3">OTA self-update</text>
+      <g transform="translate(324,0)">
+        <rect width="194" height="44" rx="12" fill="#171c23" stroke="#2F3742"/>
+        <text x="97" y="29" text-anchor="middle" fill="#E9EEF3">OTA self-update</text>
       </g>
     </g>
   </g>
