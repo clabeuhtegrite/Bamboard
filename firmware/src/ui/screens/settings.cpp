@@ -2,13 +2,14 @@
 //
 //   y =  36 ..  82 : 5 read-only rows (Bambuddy / IP / RSSI / Uptime / Server)
 //   y =  84 .. 116 : Brightness 1..5 segmented selector (panel + 5 chips)
-//   y = bot - 52   : Factory-reset pill (two-tap confirm within 3 s)
+//   y = bot - 8    : Wi-Fi-setup + Factory-reset pills (two-tap confirm, 3 s)
 //
 // Declarations from main.cpp / the sim stubs:
 //   g_cfg_bambuddy_url     — current Bambuddy URL string
 //   g_cfg_brightness_level — currently-applied brightness level (1..5)
 //   save_brightness_level  — persists + applies a new brightness level
 //   factory_reset          — wipes NVS + reboots into captive portal
+//   reconfigure_wifi       — reboots into the portal WITHOUT wiping (change Wi-Fi)
 
 #include "theme.h"
 
@@ -20,6 +21,7 @@ extern String  g_cfg_bambuddy_url;
 extern uint8_t g_cfg_brightness_level;
 extern void    save_brightness_level(uint8_t level);
 extern void    factory_reset();
+extern void    reconfigure_wifi();
 
 namespace ui::screens {
 
@@ -34,6 +36,9 @@ static lv_obj_t* s_set_bright_seg[5] = {};
 static lv_obj_t* s_set_reset_btn     = nullptr;
 static lv_obj_t* s_set_reset_lbl     = nullptr;
 static uint32_t  s_set_reset_armed_at = 0;
+static lv_obj_t* s_set_wifi_btn      = nullptr;
+static lv_obj_t* s_set_wifi_lbl      = nullptr;
+static uint32_t  s_set_wifi_armed_at = 0;
 
 // ---- brightness segmented control ------------------------------------------
 
@@ -76,6 +81,24 @@ static void set_reset_clicked(lv_event_t*) {
         lv_label_set_text(s_set_reset_lbl, i18n::tr(i18n::Str::CONFIRM_RESET));
         lv_obj_set_style_bg_color(s_set_reset_btn,
                                    lv_color_hex(::ui::C_ERR), 0);
+    }
+}
+
+// ---- Wi-Fi setup (reopen the captive portal, config preserved) -------------
+
+static void set_wifi_clicked(lv_event_t*) {
+    uint32_t now = lv_tick_get();
+    if (s_set_wifi_armed_at != 0 &&
+        (now - s_set_wifi_armed_at) < 3000) {
+        // Second tap within 3 s — reboot into the portal (NVS kept).
+        show_toast(i18n::tr(i18n::Str::WIFI_OPENING), lv_color_hex(::ui::C_ACCENT));
+        ::reconfigure_wifi();
+    } else {
+        // First tap — arm (teal, vs the reset pill's red).
+        s_set_wifi_armed_at = now;
+        lv_label_set_text(s_set_wifi_lbl, i18n::tr(i18n::Str::CONFIRM_RESET));
+        lv_obj_set_style_bg_color(s_set_wifi_btn,
+                                   lv_color_hex(::ui::C_ACCENT), 0);
     }
 }
 
@@ -163,14 +186,37 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
     }
     brightness_apply(::g_cfg_brightness_level);
 
-    // --- Factory reset button (two-tap confirm) -------------------------
+    // --- Wi-Fi-setup + Factory-reset pills (two-tap confirm each) -------
+    // Bottom row split in two: Wi-Fi setup (reopens the portal keeping the
+    // saved Bambuddy creds) on the left, the destructive Factory reset on the
+    // right. Same arm/confirm pattern; the Wi-Fi pill arms teal, reset red.
+    int pill_w = (LV_HOR_RES - 36 - 12) / 2;
+
+    s_set_wifi_btn = lv_btn_create(s_set_root);
+    lv_obj_remove_style_all(s_set_wifi_btn);
+    lv_obj_add_style(s_set_wifi_btn, &s_btn, 0);
+    lv_obj_add_style(s_set_wifi_btn, &s_btn_pressed, LV_STATE_PRESSED);
+    lv_obj_set_style_radius(s_set_wifi_btn, ::ui::R_PILL, 0);
+    lv_obj_set_size(s_set_wifi_btn, pill_w, ::ui::H_BTN);
+    lv_obj_align(s_set_wifi_btn, LV_ALIGN_BOTTOM_LEFT, 18, -8);
+    lv_obj_set_style_bg_color(s_set_wifi_btn,
+                               lv_color_hex(::ui::C_PANEL_HI), 0);
+    lv_obj_add_event_cb(s_set_wifi_btn, set_wifi_clicked, LV_EVENT_CLICKED, nullptr);
+
+    s_set_wifi_lbl = lv_label_create(s_set_wifi_btn);
+    lv_label_set_text(s_set_wifi_lbl,
+                      (String(LV_SYMBOL_WIFI "  ") +
+                       i18n::tr(i18n::Str::WIFI_SETUP)).c_str());
+    lv_obj_set_style_text_font(s_set_wifi_lbl, &bb_font_16, 0);
+    lv_obj_center(s_set_wifi_lbl);
+
     s_set_reset_btn = lv_btn_create(s_set_root);
     lv_obj_remove_style_all(s_set_reset_btn);
     lv_obj_add_style(s_set_reset_btn, &s_btn, 0);
     lv_obj_add_style(s_set_reset_btn, &s_btn_pressed, LV_STATE_PRESSED);
     lv_obj_set_style_radius(s_set_reset_btn, ::ui::R_PILL, 0);
-    lv_obj_set_size(s_set_reset_btn, LV_HOR_RES - 36, ::ui::H_BTN);
-    lv_obj_align(s_set_reset_btn, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_set_size(s_set_reset_btn, pill_w, ::ui::H_BTN);
+    lv_obj_align(s_set_reset_btn, LV_ALIGN_BOTTOM_RIGHT, -18, -8);
     lv_obj_set_style_bg_color(s_set_reset_btn,
                                lv_color_hex(::ui::C_PANEL_HI), 0);
     lv_obj_add_event_cb(s_set_reset_btn, set_reset_clicked, LV_EVENT_CLICKED, nullptr);
@@ -236,7 +282,7 @@ void update_settings() {
     // it's free to keep the binding bidirectional).
     brightness_apply(::g_cfg_brightness_level);
 
-    // Reset the "tap again to confirm" arm window after 3 s.
+    // Reset the "tap again to confirm" arm window after 3 s — both pills.
     if (s_set_reset_armed_at != 0 &&
         (lv_tick_get() - s_set_reset_armed_at) > 3000) {
         s_set_reset_armed_at = 0;
@@ -245,6 +291,16 @@ void update_settings() {
                  i18n::tr(i18n::Str::FACTORY_RESET));
         lv_label_set_text(s_set_reset_lbl, rbuf);
         lv_obj_set_style_bg_color(s_set_reset_btn,
+                                   lv_color_hex(::ui::C_PANEL_HI), 0);
+    }
+    if (s_set_wifi_armed_at != 0 &&
+        (lv_tick_get() - s_set_wifi_armed_at) > 3000) {
+        s_set_wifi_armed_at = 0;
+        char wbuf[48];
+        snprintf(wbuf, sizeof(wbuf), LV_SYMBOL_WIFI "  %s",
+                 i18n::tr(i18n::Str::WIFI_SETUP));
+        lv_label_set_text(s_set_wifi_lbl, wbuf);
+        lv_obj_set_style_bg_color(s_set_wifi_btn,
                                    lv_color_hex(::ui::C_PANEL_HI), 0);
     }
 }

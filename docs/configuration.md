@@ -15,7 +15,13 @@ storage). All compile-time tunables live in `firmware/src/config.h`.
 | `bl_level` | Screen brightness 1–5 (set on the Settings screen, not the portal) |
 
 `url`, `key`, `tz`, `reboot_h` and `lang` are populated by the captive portal on
-first boot. To re-run the portal, hold the side **BOOT** button at power-on.
+first boot. To change them later, tap **Wi-Fi setup** on the Settings screen —
+it re-opens the portal with everything pre-filled and saves a one-shot `reprov`
+flag in NVS, so it reboots straight into the portal **without wiping**. That
+lets you move the device to a new Wi-Fi network without re-entering your
+Bambuddy host / API key / Cloudflare token. Holding the side **BOOT** button at
+power-on also re-runs the portal, but **wipes** all settings first (same as the
+Settings → Factory reset button).
 
 ### Interface language
 
