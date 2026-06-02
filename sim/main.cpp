@@ -171,10 +171,13 @@ static void render_fixtures(const std::string& out) {
     ui::g_ui.go_to(ui::Screen::History);   pump(30); dump_png(out, "history");
     ui::g_ui.go_to(ui::Screen::Settings);  pump(30); dump_png(out, "settings");
 
-    // Ambient idle clock — forced on (refresh()'s idle/quiet gating isn't run
-    // in fixtures mode); the pinned shim clock makes it render deterministically.
+    // Ambient idle clock. Drive the redraw directly — NOT pump(), which calls
+    // Manager::refresh(): its gating would re-hide the overlay here because the
+    // demo farm is "printing" (i.e. not quiet). The pinned shim clock makes it
+    // render deterministically.
     ui::screens::ambient_show();
-    pump(2);
+    lv_tick_inc(8); lv_timer_handler();
+    lv_tick_inc(8); lv_timer_handler();
     dump_png(out, "ambient");
     ui::screens::ambient_hide();
 }
