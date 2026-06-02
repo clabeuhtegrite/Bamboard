@@ -67,6 +67,18 @@ jobs:
           echo "----- _site -----" && ls -l _site
           echo "----- manifest.json -----" && cat _site/manifest.json
 
+      # Demo screenshots for the README — rendered by the host sim from a fixed
+      # demo dataset (no network, no secrets), so they always match the current
+      # UI and refresh on every release (this workflow runs on release:published).
+      - name: Render demo screenshots
+        run: |
+          sudo apt-get update && sudo apt-get install -y cmake build-essential libcurl4-openssl-dev
+          cmake -S sim -B sim/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build sim/build -j
+          mkdir -p _site/screenshots
+          SIM_FIXTURES_ONLY=1 SIM_OUT=_site/screenshots ./sim/build/bamboard_sim
+          echo "----- _site/screenshots -----" && ls -l _site/screenshots
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -1,23 +1,45 @@
 # Screenshots
 
-Real 480 × 272 captures of every Bamboard screen, rendered by the host simulator
-(`sim/`) against **live Bambuddy data** and dumped to PNG — the same CI harness
-that validates the UI on every change. These are the actual widgets the firmware
-builds at runtime, not mockups.
+The README's per-screen captures are **not committed here** — they're rendered
+by the host simulator (`sim/`) from a built-in **demo dataset** (see
+`render_fixtures()` in `sim/main.cpp`) and published to **GitHub Pages** on every
+release, so they always match the current UI without bloating the repo with
+binaries. The README links them at
+`https://clabeuhtegrite.github.io/Bamboard/screenshots/<screen>.png`.
 
-| File                | Screen                                                                  | Tab idx |
-|---------------------|-------------------------------------------------------------------------|---------|
-| `live.png`          | Live dashboard — temps, progress, ETA, camera thumbnail; Pause/Stop + light while printing | 0 |
-| `ams.png`           | AMS overview — outlined slots, clear-filament checkerboard, prev/next chevrons, Dry pill | 1 |
-| `printers.png`      | Multi-printer list, focused row highlighted                             | 2 |
-| `queue.png`         | Print queue — Bambuddy's pending jobs, in order                         | 3 |
-| `history.png`       | Stats KPIs + recent archives                                            | 4 |
-| `settings.png`      | Diagnostics (incl. Bambuddy server version) + brightness 1–5 + factory reset | 5 |
-| `camera.png`        | Full-screen printer-camera viewer (tap the Live progress ring / thumbnail) | — |
-| `device_render.svg` | Hero render of the assembled device — slim PETG case, integrated desk-stand tab | — |
+| Screen     | Demo state shown                                                            |
+|------------|----------------------------------------------------------------------------|
+| `live`     | Live dashboard mid-print — temps, progress, ETA, fans, light, Pause/Stop/speed |
+| `ams`      | Multi-unit AMS; a drying 4-slot unit (outlined black + clear-PETG checker)  |
+| `printers` | A 3-printer farm; printing rows show inline temps + ETA                     |
+| `queue`    | Pending jobs with their target printer                                      |
+| `history`  | Lifetime stats KPIs + recent prints                                         |
+| `settings` | Diagnostics (incl. Bambuddy server version) + brightness + factory reset    |
 
-The pre-v0.16 hand-drawn `*_mock.svg` mockups have been replaced by these real
-renders.
+Only the hero stays in this folder:
+
+| File                | Notes                                                                       |
+|---------------------|-----------------------------------------------------------------------------|
+| `device_render.svg` | Hand-authored vector product shot of the assembled device (the README hero) |
+
+## How it works
+
+- `sim/main.cpp` `render_fixtures()` drives the real `apply_*_payload` handlers
+  with deterministic demo JSON and dumps the six screens to PNG. `getLocalTime()`
+  and `millis()` are pinned in the shim so renders are byte-reproducible.
+- `.github/workflows/pages.yml` builds the sim and renders the demo screens into
+  the Pages site (`screenshots/`) — on `release: published`, `web/**` edits, and
+  manual dispatch.
+- `.github/workflows/tests.yml` (the `visual` job) renders the same demo screens
+  on every PR and byte-diffs them against the golden images in
+  `tests/fixtures_baseline/`, catching unintended UI changes.
+
+## Updating after an intentional UI change
+
+The `visual` job will fail (the demo render no longer matches the baseline).
+Download the `fixture-renders` artifact from the `tests` run and copy the PNGs
+over `tests/fixtures_baseline/`. Pages then picks up the new look on its next
+deploy.
 
 ## Panel layout
 
@@ -25,12 +47,4 @@ renders.
 - Header: y = 0 .. 36 (1 px hairline at y = 35).
 - Body: y = 36 .. 228 (192 px tall).
 - Tab bar: y = 228 .. 272 (44 px), **six** tabs, 3 px accent strip above the active one.
-- Colours / radii come from `firmware/src/config.h` (`C_*`, `R_PANEL` / `R_PILL` / `R_CHIP`).
-
-## Regenerating
-
-Trigger the **sim** workflow (or build `sim/` locally with the `BAMBUDDY_URL` /
-`BAMBUDDY_API_KEY` / `CF_ACCESS_*` env vars set) and copy the PNGs from the
-`sim-screens` artifact over the ones here. The sim writes the Live screen as
-`dashboard.png` — copy that over `live.png`; the other names match 1:1, and the
-artifact's `hms_overlay.png` isn't used here.
+- Colours / radii come from `firmware/src/config.h`.

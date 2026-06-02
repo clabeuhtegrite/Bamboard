@@ -55,9 +55,9 @@ jobs:
         run: SIM_FIXTURES_ONLY=1 SIM_OUT=fx_out ./sim/build/bamboard_sim
       - name: Compare against committed baselines (or seed them)
         run: |
-          if ls tests/fixtures_baseline/fx_*.png >/dev/null 2>&1; then
+          if ls tests/fixtures_baseline/*.png >/dev/null 2>&1; then
             fail=0
-            for b in tests/fixtures_baseline/fx_*.png; do
+            for b in tests/fixtures_baseline/*.png; do
               n=$(basename "$b")
               if ! cmp -s "$b" "fx_out/$n"; then
                 echo "::error::visual regression in $n (differs from baseline)"; fail=1

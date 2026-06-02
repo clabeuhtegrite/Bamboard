@@ -15,11 +15,15 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 
 ![Bamboard assembled](docs/screenshots/device_render.svg)
 
+> The screen captures below are rendered by the host simulator from a built-in
+> **demo dataset** (a print running, a full queue, a drying AMS…) and published
+> to GitHub Pages on every release — so they always match the current UI.
+
 | Live | AMS | Printers |
 |------|-----|----------|
-| ![Live](docs/screenshots/live.png) | ![AMS](docs/screenshots/ams.png) | ![Printers](docs/screenshots/printers.png) |
+| ![Live](https://clabeuhtegrite.github.io/Bamboard/screenshots/live.png) | ![AMS](https://clabeuhtegrite.github.io/Bamboard/screenshots/ams.png) | ![Printers](https://clabeuhtegrite.github.io/Bamboard/screenshots/printers.png) |
 | **Queue** | **History** | **Settings** |
-| ![Queue](docs/screenshots/queue.png) | ![History](docs/screenshots/history.png) | ![Settings](docs/screenshots/settings.png) |
+| ![Queue](https://clabeuhtegrite.github.io/Bamboard/screenshots/queue.png) | ![History](https://clabeuhtegrite.github.io/Bamboard/screenshots/history.png) | ![Settings](https://clabeuhtegrite.github.io/Bamboard/screenshots/settings.png) |
 
 ## Features
 
