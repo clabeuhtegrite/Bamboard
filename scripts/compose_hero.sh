@@ -22,8 +22,10 @@ BRx=0.710; BRy=0.615
 BLx=0.300; BLy=0.600
 
 IM=convert; command -v convert >/dev/null 2>&1 || IM=magick
-read W H  < <($IM "$CASE" -format '%w %h' info:)
-read LW LH < <($IM "$LIVE" -format '%w %h' info:)
+# Use $(...) not `read < <(...)`: convert's info: output has no trailing newline,
+# which makes `read` return non-zero and `set -e` abort the script silently.
+W=$($IM "$CASE"  -format '%w' info:);  H=$($IM "$CASE"  -format '%h' info:)
+LW=$($IM "$LIVE" -format '%w' info:); LH=$($IM "$LIVE" -format '%h' info:)
 f2p(){ awk "BEGIN{printf \"%d\", ($1)*($2)+0.5}"; }
 tlx=$(f2p "$TLx" "$W"); tly=$(f2p "$TLy" "$H")
 trx=$(f2p "$TRx" "$W"); try=$(f2p "$TRy" "$H")
