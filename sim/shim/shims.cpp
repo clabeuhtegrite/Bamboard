@@ -11,6 +11,7 @@
 
 #include "../../firmware/src/hw/display.h"
 #include "../../firmware/src/net/ca_bundle.h"   // CA-bundle symbol (stub below)
+#include "../../firmware/src/ui/control.h"      // ui::ctrl::enqueue stub (below)
 
 #ifdef SIM_HAVE_CURL
 #include <curl/curl.h>
@@ -51,6 +52,11 @@ uint8_t g_cfg_brightness_level = 3;
 void save_brightness_level(uint8_t level) { g_cfg_brightness_level = level; }
 void factory_reset() {}
 void reconfigure_wifi() {}
+// Control actions are no-ops in the sim — fixtures never tap the buttons and
+// there is no net task to marshal them to.
+namespace ui::ctrl {
+void enqueue(Op, int, uint8_t, uint8_t, uint16_t) {}
+}
 
 // ---- HTTPClient over libcurl ----------------------------------------------
 bool HTTPClient::begin(const String& url) { url_ = url.std_str(); hdrs_.clear(); size_ = -1; code_ = 0; return true; }

@@ -15,6 +15,8 @@
 
 #include <time.h>   // mktime / localtime_r for the wall-clock ETA
 
+#include "../control.h"   // marshal control POSTs to the net task (never block UI)
+
 namespace ui::screens {
 
 static lv_obj_t* s_dash_root         = nullptr;
@@ -108,37 +110,25 @@ static void speed_opt_clicked(lv_event_t* e) {
     speed_menu_close();
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0 || mode < 1 || mode > 4) return;
-    bool ok = ::bambuddy::g_client.set_print_speed(id, mode);
-    char msg[40];
-    snprintf(msg, sizeof(msg), LV_SYMBOL_OK " %s", speed_mode_name(mode));
-    show_toast(ok ? msg : i18n::tr(i18n::Str::SPEED_CHANGE_FAILED),
-               lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
+    ::ui::ctrl::enqueue(::ui::ctrl::Speed, id, mode);
 }
 
 static void btn_plate_clicked(lv_event_t*) {
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0) return;
-    bool ok = ::bambuddy::g_client.clear_plate(id);
-    show_toast(ok ? i18n::tr(i18n::Str::PLATE_CLEARED)
-                  : i18n::tr(i18n::Str::CLEAR_PLATE_FAILED),
-               lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
+    ::ui::ctrl::enqueue(::ui::ctrl::ClearPlate, id);
 }
 
 static void btn_hms_clicked(lv_event_t*) {
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0) return;
-    bool ok = ::bambuddy::g_client.clear_hms(id);
-    show_toast(ok ? i18n::tr(i18n::Str::HMS_CLEARED)
-                  : i18n::tr(i18n::Str::CLEAR_HMS_FAILED),
-               lv_color_hex(ok ? ::ui::C_OK : ::ui::C_ERR));
+    ::ui::ctrl::enqueue(::ui::ctrl::ClearHms, id);
 }
 
 static void btn_pause_clicked(lv_event_t*) {
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0) return;
-    bool ok = s_dash_is_paused ? ::bambuddy::g_client.resume_print(id)
-                               : ::bambuddy::g_client.pause_print(id);
-    if (!ok) show_toast(i18n::tr(i18n::Str::CONTROL_FAILED), lv_color_hex(::ui::C_ERR));
+    ::ui::ctrl::enqueue(s_dash_is_paused ? ::ui::ctrl::Resume : ::ui::ctrl::Pause, id);
 }
 
 // Stop is two-tap: the first tap arms (toast-confirmed); a second within 3 s
@@ -149,8 +139,7 @@ static void btn_stop_clicked(lv_event_t*) {
     uint32_t now = lv_tick_get();
     if (s_dash_stop_armed_at != 0 && (now - s_dash_stop_armed_at) < 3000) {
         s_dash_stop_armed_at = 0;
-        bool ok = ::bambuddy::g_client.stop_print(id);
-        if (!ok) show_toast(i18n::tr(i18n::Str::CONTROL_FAILED), lv_color_hex(::ui::C_ERR));
+        ::ui::ctrl::enqueue(::ui::ctrl::Stop, id);
     } else {
         s_dash_stop_armed_at = now;
         show_toast(i18n::tr(i18n::Str::CONFIRM_STOP), lv_color_hex(::ui::C_WARN));
@@ -160,8 +149,7 @@ static void btn_stop_clicked(lv_event_t*) {
 static void light_btn_clicked(lv_event_t*) {
     int id = ::ui::g_ui.selected_printer_id();
     if (id < 0) return;
-    bool ok = ::bambuddy::g_client.set_chamber_light(id, !s_dash_light_on);
-    if (!ok) show_toast(i18n::tr(i18n::Str::CONTROL_FAILED), lv_color_hex(::ui::C_ERR));
+    ::ui::ctrl::enqueue(::ui::ctrl::Light, id, s_dash_light_on ? 0 : 1);
 }
 
 // Tapping the progress ring opens the full-screen camera snapshot overlay.

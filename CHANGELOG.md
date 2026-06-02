@@ -5,6 +5,23 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.21.0 — 2026-06
+
+A project-audit pass — a reliability fix, a security fix, and hardening.
+
+### Fixed
+
+- **Tapping a control button can no longer freeze the screen or reboot the
+  device.** The Live / AMS actions (Pause / Resume, Stop, Clear plate, Clear
+  HMS, print speed, chamber light, AMS Dry / Stop) issued their Bambuddy HTTP
+  POST **synchronously from the LVGL touch handler** — on the watchdog-guarded
+  UI task. Against a slow or unreachable server that froze the UI for the whole
+  round-trip (up to ~10 s) and could trip the task watchdog into a reboot.
+  Control actions are now marshalled onto the network task through a command
+  queue (`ui/control.h`), so the UI never blocks; the outcome comes back as a
+  toast a moment later. This also closes a data race on the REST client's shared
+  error/credential state, which both tasks could previously touch at once.
+
 ## v0.20.0 — 2026-06
 
 ### Added

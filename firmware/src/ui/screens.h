@@ -41,6 +41,11 @@ uint8_t ams_visible_unit_index();
 // Toast / message overlay used by the manager.
 lv_obj_t* build_toast(lv_obj_t* parent);
 void      show_toast(const char* msg, lv_color_t bg);
+// Toast requested from a non-UI task (the net task reporting a control-action
+// result): parks the message + colour (hex) and pump_toast_request() shows it
+// on the UI task next tick — same park-and-apply discipline as ota_set_*.
+void      request_toast(const char* msg, uint32_t bg_hex);  // any task
+void      pump_toast_request();                             // UI task only
 
 // Full-screen HMS-error flash. The UI manager drives a periodic show /
 // hide cycle while an HMS error is active; consumers just call these.

@@ -17,6 +17,7 @@
 #include <esp_heap_caps.h> // free the PSRAM camera-JPEG buffer
 #include <esp_system.h>   // esp_reset_reason() for boot diagnostics
 #include <esp_task_wdt.h> // task watchdog on the UI task
+#include <freertos/queue.h>  // control-action command queue (UI → net task)
 #include <lvgl.h>
 #include <time.h>
 
@@ -28,6 +29,7 @@
 #include "net/host_valid.h"
 #include "ui/fonts.h"
 #include "ui/i18n.h"
+#include "ui/control.h"
 #include "ui/screens.h"
 #include "ui/ui.h"
 
@@ -345,6 +347,76 @@ static void start_provisioning() {
 }
 
 // ---------------------------------------------------------------------------
+// Control-action command queue
+// ---------------------------------------------------------------------------
+//
+// Touch handlers enqueue() a control action (ui/control.h); net_task drains it
+// via control_process() and runs the blocking POST there — off the UI task
+// (which the TWDT guards and which must keep LVGL responsive) and on the single
+// task that already owns the REST client, so there is no cross-task race on it.
+
+namespace {
+struct CtrlCmd {
+    uint8_t  op;
+    int      pid;
+    uint8_t  a;
+    uint8_t  b;
+    uint16_t c;
+};
+QueueHandle_t s_ctrl_q = nullptr;
+}  // namespace
+
+namespace ui::ctrl {
+void enqueue(Op op, int printer_id, uint8_t a, uint8_t b, uint16_t c) {
+    if (!s_ctrl_q) return;
+    CtrlCmd cmd{(uint8_t)op, printer_id, a, b, c};
+    xQueueSend(s_ctrl_q, &cmd, 0);   // non-blocking; a full queue drops the tap
+}
+}  // namespace ui::ctrl
+
+// Drain + run every queued control action on the net task. Each maps to one
+// REST POST plus a toast: the success string where one exists, the failure
+// string always (reported back to the UI via the park-and-apply request_toast).
+static void control_process() {
+    if (!s_ctrl_q) return;
+    CtrlCmd c;
+    while (xQueueReceive(s_ctrl_q, &c, 0) == pdTRUE) {
+        auto& cl = bambuddy::g_client;
+        bool ok = false;
+        i18n::Str ok_str   = i18n::Str::_COUNT;        // _COUNT sentinel = no toast
+        i18n::Str fail_str = i18n::Str::CONTROL_FAILED;
+        switch ((ui::ctrl::Op)c.op) {
+            case ui::ctrl::Speed:
+                ok = cl.set_print_speed(c.pid, c.a);
+                fail_str = i18n::Str::SPEED_CHANGE_FAILED; break;
+            case ui::ctrl::ClearPlate:
+                ok = cl.clear_plate(c.pid);
+                ok_str = i18n::Str::PLATE_CLEARED;
+                fail_str = i18n::Str::CLEAR_PLATE_FAILED; break;
+            case ui::ctrl::ClearHms:
+                ok = cl.clear_hms(c.pid);
+                ok_str = i18n::Str::HMS_CLEARED;
+                fail_str = i18n::Str::CLEAR_HMS_FAILED; break;
+            case ui::ctrl::Pause:  ok = cl.pause_print(c.pid);  break;
+            case ui::ctrl::Resume: ok = cl.resume_print(c.pid); break;
+            case ui::ctrl::Stop:   ok = cl.stop_print(c.pid);   break;
+            case ui::ctrl::Light:  ok = cl.set_chamber_light(c.pid, c.a != 0); break;
+            case ui::ctrl::DryStart:
+                ok = cl.start_ams_drying(c.pid, c.a, c.c, c.b);   // a=unit c=min b=°C
+                fail_str = i18n::Str::START_DRYING_FAILED; break;
+            case ui::ctrl::DryStop:
+                ok = cl.stop_ams_drying(c.pid, c.a);
+                ok_str = i18n::Str::DRYING_STOPPED;
+                fail_str = i18n::Str::STOP_DRYING_FAILED; break;
+        }
+        i18n::Str s = ok ? ok_str : fail_str;
+        if (s != i18n::Str::_COUNT) {
+            ui::screens::request_toast(i18n::tr(s), ok ? ::ui::C_OK : ::ui::C_ERR);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // FreeRTOS tasks
 // ---------------------------------------------------------------------------
 
@@ -369,6 +441,10 @@ static void net_task(void*) {
         // Drive the WS event loop on every iteration so push frames land
         // without waiting for the next poll tick.
         bambuddy::g_ws.loop();
+
+        // Run any control actions the UI queued (pause/stop/clear/speed/light/
+        // dry) here — the blocking POST stays off the watchdog-guarded UI task.
+        control_process();
 
         // Daily scheduled reboot: at local DAILY_REBOOT_HOUR:00 the device
         // restarts so the boot-time OTA check applies any new firmware
@@ -510,6 +586,8 @@ static void ui_task(void*) {
             ui::g_ui.refresh();
             last_refresh = millis();
         }
+        // Show any toast the net task requested (control-action results).
+        ui::screens::pump_toast_request();
 
         // Auto-dim — no more buttons, so the touch driver is the only thing
         // that can wake the screen back up.
@@ -694,6 +772,8 @@ void setup() {
     // ArduinoJson parse + the TJpgDec JPEG decode for camera snapshots
     // (≈3.5 KB workspace). 12 KB was tight on the camera-over-TLS path; 16 KB
     // buys margin (internal RAM is plentiful on the S3).
+    // Create the control-action queue before net_task starts draining it.
+    s_ctrl_q = xQueueCreate(8, sizeof(CtrlCmd));
     xTaskCreatePinnedToCore(net_task, "net", 16384, nullptr, 1, nullptr, 0);
     xTaskCreatePinnedToCore(ui_task,  "ui",  6144,  nullptr, 2, nullptr, 1);
 }
