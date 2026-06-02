@@ -17,6 +17,10 @@ change, not on every commit).
   connectivity badge shows how long the on-screen data has been stale
   ("offline 12m") instead of a bare "offline", so a blip reads differently from
   a real outage.
+- **Remove a job from the print queue.** Each row on the Queue screen now has a
+  trash button — two-tap to confirm — that cancels that pending job in Bambuddy
+  (`POST /queue/{id}/cancel`). Runs on the network task via the control queue, so
+  the UI never blocks. Needs the API key's queue-update permission.
 
 ### Changed
 

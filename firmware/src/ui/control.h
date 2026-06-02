@@ -29,6 +29,7 @@ enum Op : uint8_t {
     Light,        // a = on (0/1)
     DryStart,     // a = AMS unit index, b = temp °C, c = minutes
     DryStop,      // a = AMS unit index
+    QueueCancel,  // printer_id field carries the queue-item id
 };
 
 // Non-blocking: parks the command for the network task. A full queue simply

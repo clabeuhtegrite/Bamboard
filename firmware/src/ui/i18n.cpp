@@ -104,6 +104,8 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*DRYING_STARTED*/{"Drying %s @ %d °C", "Secando %s @ %d °C", "Séchage %s @ %d °C", "Secagem %s @ %d °C", "Trocknen %s @ %d °C"},
     /*QUEUE_EMPTY*/   {"Queue is empty.", "La cola está vacía.", "La file est vide.", "A fila está vazia.", "Warteschlange leer."},
     /*QUEUE_POS*/     {"#%d", "#%d", "#%d", "#%d", "#%d"},
+    /*QUEUE_REMOVED*/      {"Removed from queue", "Eliminado de la cola", "Retiré de la file", "Removido da fila", "Aus Warteschlange entfernt"},
+    /*QUEUE_REMOVE_FAILED*/{"Remove failed", "Error al eliminar", "Échec du retrait", "Falha ao remover", "Entfernen fehlgeschlagen"},
     /*AMBIENT_ALL_IDLE*/ {"All idle", "Todo inactivo", "Tout au repos", "Tudo parado", "Alles im Leerlauf"},
     /*AMBIENT_NEXT*/  {"Next", "Siguiente", "Suivant", "Próximo", "Nächste"},
 };

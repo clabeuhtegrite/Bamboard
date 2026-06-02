@@ -133,6 +133,7 @@ struct Archive {
 // One pending entry of Bambuddy's print queue (only the fields a desk monitor
 // shows). printer_id == -1 means the job isn't assigned to a printer yet.
 struct QueueItem {
+    int     id         = -1;   // Bambuddy queue-item id (used to cancel the job)
     String  name;              // archive_name (the job)
     String  status;            // "pending" (we only cache those)
     int     printer_id = -1;
@@ -192,6 +193,9 @@ class Client {
     bool start_ams_drying(int printer_id, uint8_t unit_id,
                           uint16_t minutes, uint8_t temp_c);
     bool stop_ams_drying (int printer_id, uint8_t unit_id);
+
+    // Remove a pending job from the print queue (POST /queue/{id}/cancel).
+    bool cancel_queue_item(int item_id);
 
     // Apply a /status-shaped JSON payload to the cached Printer record.
     // Shared between the REST poller and the WebSocket push handler — the
