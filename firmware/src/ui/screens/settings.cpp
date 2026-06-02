@@ -22,6 +22,7 @@ extern uint8_t g_cfg_brightness_level;
 extern void    save_brightness_level(uint8_t level);
 extern void    factory_reset();
 extern void    reconfigure_wifi();
+extern const char* g_boot_reason;   // human-readable cause of this boot (main.cpp)
 
 namespace ui::screens {
 
@@ -233,8 +234,8 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
     // the boot-time OTA pulls a new release from GitHub.
     lv_obj_t* ver = lv_label_create(s_set_root);
     lv_label_set_text(ver,
-                      (String(i18n::tr(i18n::Str::FIRMWARE)) +
-                       BAMBOARD_VERSION).c_str());
+                      (String(i18n::tr(i18n::Str::FIRMWARE)) + BAMBOARD_VERSION +
+                       "  \xC2\xB7  " + ::g_boot_reason).c_str());
     lv_obj_add_style(ver, &s_label_dim, 0);
     lv_obj_set_style_text_font(ver, &bb_font_14, 0);
     lv_obj_align(ver, LV_ALIGN_BOTTOM_MID, 0, -56);

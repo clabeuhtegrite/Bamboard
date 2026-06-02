@@ -5,6 +5,25 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.23.0 — 2026-06
+
+### Added
+
+- **Last-reset cause on Settings.** The firmware line now shows why the device
+  last booted — e.g. `Firmware 0.23.0 · power-on`, or `· brownout` / `· panic` /
+  `· task watchdog` — an at-a-glance health signal for diagnosing an unexpected
+  reboot in the field.
+- **Offline staleness in the header.** When Bambuddy is unreachable the
+  connectivity badge shows how long the on-screen data has been stale
+  ("offline 12m") instead of a bare "offline", so a blip reads differently from
+  a real outage.
+
+### Changed
+
+- **Printers grid is sorted into a control-wall order** — live prints first
+  (next-to-finish at the top), then anything needing attention (failed / error),
+  then finished, then idle, then offline — instead of raw discovery order.
+
 ## v0.22.0 — 2026-06
 
 ### Added

@@ -24,6 +24,10 @@ static lv_obj_t* s_hdr_conn    = nullptr;
 static volatile bool     s_conn_dirty      = false;
 static volatile bool     s_conn_online     = false;
 static volatile uint32_t s_conn_latency_ms = 0;
+// UI-task-only: how long we've been offline, so the badge can show the staleness
+// of the on-screen data ("offline 12m") instead of a bare "offline".
+static uint32_t s_offline_since_ms = 0;
+static bool     s_was_online       = true;
 
 lv_obj_t* build_header(lv_obj_t* parent) {
     ensure_styles();
@@ -97,14 +101,23 @@ void header_apply() {
     bool     online  = s_conn_online;
     uint32_t latency = s_conn_latency_ms;
     if (online) {
+        s_was_online = true;
         char buf[24];
         snprintf(buf, sizeof(buf), LV_SYMBOL_WIFI " %ums", (unsigned)latency);
         lv_label_set_text(s_hdr_conn, buf);
         lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_OK), 0);
     } else {
-        char buf[32];
-        snprintf(buf, sizeof(buf), LV_SYMBOL_WARNING " %s",
-                 i18n::tr(i18n::Str::OFFLINE_SHORT));
+        // First frame offline: stamp the moment, so we can show how stale the
+        // last data is. (Unsigned subtraction below is wrap-safe.)
+        if (s_was_online) { s_offline_since_ms = lv_tick_get(); s_was_online = false; }
+        uint32_t mins = (lv_tick_get() - s_offline_since_ms) / 60000u;
+        char buf[40];
+        if (mins == 0)
+            snprintf(buf, sizeof(buf), LV_SYMBOL_WARNING " %s",
+                     i18n::tr(i18n::Str::OFFLINE_SHORT));
+        else
+            snprintf(buf, sizeof(buf), LV_SYMBOL_WARNING " %s %um",
+                     i18n::tr(i18n::Str::OFFLINE_SHORT), (unsigned)mins);
         lv_label_set_text(s_hdr_conn, buf);
         lv_obj_set_style_text_color(s_hdr_conn, lv_color_hex(::ui::C_ERR), 0);
     }

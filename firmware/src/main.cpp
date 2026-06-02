@@ -59,6 +59,10 @@ void save_brightness_level(uint8_t level);
 // Persisted settings
 // ---------------------------------------------------------------------------
 
+// Human-readable cause of THIS boot (set in setup() from esp_reset_reason);
+// surfaced on the Settings screen. A static string literal — safe to share.
+const char* g_boot_reason = "?";
+
 static Preferences s_prefs;
 
 static void load_prefs() {
@@ -782,6 +786,7 @@ void setup() {
     delay(50);
     log_i("Bamboard %s booting — reset cause: %s",
           BAMBOARD_VERSION, reset_reason_str(esp_reset_reason()));
+    g_boot_reason = reset_reason_str(esp_reset_reason());  // shown on the Settings screen
 
     // Anti-brick: before anything else, decide whether the last OTA's image has
     // proven itself. If it keeps failing to confirm, this rolls the boot
