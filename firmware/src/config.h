@@ -225,6 +225,16 @@ constexpr const char* BIN_URL_PREFIX =
 // must still fall through to normal operation instead of hanging at boot.
 constexpr uint32_t CHECK_TIMEOUT_MS = 8000;
 
+// Anti-brick boot verification. A freshly-OTA'd image (which passed the MD5
+// check but could still be a bad *build*) must reach VERIFY_HEALTHY_MS of uptime
+// to confirm itself; if it crash-loops / hangs and fails to confirm for
+// VERIFY_MAX_BOOTS boots, the device rolls the boot partition back to the
+// previous (known-good) slot. App-level: the IDF bootloader rollback
+// (CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE) isn't enabled in the precompiled
+// Arduino SDK. Logic in main.cpp (handle_ota_verify / ota_mark_confirmed).
+constexpr uint8_t  VERIFY_MAX_BOOTS  = 3;
+constexpr uint32_t VERIFY_HEALTHY_MS = 30000;
+
 // Master switch for the boot-time check. Shipped firmware leaves it on; a dev
 // build can pass -DBAMBOARD_OTA_AUTOCHECK=0 to opt out. Dev-sentinel builds
 // skip the check regardless (see BAMBOARD_VERSION_IS_DEV).

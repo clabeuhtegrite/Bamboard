@@ -5,6 +5,24 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.22.0 — 2026-06
+
+### Added
+
+- **OTA anti-brick rollback.** A firmware image can pass the OTA's MD5 check yet
+  still be a bad *build* that boots but crash-loops or hangs — which previously
+  could brick a device (it keeps rebooting into the broken image, and the OTA
+  won't re-flash a version it already considers current). The device now
+  **verifies** each freshly-OTA'd image: it must reach ~30 s of steady uptime to
+  confirm itself, and if it fails to across a few boots the device **rolls the
+  boot partition back to the previous (known-good) slot** and reboots — then
+  remembers the bad version so the next update check skips it (no re-flash loop)
+  until a newer release supersedes it. Implemented in the app (the ESP-IDF
+  bootloader's own rollback isn't enabled in the precompiled Arduino SDK) and
+  scoped to the post-OTA window, so a normal boot is untouched. The health check
+  is purely internal uptime — no Wi-Fi / Bambuddy dependency — so an offline
+  router can't trigger a false rollback.
+
 ## v0.21.0 — 2026-06
 
 A project-audit pass — a reliability fix, a security fix, and hardening.
