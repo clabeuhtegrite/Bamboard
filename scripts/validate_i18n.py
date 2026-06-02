@@ -25,8 +25,17 @@ except json.JSONDecodeError as e:
     sys.exit("i18n dictionary is not valid JSON: %s" % e)
 
 langs = sorted(d)
-if "fr" not in d:
-    sys.exit("expected a 'fr' language table to compare against")
+# The dictionary holds the four non-English tables; English is the live DOM
+# baseline (no table). This set must mirror firmware/src/ui/i18n.cpp's CODES so
+# a deleted/added language can't slip through unnoticed.
+EXPECTED = {"es", "fr", "pt", "de"}
+if set(d) != EXPECTED:
+    sys.exit("i18n language tables %s != expected %s (mirror firmware/src/ui/i18n.cpp)"
+             % (sorted(d), sorted(EXPECTED)))
+mlangs = re.search(r"var LANGS = \[([^\]]*)\]", js)
+codes = re.findall(r'"([a-z]{2})"', mlangs.group(1)) if mlangs else []
+if codes != ["en", "es", "fr", "pt", "de"]:
+    sys.exit("web/i18n.js LANGS %s != ['en','es','fr','pt','de'] (firmware source of truth)" % codes)
 
 bad = False
 base = set(d["fr"])
