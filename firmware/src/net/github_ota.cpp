@@ -88,7 +88,8 @@ static bool fetch_manifest(String& out_version, String& out_bin_url,
 // Check + apply
 // ---------------------------------------------------------------------------
 
-CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
+CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t),
+                             const char* skip_version) {
     if (WiFi.status() != WL_CONNECTED) {
         log_w("OTA: Wi-Fi down — skipping update check");
         return CheckResult::NoNetwork;
@@ -105,6 +106,15 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t)) {
 
     log_i("OTA: running %s, latest release %s", BAMBOARD_VERSION, latest.c_str());
     if (semver_cmp(latest.c_str(), BAMBOARD_VERSION) <= 0) {
+        return CheckResult::UpToDate;
+    }
+
+    // Anti-brick: this exact version was rolled back as a bad build (it booted
+    // but never confirmed healthy). Don't re-flash it — that would just loop —
+    // until a newer release supersedes it. skip_version is the caller's
+    // remembered bad version (null/empty = nothing flagged).
+    if (skip_version && skip_version[0] && latest == skip_version) {
+        log_w("OTA: latest %s is flagged bad (rolled back) — skipping", latest.c_str());
         return CheckResult::UpToDate;
     }
 

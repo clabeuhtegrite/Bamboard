@@ -30,8 +30,13 @@ enum class CheckResult : uint8_t {
 // on_start()      fires once, the moment a newer release is confirmed and the
 //                 download is about to begin (use it to show the OTA overlay).
 // on_progress(p)  fires repeatedly during the download with 0..100.
+// skip_version    if non-null/non-empty and equal to the latest release's
+//                 version, the update is skipped — a version previously rolled
+//                 back as a bad build (see the app-level anti-brick verify in
+//                 main.cpp), so re-flashing it would just loop.
 // Either callback may be null.
 CheckResult check_and_update(void (*on_start)() = nullptr,
-                             void (*on_progress)(uint8_t) = nullptr);
+                             void (*on_progress)(uint8_t) = nullptr,
+                             const char* skip_version = nullptr);
 
 }  // namespace ota

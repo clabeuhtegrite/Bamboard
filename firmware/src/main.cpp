@@ -15,6 +15,7 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <esp_heap_caps.h> // free the PSRAM camera-JPEG buffer
+#include <esp_ota_ops.h>  // anti-brick: boot-partition rollback (set_boot_partition)
 #include <esp_system.h>   // esp_reset_reason() for boot diagnostics
 #include <esp_task_wdt.h> // task watchdog on the UI task
 #include <freertos/queue.h>  // control-action command queue (UI → net task)
@@ -148,6 +149,86 @@ void reconfigure_wifi() {
     s_prefs.end();
     delay(300);
     ESP.restart();
+}
+
+// ---------------------------------------------------------------------------
+// OTA boot-verification / anti-brick rollback
+// ---------------------------------------------------------------------------
+//
+// A new image can pass the OTA MD5 check yet still be a bad *build* — one that
+// boots but crash-loops or hangs. The IDF bootloader's own rollback is off in
+// the precompiled Arduino SDK, so we do it in the app: the OTA arms a
+// "pending verify" flag (ota_arm_pending); each boot of the new image bumps a
+// counter very early in setup (handle_ota_verify); if the image never runs long
+// enough to confirm itself (ota_mark_confirmed, from the UI task) the counter
+// hits VERIFY_MAX_BOOTS and we switch the boot partition back to the previous
+// (known-good) slot and reboot. The bad version is remembered so the next OTA
+// check skips it (no re-flash loop) until a newer release supersedes it.
+// All NVS access here is on the setup/UI task only (the net task never writes NVS).
+
+static void ota_arm_pending() {
+    s_prefs.begin("bamboard", false);
+    s_prefs.putUChar("ota_pend", 1);
+    s_prefs.putUChar("ota_tries", 0);
+    s_prefs.end();
+}
+
+static void ota_clear_pending() {
+    s_prefs.begin("bamboard", false);
+    if (s_prefs.getUChar("ota_pend", 0)) {
+        s_prefs.putUChar("ota_pend", 0);
+        s_prefs.putUChar("ota_tries", 0);
+    }
+    s_prefs.end();
+}
+
+// Called once the running image has proven healthy (steady uptime). Confirms it
+// and clears any stale bad-version record — the fleet has moved past it.
+static void ota_mark_confirmed() {
+    s_prefs.begin("bamboard", false);
+    if (s_prefs.getUChar("ota_pend", 0)) {
+        s_prefs.putUChar("ota_pend", 0);
+        s_prefs.putUChar("ota_tries", 0);
+        s_prefs.remove("ota_bad_ver");
+        log_i("OTA: running image confirmed healthy");
+    }
+    s_prefs.end();
+}
+
+// Run FIRST in setup(). Rolls the boot partition back to the previous slot (and
+// reboots — never returns) if a freshly-OTA'd image keeps failing to confirm;
+// otherwise returns and boot continues.
+static void handle_ota_verify() {
+    s_prefs.begin("bamboard", false);
+    // Dev builds (USB-flashed) don't participate — clear any stale verify state.
+    if (BAMBOARD_VERSION_IS_DEV) {
+        s_prefs.putUChar("ota_pend", 0);
+        s_prefs.putUChar("ota_tries", 0);
+        s_prefs.end();
+        return;
+    }
+    if (!s_prefs.getUChar("ota_pend", 0)) { s_prefs.end(); return; }  // normal boot
+    uint8_t tries = s_prefs.getUChar("ota_tries", 0);
+    if (tries >= ::ota::VERIFY_MAX_BOOTS) {
+        // The new image never confirmed across VERIFY_MAX_BOOTS boots → roll back.
+        s_prefs.putString("ota_bad_ver", BAMBOARD_VERSION);  // skip it next OTA check
+        s_prefs.putUChar("ota_pend", 0);
+        s_prefs.putUChar("ota_tries", 0);
+        s_prefs.end();
+        const esp_partition_t* prev = esp_ota_get_next_update_partition(nullptr);
+        if (prev && esp_ota_set_boot_partition(prev) == ESP_OK) {
+            log_e("OTA: image %s failed to confirm after %u boots — rolling back",
+                  BAMBOARD_VERSION, (unsigned)tries);
+            delay(300);
+            esp_restart();   // boots the previous (good) slot; never returns
+        }
+        log_e("OTA: rollback wanted but set_boot_partition failed — running anyway");
+        return;
+    }
+    s_prefs.putUChar("ota_tries", (uint8_t)(tries + 1));
+    s_prefs.end();
+    log_w("OTA: verifying new image %s (boot attempt %u/%u)", BAMBOARD_VERSION,
+          (unsigned)(tries + 1), (unsigned)::ota::VERIFY_MAX_BOOTS);
 }
 
 // ---------------------------------------------------------------------------
@@ -567,6 +648,7 @@ static void net_task(void*) {
 static void ui_task(void*) {
     uint32_t last_refresh       = 0;
     uint32_t last_touch_seen_ms = millis();
+    bool     ota_confirmed      = false;   // anti-brick: clear the OTA verify once steady
     // Watch the UI task: a frozen screen is the worst failure for a desk
     // monitor, and this loop never blocks (LVGL tick + an 8 ms delay), so it
     // can't false-trip the way the HTTP-bound net task would. If LVGL ever
@@ -594,6 +676,15 @@ static void ui_task(void*) {
         // Show any toast the net task requested (control-action results).
         ui::screens::pump_toast_request();
 
+        // Anti-brick: once the UI has run steadily for a while, confirm the
+        // running image so the boot-verify won't roll it back. Internal health
+        // only (no Wi-Fi / Bambuddy dependency), so an offline router can never
+        // trigger a false rollback.
+        if (!ota_confirmed && millis() > ::ota::VERIFY_HEALTHY_MS) {
+            ota_confirmed = true;
+            ota_mark_confirmed();
+        }
+
         // Auto-dim — no more buttons, so the touch driver is the only thing
         // that can wake the screen back up.
         if (millis() - last_touch_seen_ms > display::DIM_AFTER_MS) {
@@ -615,9 +706,22 @@ static void ui_task(void*) {
 // progress overlay. On success the device reboots into the new image inside
 // check_and_update() and never returns; otherwise we clear the overlay and
 // fall through to normal operation on the current build.
+static volatile bool s_ota_armed_this_boot = false;
+
 static void run_boot_update() {
+    // A version we rolled back as a bad build: tell the updater to skip it so it
+    // can't re-flash-and-rebrick in a loop (cleared once a newer image confirms).
+    s_prefs.begin("bamboard", true);
+    String bad_ver = s_prefs.getString("ota_bad_ver", "");
+    s_prefs.end();
+
+    s_ota_armed_this_boot = false;
     ota::CheckResult r = ota::check_and_update(
         /* on_start */ []() {
+            // A newer image is confirmed and about to flash → arm the boot-verify
+            // so the new image must prove itself healthy or be rolled back.
+            ota_arm_pending();
+            s_ota_armed_this_boot = true;
             ui::screens::ota_set_active(true);
             ui::screens::ota_set_progress(0);
             ui::screens::ota_apply();
@@ -627,7 +731,12 @@ static void run_boot_update() {
             ui::screens::ota_set_progress(pct);
             ui::screens::ota_apply();
             lv_timer_handler();
-        });
+        },
+        /* skip_version */ bad_ver.length() ? bad_ver.c_str() : nullptr);
+
+    // If on_start armed the verify but we're still running, the flash didn't
+    // reboot us (it failed) → disarm: we're still on the current good image.
+    if (s_ota_armed_this_boot) ota_clear_pending();
 
     // A download that started but failed leaves the overlay up — surface the
     // reason briefly so a wall-mounted device shows something other than a
@@ -673,6 +782,11 @@ void setup() {
     delay(50);
     log_i("Bamboard %s booting — reset cause: %s",
           BAMBOARD_VERSION, reset_reason_str(esp_reset_reason()));
+
+    // Anti-brick: before anything else, decide whether the last OTA's image has
+    // proven itself. If it keeps failing to confirm, this rolls the boot
+    // partition back to the previous slot and reboots (never returns here).
+    handle_ota_verify();
 
     if (!hw::g_display.begin()) {
         // Fall back to a minimal serial-only mode; the user will see no
