@@ -3,6 +3,8 @@
 > A budget, open-source touch desk monitor for your Bambu Lab printers
 > — powered by [Bambuddy](https://github.com/maziggy/bambuddy).
 
+**[Visit the project site →](https://clabeuhtegrite.github.io/Bamboard/)** — overview, a screen-by-screen tour, and the in-browser flasher.
+
 Bamboard is a small ESP32-S3 device with a 4.3" capacitive touch screen
 that lives on your desk and shows you, in real time, what your Bambu Lab
 printers are doing. It talks **only** to your self-hosted Bambuddy

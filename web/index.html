@@ -3,156 +3,456 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bamboard — flash your device</title>
-  <meta name="description" content="Flash the latest Bamboard firmware to your ESP32-S3 straight from the browser — no install, no CLI." />
+  <title>Bamboard — a touch desk monitor for your Bambu Lab printers</title>
+  <meta name="description" content="Bamboard is a ~20 € open-source ESP32-S3 desk monitor with a 4.3″ touch screen that shows what your Bambu Lab printers are doing — in real time, entirely through your self-hosted Bambuddy. Flash it from the browser." />
+  <link rel="canonical" href="https://clabeuhtegrite.github.io/Bamboard/" />
+  <meta name="theme-color" content="#0E1116" />
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Bamboard" />
+  <meta property="og:title" content="Bamboard — a touch desk monitor for your Bambu Lab printers" />
+  <meta property="og:description" content="A ~20 € open-source ESP32-S3 touch monitor for your Bambu Lab printers, powered by self-hosted Bambuddy. Flash it from the browser." />
+  <meta property="og:url" content="https://clabeuhtegrite.github.io/Bamboard/" />
+  <meta property="og:image" content="https://clabeuhtegrite.github.io/Bamboard/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Bamboard — a touch desk monitor for your Bambu Lab printers" />
+  <meta name="twitter:description" content="A ~20 € open-source ESP32-S3 touch monitor for your Bambu Lab printers, powered by self-hosted Bambuddy." />
+  <meta name="twitter:image" content="https://clabeuhtegrite.github.io/Bamboard/assets/og-image.png" />
+
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="mask-icon" href="assets/favicon.svg" color="#00B7C3" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
 
   <!-- ESP Web Tools: the <esp-web-install-button> web component. Pinned to a
        major version so a breaking release can't silently change the flow. -->
   <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
 
-  <style>
-    :root {
-      --bg: #0E1116; --panel: #1A1F26; --panel-hi: #252B34; --line: #2F3742;
-      --accent: #00B7C3; --accent-dark: #017782; --ok: #39D98A; --warn: #F5A524;
-      --err: #E5484D; --text: #E9EEF3; --dim: #8A95A4; --inv: #0E1116;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
-    body {
-      background: var(--bg); color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.55; display: flex; flex-direction: column; align-items: center;
-      padding: 32px 20px 64px;
-    }
-    main { width: 100%; max-width: 640px; position: relative; z-index: 1; }
-    /* soft teal glow behind the hero */
-    body::before {
-      content: ""; position: fixed; top: 0; left: 0; right: 0; height: 340px;
-      pointer-events: none; z-index: 0;
-      background: radial-gradient(60% 100% at 50% 0%, rgba(0, 183, 195, 0.14), transparent 72%);
-    }
-    header { text-align: center; margin-bottom: 8px; }
-    h1 { font-size: 2rem; margin: 0 0 4px; letter-spacing: -0.02em; }
-    h1 .accent { color: var(--accent); }
-    .tagline { color: var(--dim); margin: 0 0 28px; text-align: center; }
-
-    .card {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-      padding: 24px; margin: 16px 0;
-    }
-    .install { text-align: center; }
-    .card.install { border-color: var(--accent-dark); box-shadow: 0 0 44px rgba(0, 183, 195, 0.07); }
-
-    /* ESP Web Tools button — teal CTA matching the firmware accent.
-       --esp-tools-button-color is the *background*, -text-color the label. */
-    esp-web-install-button {
-      --esp-tools-button-color: var(--accent);
-      --esp-tools-button-text-color: var(--inv);
-      --esp-tools-button-border-radius: 18px;
-    }
-
-    /* Version / chip badges — replaces the old inline <code> version line. */
-    .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-    .badge {
-      display: inline-flex; align-items: center; gap: 7px; font-size: 0.8rem;
-      background: var(--panel-hi); border: 1px solid var(--line); color: var(--dim);
-      border-radius: 8px; padding: 5px 11px;
-    }
-    .badge strong { color: var(--text); font-weight: 600; }
-    .badge .dot {
-      width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
-      box-shadow: 0 0 0 3px rgba(57, 217, 138, 0.15);
-    }
-
-    ol { padding-left: 22px; } li { margin: 6px 0; }
-    .note { border-left: 3px solid var(--warn); padding: 4px 0 4px 14px; color: var(--text); }
-    .note.err { border-color: var(--err); }
-    a { color: var(--accent); }
-    .msg { color: var(--dim); }
-    .msg.bad { color: var(--warn); }
-    kbd {
-      background: var(--panel-hi); border: 1px solid var(--line); border-bottom-width: 2px;
-      border-radius: 6px; padding: 1px 6px; font-size: 0.85em;
-    }
-    footer { color: var(--dim); font-size: 0.85rem; margin-top: 28px; text-align: center; }
-  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    "name": "Bamboard",
+    "description": "Open-source ESP32-S3 touch desk monitor for Bambu Lab printers, via self-hosted Bambuddy.",
+    "codeRepository": "https://github.com/clabeuhtegrite/Bamboard",
+    "programmingLanguage": "C++",
+    "license": "https://opensource.org/licenses/MIT",
+    "operatingSystem": "ESP32-S3",
+    "url": "https://clabeuhtegrite.github.io/Bamboard/"
+  }
+  </script>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>Bam<span class="accent">board</span></h1>
-      <p class="tagline">Flash the latest firmware to your device — straight from this page.</p>
-    </header>
 
-    <div class="card install">
-      <esp-web-install-button id="installBtn" manifest="./manifest.json">
-        <!-- Shown when the browser doesn't support Web Serial (Firefox/Safari/mobile). -->
-        <span slot="unsupported" class="msg bad">
-          ⚠️ This browser can't talk to USB serial devices.
-          Open this page in <strong>Chrome, Edge or Opera on a desktop</strong> to flash.
-        </span>
-        <!-- Shown on a non-secure context (shouldn't happen on https Pages). -->
-        <span slot="not-allowed" class="msg bad">
-          ⚠️ Web Serial needs a secure (https) page.
-        </span>
-      </esp-web-install-button>
-      <p id="placeholderWarn" class="msg bad" hidden>
-        ⚠️ The published manifest is a placeholder (<code>0.0.0-dev</code>) — the release CI hasn't run yet.
-        Use the <a href="https://github.com/clabeuhtegrite/Bamboard/releases/latest" target="_blank" rel="noopener">latest release</a>
-        on GitHub instead.
-      </p>
-      <div class="badges">
-        <span class="badge"><span class="dot"></span>Latest&nbsp;·&nbsp;<strong>v<span id="ver">…</span></strong></span>
-        <span class="badge">ESP32-S3</span>
+  <!-- ===== Inline icon sprite ===== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-github" viewBox="0 0 24 24"><path fill="currentColor" d="M12 .5A11.5 11.5 0 0 0 .5 12 11.5 11.5 0 0 0 8.36 23c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.73 1.27 3.4.97.1-.75.4-1.27.74-1.56-2.56-.29-5.26-1.28-5.26-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.5 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.4-5.28 5.69.41.36.78 1.05.78 2.13v3.16c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path fill="currentColor" d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></g></symbol>
+      <symbol id="i-coins" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v5c0 1.66 2.69 3 6 3s6-1.34 6-3" stroke-linecap="round"/><path d="M3 12v5c0 1.66 2.69 3 6 3 1.06 0 2.06-.14 2.92-.38" stroke-linecap="round"/><ellipse cx="16" cy="14" rx="5" ry="2.6"/><path d="M11 14v3.5c0 1.4 2.24 2.5 5 2.5s5-1.1 5-2.5V14" stroke-linecap="round"/></g></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 0 0-14-4.6L4 8M4 4v4h4M4 13a8 8 0 0 0 14 4.6L20 16M20 20v-4h-4"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.4 3.9 5.7 4 9-.1 3.3-1.5 6.6-4 9-2.5-2.4-3.9-5.7-4-9 .1-3.3 1.5-6.6 4-9Z"/></g></symbol>
+      <symbol id="i-touch" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V6a2 2 0 0 1 4 0v5"/><path d="M13 11V9.5a2 2 0 0 1 4 0V14a6 6 0 0 1-6 6h-1a6 6 0 0 1-4.5-2L3.5 15c-.7-.8.2-2 1.2-1.6L7 14.5V7a2 2 0 0 1 4 0v4"/></g></symbol>
+      <symbol id="i-wifi" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9a13 13 0 0 1 16 0"/><path d="M7 12.4a8.5 8.5 0 0 1 10 0"/><path d="M9.6 15.7a4.2 4.2 0 0 1 4.8 0"/></g><circle cx="12" cy="18.6" r="1.3" fill="currentColor"/></symbol>
+      <symbol id="i-server" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01" stroke-linecap="round"/></g></symbol>
+      <symbol id="i-printer" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></g></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 3l8 3v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-3Z"/></symbol>
+      <symbol id="i-chip" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 2v3M14 2v3M10 19v3M14 19v3M2 10h3M2 14h3M19 10h3M19 14h3" stroke-linecap="round"/></g></symbol>
+      <symbol id="i-box" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></g></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 12.5 9.5 18 20 6.5"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></g></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 19a2 2 0 0 0 4 0" stroke-linecap="round"/></g></symbol>
+      <!-- device tab glyphs (mirror the firmware) -->
+      <symbol id="t-live" viewBox="0 0 24 24"><path d="M4 11.2 12 4l8 7.2M6 10v9h12v-9M10 19v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+      <symbol id="t-ams" viewBox="0 0 24 24"><path d="M12 3.2S5.5 10 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10 12 3.2 12 3.2Z" fill="currentColor"/></symbol>
+      <symbol id="t-printers" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 7h11M8 12h11M8 17h11"/><circle cx="4.2" cy="7" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.2" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.2" cy="17" r="1.1" fill="currentColor" stroke="none"/></g></symbol>
+      <symbol id="t-queue" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5"/><path d="M5 19h14"/></g></symbol>
+      <symbol id="t-history" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="t-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v3M12 18.4v3M21.4 12h-3M5.6 12h-3M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1M18.6 18.6l-2.1-2.1M7.5 7.5 5.4 5.4"/></g></symbol>
+    </defs>
+  </svg>
+
+  <!-- ===== Nav ===== -->
+  <header class="nav" id="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="#top" aria-label="Bamboard home">
+        <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0E1116"/><circle cx="32" cy="32" r="17" fill="none" stroke="#252B34" stroke-width="6"/><circle cx="32" cy="32" r="17" fill="none" stroke="#00B7C3" stroke-width="6" stroke-linecap="round" stroke-dasharray="80 107" transform="rotate(-90 32 32)"/><circle cx="32" cy="32" r="4.5" fill="#39D98A"/></svg>
+        <span>Bam<span class="accent">board</span></span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#screens">Screens</a>
+        <a href="#how">How it works</a>
+        <a href="#hardware">Hardware</a>
+        <a href="#install">Install</a>
+      </nav>
+      <div class="nav-cta">
+        <a class="icon-link" href="https://github.com/clabeuhtegrite/Bamboard" target="_blank" rel="noopener" aria-label="GitHub repository"><svg aria-hidden="true"><use href="#i-github"/></svg></a>
+        <a class="btn btn-primary" href="#install"><svg aria-hidden="true"><use href="#i-bolt"/></svg><span class="label">Flash it</span></a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false"><svg aria-hidden="true"><use href="#i-menu"/></svg></button>
       </div>
     </div>
+  </header>
 
-    <div class="card">
-      <h3 style="margin-top:0">How to flash</h3>
-      <ol>
-        <li>Use <strong>Chrome, Edge or Opera on a computer</strong> (Web Serial isn't available in Firefox, Safari or on phones).</li>
-        <li>Plug the board into a USB-C <strong>data</strong> cable (not charge-only).</li>
-        <li>Click <strong>Connect</strong> above and pick the serial port that appears.</li>
-        <li>If no port shows up or the connection fails, put the board in download mode:
-            hold <kbd>BOOT</kbd>, tap <kbd>RST</kbd>, release <kbd>BOOT</kbd>, then retry.</li>
-        <li>Wait for the flash to finish, then follow the on-screen Wi-Fi + Bambuddy setup
-            (the device opens a <code>Bamboard-setup</code> Wi-Fi access point on first boot).</li>
-      </ol>
-      <p class="note">You only need to do this once. After the first flash, the device
-        updates itself over the air from GitHub Releases at every boot.</p>
-    </div>
+  <main id="top">
 
-    <div class="card">
-      <h3 style="margin-top:0">Other browsers / manual flashing</h3>
-      <p class="msg">Web Serial only works in Chromium-based desktop browsers. On Firefox,
-        Safari, Linux without a Chromium browser, or to flash by hand, download
-        <code>bamboard-factory.bin</code> from the
-        <a href="https://github.com/clabeuhtegrite/Bamboard/releases/latest" target="_blank" rel="noopener">latest release</a>
-        and flash it at offset <code>0x0</code> with
-        <a href="https://github.com/espressif/esptool" target="_blank" rel="noopener">esptool</a>:</p>
-      <pre style="overflow:auto;background:var(--panel-hi);border:1px solid var(--line);border-radius:8px;padding:12px"><code>esptool.py --chip esp32s3 write_flash 0x0 bamboard-factory.bin</code></pre>
-    </div>
+    <!-- ===== Hero ===== -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">Open-source desk monitor</span>
+          <h1>Keep an eye on every<br>Bambu&nbsp;Lab print</h1>
+          <p class="lede">A small ESP32-S3 device with a 4.3″ touch screen that lives on your desk and shows — in real time — what your printers are doing. It talks <strong>only</strong> to your self-hosted Bambuddy, so your printers never see a third-party cloud.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary btn-lg" href="#install"><svg aria-hidden="true"><use href="#i-bolt"/></svg>Flash from your browser</a>
+            <a class="btn btn-ghost btn-lg" href="https://github.com/clabeuhtegrite/Bamboard" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-github"/></svg>View on GitHub</a>
+          </div>
+          <div class="hero-meta">
+            <span class="pill live"><span class="dot"></span>Latest&nbsp;·&nbsp;<strong>v<span id="ver">…</span></strong></span>
+            <span class="pill"><strong>~20 €</strong>&nbsp;BOM</span>
+            <span class="pill"><strong>ESP32-S3</strong></span>
+            <span class="pill">No soldering</span>
+            <span class="pill">MIT</span>
+          </div>
+        </div>
+        <div class="hero-art">
+          <img src="assets/device_render.svg" width="1200" height="800"
+               alt="The assembled Bamboard in its 3D-printed case, screen lit, showing the Live dashboard mid-print" />
+        </div>
+      </div>
+    </section>
 
-    <footer>
-      <a href="https://github.com/clabeuhtegrite/Bamboard" target="_blank" rel="noopener">Source &amp; docs on GitHub</a>
-      · MIT · Not affiliated with Bambu Lab
-    </footer>
+    <!-- ===== Why / features ===== -->
+    <section id="features">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Why Bamboard</span>
+          <h2>A glanceable status screen, on your terms</h2>
+          <p>Everything Bambuddy already knows about your farm — temperatures, progress, AMS, queue, history — on a dedicated screen you control end to end.</p>
+        </div>
+        <div class="grid-cards">
+          <div class="card hoverable reveal">
+            <span class="ic"><svg aria-hidden="true"><use href="#i-lock"/></svg></span>
+            <h3>Local-first &amp; private</h3>
+            <p>Speaks REST + WebSocket to your own Bambuddy instance. Your printers stay off any third-party cloud — your data never leaves your network unless you choose HTTPS.</p>
+          </div>
+          <div class="card hoverable reveal">
+            <span class="ic"><svg aria-hidden="true"><use href="#i-coins"/></svg></span>
+            <h3>About 20 €, no soldering</h3>
+            <p>One all-in-one ESP32-S3 board, a USB-C cable, four screws and ~70 g of filament for the case. Everything's on a single PCB — nothing to wire.</p>
+          </div>
+          <div class="card hoverable reveal">
+            <span class="ic"><svg aria-hidden="true"><use href="#i-refresh"/></svg></span>
+            <h3>Updates itself</h3>
+            <p>Flash once from the browser; after that every release lands over the air from GitHub. The device reboots nightly so new firmware arrives unattended.</p>
+          </div>
+          <div class="card hoverable reveal">
+            <span class="ic"><svg aria-hidden="true"><use href="#i-touch"/></svg></span>
+            <h3>Touch-first UI</h3>
+            <p>Six tabs, tap or swipe to switch. Pause / Resume / Stop a print, toggle the chamber light or start an AMS drying cycle — right from the panel.</p>
+          </div>
+          <div class="card hoverable reveal">
+            <span class="ic"><svg aria-hidden="true"><use href="#i-bell"/></svg></span>
+            <h3>Won't let errors slip</h3>
+            <p>HMS faults surface in red with a full-screen pulsing alert that re-arms until cleared. Finished-or-failed jobs pop a toast from any tab.</p>
+          </div>
+          <div class="card hoverable reveal">
+            <span class="ic"><svg aria-hidden="true"><use href="#i-globe"/></svg></span>
+            <h3>Five languages</h3>
+            <p>Pick the interface language at first boot — English, Spanish, French, Portuguese or German — no re-flash to change it.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Screens showcase ===== -->
+    <section id="screens">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">The screens</span>
+          <h2>Six tabs, everything at a glance</h2>
+          <p>Live renders from a built-in demo dataset, regenerated on every release — so what you see here always matches the current firmware.</p>
+        </div>
+
+        <div class="showcase reveal" id="showcase">
+          <div class="showcase-wrap">
+            <div class="screen-tabs" role="tablist" aria-label="Device screens">
+              <button class="screen-tab is-active" role="tab" aria-selected="true" data-screen="live">
+                <span class="ti"><svg aria-hidden="true"><use href="#t-live"/></svg></span>
+                <span class="tl"><b>Live</b><span>Temps, progress &amp; controls</span></span>
+              </button>
+              <button class="screen-tab" role="tab" aria-selected="false" data-screen="ams">
+                <span class="ti"><svg aria-hidden="true"><use href="#t-ams"/></svg></span>
+                <span class="tl"><b>AMS</b><span>Slots, humidity &amp; drying</span></span>
+              </button>
+              <button class="screen-tab" role="tab" aria-selected="false" data-screen="printers">
+                <span class="ti"><svg aria-hidden="true"><use href="#t-printers"/></svg></span>
+                <span class="tl"><b>Printers</b><span>Your whole farm</span></span>
+              </button>
+              <button class="screen-tab" role="tab" aria-selected="false" data-screen="queue">
+                <span class="ti"><svg aria-hidden="true"><use href="#t-queue"/></svg></span>
+                <span class="tl"><b>Queue</b><span>Pending jobs in order</span></span>
+              </button>
+              <button class="screen-tab" role="tab" aria-selected="false" data-screen="history">
+                <span class="ti"><svg aria-hidden="true"><use href="#t-history"/></svg></span>
+                <span class="tl"><b>History</b><span>Stats &amp; recent prints</span></span>
+              </button>
+              <button class="screen-tab" role="tab" aria-selected="false" data-screen="settings">
+                <span class="ti"><svg aria-hidden="true"><use href="#t-settings"/></svg></span>
+                <span class="tl"><b>Settings</b><span>Diagnostics &amp; brightness</span></span>
+              </button>
+            </div>
+
+            <div class="screen-stage">
+              <div class="device-frame">
+                <div class="device-screen" id="deviceScreen">
+                  <img class="shot is-active" data-screen="live" src="screenshots/live.png" alt="Live dashboard mid-print — nozzle, bed and chamber temperatures, a progress ring, ETA, the camera thumbnail and Pause / Stop / speed controls" loading="lazy" width="480" height="272" />
+                  <img class="shot" data-screen="ams" src="screenshots/ams.png" alt="AMS overview — per-slot filament colour, type and remaining percent, humidity, temperature and a live drying countdown" loading="lazy" width="480" height="272" />
+                  <img class="shot" data-screen="printers" src="screenshots/printers.png" alt="Printers list — every printer Bambuddy knows, with inline temperatures and ETA on the ones currently printing" loading="lazy" width="480" height="272" />
+                  <img class="shot" data-screen="queue" src="screenshots/queue.png" alt="Print queue — pending jobs in order, each with its target printer" loading="lazy" width="480" height="272" />
+                  <img class="shot" data-screen="history" src="screenshots/history.png" alt="History and stats — success rate, total filament, total time and the last prints" loading="lazy" width="480" height="272" />
+                  <img class="shot" data-screen="settings" src="screenshots/settings.png" alt="Settings — Bambuddy URL and server version, device diagnostics, a brightness selector and factory reset" loading="lazy" width="480" height="272" />
+                </div>
+              </div>
+              <div class="shot-caption">
+                <span class="num" id="shotNum">01</span>
+                <p id="shotDesc"><b>Live dashboard.</b> Nozzle / bed / chamber temps, layer progress, ETA and filename — plus a camera thumbnail and inline Pause / Resume / Stop, a chamber-light toggle, the print-speed picker and a fan readout while printing.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== How it works ===== -->
+    <section id="how" class="band">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">How it works</span>
+          <h2>Your printers → Bambuddy → Bamboard</h2>
+          <p>Bamboard is a thin, dedicated client for the Bambuddy API. No bridge, no extra service to run beyond the Bambuddy you already host.</p>
+        </div>
+        <div class="arch">
+          <div class="arch-diagram reveal" aria-hidden="true">
+            <svg viewBox="0 0 520 240" role="img" width="520" height="240">
+              <defs>
+                <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00B7C3"/><stop offset="1" stop-color="#39D98A"/></linearGradient>
+                <linearGradient id="node" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#202730"/><stop offset="1" stop-color="#171c23"/></linearGradient>
+              </defs>
+              <!-- links -->
+              <line x1="150" y1="80" x2="210" y2="80" stroke="url(#flow)" stroke-width="3" stroke-linecap="round"/>
+              <line x1="370" y1="80" x2="430" y2="80" stroke="url(#flow)" stroke-width="3" stroke-linecap="round"/>
+              <text x="180" y="66" font-size="11" fill="#8A95A4" text-anchor="middle">MQTT</text>
+              <text x="400" y="60" font-size="11" fill="#8A95A4" text-anchor="middle">REST</text>
+              <text x="400" y="100" font-size="11" fill="#8A95A4" text-anchor="middle">WebSocket</text>
+              <!-- printers -->
+              <g>
+                <rect x="20" y="48" width="130" height="64" rx="12" fill="url(#node)" stroke="#2F3742"/>
+                <use href="#i-printer" x="36" y="64" width="22" height="22" color="#39D98A"/>
+                <text x="66" y="74" font-size="13" font-weight="700" fill="#E9EEF3">Bambu Lab</text>
+                <text x="66" y="92" font-size="11" fill="#8A95A4">printers</text>
+              </g>
+              <!-- bambuddy -->
+              <g>
+                <rect x="210" y="40" width="160" height="80" rx="12" fill="url(#node)" stroke="#017782"/>
+                <use href="#i-server" x="228" y="60" width="24" height="24" color="#00B7C3"/>
+                <text x="262" y="72" font-size="13" font-weight="700" fill="#E9EEF3">Bambuddy</text>
+                <text x="262" y="90" font-size="11" fill="#8A95A4">self-hosted</text>
+              </g>
+              <!-- bamboard -->
+              <g>
+                <rect x="430" y="48" width="74" height="64" rx="10" fill="url(#node)" stroke="#2F3742"/>
+                <rect x="440" y="58" width="54" height="36" rx="5" fill="#0E1116" stroke="#2F3742"/>
+                <circle cx="467" cy="76" r="9" fill="none" stroke="#252B34" stroke-width="3"/>
+                <circle cx="467" cy="76" r="9" fill="none" stroke="url(#flow)" stroke-width="3" stroke-linecap="round" stroke-dasharray="36 60" transform="rotate(-90 467 76)"/>
+                <text x="467" y="108" font-size="11" font-weight="700" fill="#00B7C3" text-anchor="middle">Bamboard</text>
+              </g>
+              <!-- connectivity footnote -->
+              <g transform="translate(20,150)">
+                <rect width="484" height="70" rx="10" fill="#0E1116" stroke="#232a33"/>
+                <use href="#i-shield" x="16" y="26" width="20" height="20" color="#00B7C3"/>
+                <text x="46" y="34" font-size="12" font-weight="600" fill="#E9EEF3">HTTP on the LAN, or HTTPS to a domain</text>
+                <text x="46" y="52" font-size="11" fill="#8A95A4">validated against a CI-refreshed CA bundle · optional Cloudflare Access token</text>
+              </g>
+            </svg>
+          </div>
+          <ul class="arch-list">
+            <li class="reveal">
+              <span class="ic"><svg aria-hidden="true"><use href="#i-wifi"/></svg></span>
+              <div><b>Real-time push.</b><p>Subscribes to Bambuddy's WebSocket for instant <code>printer_status</code> frames, with REST polling as a safety net — so an HMS alert shows up in one network hop, not a poll cycle.</p></div>
+            </li>
+            <li class="reveal">
+              <span class="ic"><svg aria-hidden="true"><use href="#i-shield"/></svg></span>
+              <div><b>LAN or remote, your call.</b><p>Plain HTTP to a private IP / <code>.local</code> on your LAN by default, or HTTPS to a domain with the server certificate validated against a built-in, CI-refreshed root-CA bundle.</p></div>
+            </li>
+            <li class="reveal">
+              <span class="ic"><svg aria-hidden="true"><use href="#i-lock"/></svg></span>
+              <div><b>Cloudflare Access ready.</b><p>Optional service-token fields let you reach a Bambuddy published behind Cloudflare Access — the headers ride only on HTTPS / WSS, never in clear text.</p></div>
+            </li>
+            <li class="reveal">
+              <span class="ic"><svg aria-hidden="true"><use href="#i-touch"/></svg></span>
+              <div><b>No-reflash setup.</b><p>A first-boot captive portal collects Wi-Fi, Bambuddy URL + API key, timezone, daily-reboot hour and language. Hold <kbd>BOOT</kbd> at power-on to run it again.</p></div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Hardware ===== -->
+    <section id="hardware">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Hardware</span>
+          <h2>One board. Four screws. Done.</h2>
+          <p>No DevKit wiring, no breakout boards. A single Guition all-in-one drops into a printable case.</p>
+        </div>
+        <div class="hw">
+          <div class="reveal">
+            <ul class="spec-list">
+              <li><svg aria-hidden="true"><use href="#i-chip"/></svg><span><b>Guition JC4827W543</b> — ESP32-S3-WROOM-1 with 8&nbsp;MB PSRAM, all on one PCB.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-touch"/></svg><span><b>4.3″ IPS, 480 × 272</b> RGB-parallel panel with a GT911 capacitive touch layer.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-box"/></svg><span><b>FDM-printable case</b> — parametric OpenSCAD, slim 3&nbsp;mm bezel, chamfered front and an integrated 15° desk-stand. ~70&nbsp;g of filament.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-bolt"/></svg><span><b>Just a USB-C cable</b> for power and the one-time flash — nothing else to connect.</span></li>
+            </ul>
+            <a class="btn btn-ghost" href="https://github.com/clabeuhtegrite/Bamboard/blob/main/hardware/bom.md" target="_blank" rel="noopener">Bill of materials<svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </div>
+          <div class="bom reveal">
+            <div class="price">~20 €</div>
+            <div class="price-sub">total bill of materials</div>
+            <hr>
+            <dl>
+              <dt>All-in-one board</dt><dd>1×</dd>
+              <dt>USB-C data cable</dt><dd>1×</dd>
+              <dt>M3 × 6 mm screws</dt><dd>4×</dd>
+              <dt>Filament (case)</dt><dd>~70 g</dd>
+              <dt>Soldering</dt><dd>none</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Install ===== -->
+    <section id="install" class="band">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Install &amp; updates</span>
+          <h2>Flash it straight from this page</h2>
+          <p>First install runs in the browser over Web Serial — no PlatformIO, no CLI, no toolchain. Everything after lands over the air.</p>
+        </div>
+
+        <div class="install-grid">
+          <div class="install-card reveal">
+            <h3>Browser install</h3>
+            <p class="msg">Chrome, Edge or Opera on a desktop. Plug the board into a USB-C data cable and click Connect.</p>
+            <esp-web-install-button id="installBtn" manifest="./manifest.json">
+              <span slot="unsupported" class="msg bad">⚠️ This browser can't talk to USB serial devices. Open this page in <strong>Chrome, Edge or Opera on a desktop</strong> to flash.</span>
+              <span slot="not-allowed" class="msg bad">⚠️ Web Serial needs a secure (https) page.</span>
+            </esp-web-install-button>
+            <p id="placeholderWarn" class="msg bad" hidden>
+              ⚠️ The published manifest is a placeholder (<code>0.0.0-dev</code>) — the release CI hasn't run yet.
+              Use the <a href="https://github.com/clabeuhtegrite/Bamboard/releases/latest" target="_blank" rel="noopener">latest release</a> on GitHub instead.
+            </p>
+            <div class="badges">
+              <span class="pill live"><span class="dot"></span>Latest&nbsp;·&nbsp;<strong>v<span id="ver2">…</span></strong></span>
+              <span class="pill">ESP32-S3</span>
+            </div>
+          </div>
+
+          <div class="reveal">
+            <ol class="steps">
+              <li><span>Use <b>Chrome, Edge or Opera</b> on a computer (Web Serial isn't in Firefox, Safari or on phones).</span></li>
+              <li><span>Plug the board into a USB-C <b>data</b> cable (not charge-only).</span></li>
+              <li><span>Click <b>Connect</b> and pick the serial port that appears.</span></li>
+              <li><span>No port? Enter download mode: hold <kbd>BOOT</kbd>, tap <kbd>RST</kbd>, release <kbd>BOOT</kbd>, retry.</span></li>
+              <li><span>On first boot, join the <code>Bamboard-setup</code> Wi-Fi and finish setup in the captive portal.</span></li>
+            </ol>
+            <p class="note">You only do this once. After the first flash, the device updates itself over the air from GitHub Releases at every boot.</p>
+          </div>
+        </div>
+
+        <div class="card reveal" style="margin-top:24px">
+          <h3 style="margin-top:0">Other browsers &amp; manual flashing</h3>
+          <p class="msg">Web Serial is Chromium-desktop only. On Firefox, Safari, Linux without a Chromium browser, or to flash by hand, download <code>bamboard-factory.bin</code> from the <a href="https://github.com/clabeuhtegrite/Bamboard/releases/latest" target="_blank" rel="noopener">latest release</a> and write it at offset <code>0x0</code> with <a href="https://github.com/espressif/esptool" target="_blank" rel="noopener">esptool</a>:</p>
+          <div class="codebox">
+            <pre><code id="esptoolCmd">esptool.py --chip esp32s3 write_flash 0x0 bamboard-factory.bin</code></pre>
+            <button class="copy-btn" id="copyBtn" aria-label="Copy command"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CTA band ===== -->
+    <section>
+      <div class="container band-inner reveal">
+        <span class="eyebrow" style="justify-content:center">Get started</span>
+        <h2>Build your own Bamboard</h2>
+        <p>Order the ~20 € board, print the case, and flash it from your browser. The docs walk you through assembly, flashing and configuration.</p>
+        <div class="hero-actions" style="justify-content:center">
+          <a class="btn btn-primary btn-lg" href="#install"><svg aria-hidden="true"><use href="#i-bolt"/></svg>Flash it now</a>
+          <a class="btn btn-ghost btn-lg" href="https://github.com/clabeuhtegrite/Bamboard#readme" target="_blank" rel="noopener">Read the docs<svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </div>
+    </section>
+
   </main>
 
-  <script>
-    // Surface the firmware version from the ESP Web Tools manifest so the page
-    // always shows what it will install, without hard-coding it here. When the
-    // version is still the in-tree placeholder ("0.0.0-dev"), hide the install
-    // button — that means the release CI hasn't regenerated the manifest yet
-    // and clicking Connect would flash a dev sentinel build users don't want.
-    fetch("./manifest.json").then(r => r.json()).then(m => {
-      const ver = (m && m.version) || "";
-      document.getElementById("ver").textContent = ver || "?";
-      if (!ver || ver === "0.0.0-dev") {
-        document.getElementById("installBtn").hidden = true;
-        document.getElementById("placeholderWarn").hidden = false;
-      }
-    }).catch(() => {});
-  </script>
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div style="max-width:300px">
+          <span class="footer-brand"><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0E1116"/><circle cx="32" cy="32" r="17" fill="none" stroke="#252B34" stroke-width="6"/><circle cx="32" cy="32" r="17" fill="none" stroke="#00B7C3" stroke-width="6" stroke-linecap="round" stroke-dasharray="80 107" transform="rotate(-90 32 32)"/><circle cx="32" cy="32" r="4.5" fill="#39D98A"/></svg>Bam<span class="accent">board</span></span>
+          <p style="margin-top:12px">An open-source touch desk monitor for Bambu Lab printers, powered by self-hosted Bambuddy.</p>
+        </div>
+        <div>
+          <h4>Project</h4>
+          <ul>
+            <li><a href="https://github.com/clabeuhtegrite/Bamboard" target="_blank" rel="noopener">GitHub repository</a></li>
+            <li><a href="https://github.com/clabeuhtegrite/Bamboard/releases" target="_blank" rel="noopener">Releases</a></li>
+            <li><a href="https://github.com/clabeuhtegrite/Bamboard/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a></li>
+            <li><a href="https://github.com/clabeuhtegrite/Bamboard/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Docs</h4>
+          <ul>
+            <li><a href="https://github.com/clabeuhtegrite/Bamboard/blob/main/docs/assembly.md" target="_blank" rel="noopener">Assembly</a></li>
+            <li><a href="https://github.com/clabeuhtegrite/Bamboard/blob/main/docs/flashing.md" target="_blank" rel="noopener">Flashing</a></li>
+            <li><a href="https://github.com/clabeuhtegrite/Bamboard/blob/main/docs/configuration.md" target="_blank" rel="noopener">Configuration</a></li>
+            <li><a href="https://github.com/clabeuhtegrite/Bamboard/blob/main/hardware/bom.md" target="_blank" rel="noopener">Bill of materials</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Related</h4>
+          <ul>
+            <li><a href="https://github.com/maziggy/bambuddy" target="_blank" rel="noopener">Bambuddy</a></li>
+            <li><a href="https://esphome.github.io/esp-web-tools/" target="_blank" rel="noopener">ESP Web Tools</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>MIT licensed · Not affiliated with Bambu Lab or the Bambuddy project.</span>
+        <span>Built for makers who self-host.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== Lightbox ===== -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged screenshot">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">×</button>
+    <img id="lightboxImg" src="" alt="" />
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
