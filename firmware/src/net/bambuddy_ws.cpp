@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 
 #include "bambuddy_client.h"
+#include "ca_bundle.h"      // embedded root-CA bundle — validate the wss:// cert
 #include "psram_json.h"
 
 namespace bambuddy {
@@ -63,8 +64,15 @@ void WsClient::apply_url(const String& base_url) {
         client_.setExtraHeaders();
     }
 
-    if (secure_) client_.beginSSL(host_.c_str(), port_, "/ws");
-    else         client_.begin   (host_.c_str(), port_, "/ws");
+    // Validate the wss:// server certificate against the same embedded Mozilla
+    // root-CA bundle the REST client uses: beginSslWithBundle stores it and the
+    // library calls setCACertBundle() at connect time. Plain beginSSL (no CA
+    // set) silently fell back to setInsecure() — accepting any cert and handing
+    // the CF-Access token below to an unauthenticated TLS peer. (size 0: the
+    // esp_crt_bundle carries its own length, as in the REST setCACertBundle path.)
+    if (secure_) client_.beginSslWithBundle(host_.c_str(), port_, "/ws",
+                                            ca_bundle_start, (size_t)0);
+    else         client_.begin             (host_.c_str(), port_, "/ws");
 
     // Application-level pings handle keepalive (see Bambuddy's ws handler),
     // so the protocol-level heartbeat is left off to avoid double-pinging.

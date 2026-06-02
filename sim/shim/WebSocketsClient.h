@@ -17,6 +17,7 @@ class WebSocketsClient {
     void onEvent(Cb cb) { cb_ = cb; (void)cb_; }
     void begin(const char*, uint16_t, const char*) {}
     void beginSSL(const char*, uint16_t, const char*) {}
+    void beginSslWithBundle(const char*, uint16_t, const char*, const uint8_t*, size_t) {}
     void disconnect() {}
     void setReconnectInterval(uint32_t) {}
     void setExtraHeaders(const char* = nullptr) {}

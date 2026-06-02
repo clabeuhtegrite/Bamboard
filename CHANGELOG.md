@@ -22,6 +22,18 @@ A project-audit pass — a reliability fix, a security fix, and hardening.
   toast a moment later. This also closes a data race on the REST client's shared
   error/credential state, which both tasks could previously touch at once.
 
+### Security
+
+- **The WebSocket push channel now validates Bambuddy's TLS certificate.** In
+  HTTPS mode the `wss://` connection used the library's plain `beginSSL`, which
+  — with no CA configured — silently fell back to `setInsecure()`, accepting
+  **any** certificate, even though the REST and OTA paths validate against the
+  embedded root-CA bundle. A man-in-the-middle could have injected forged
+  `printer_status` frames and, worse, harvested the **Cloudflare-Access service
+  token** the handshake carries. The WS now validates against the same bundle
+  via `beginSslWithBundle`. (The WebSockets library is pinned to an exact
+  version, `=2.6.1`, because that call's signature changed across the 2.x line.)
+
 ## v0.20.0 — 2026-06
 
 ### Added
