@@ -162,6 +162,20 @@ static void light_btn_clicked(lv_event_t*) {
 // Tapping the progress ring opens the full-screen camera snapshot overlay.
 static void dash_arc_clicked(lv_event_t*) { camera_overlay_open(); }
 
+// Give an action pill a solid, self-consistent fill: the colour up top fading
+// to a darker shade of *itself* at the bottom, with a matching hairline. Needed
+// because s_btn_accent bakes in a teal gradient + teal border; overriding only
+// bg_color left a non-teal pill (amber Stop, red Clear HMS) shaded and ringed in
+// teal. Re-apply whenever the colour changes (e.g. Stop arming to red).
+static void tint_action_btn(lv_obj_t* btn, uint32_t color) {
+    lv_color_t base = lv_color_hex(color);
+    lv_color_t dark = lv_color_darken(base, LV_OPA_30);
+    lv_obj_set_style_bg_color(btn, base, 0);
+    lv_obj_set_style_bg_grad_color(btn, dark, 0);
+    lv_obj_set_style_bg_grad_dir(btn, LV_GRAD_DIR_VER, 0);
+    lv_obj_set_style_border_color(btn, dark, 0);
+}
+
 // Single primary-action pill (used for Clear plate / Clear HMS).
 static lv_obj_t* make_action_btn(lv_obj_t* parent, int x, int y, int w,
                                   const char* text,
@@ -172,7 +186,7 @@ static lv_obj_t* make_action_btn(lv_obj_t* parent, int x, int y, int w,
     lv_obj_add_style(btn, &s_btn, 0);
     lv_obj_add_style(btn, &s_btn_accent, 0);
     lv_obj_add_style(btn, &s_btn_pressed, LV_STATE_PRESSED);
-    lv_obj_set_style_bg_color(btn, lv_color_hex(accent), 0);
+    tint_action_btn(btn, accent);
     lv_obj_set_style_radius  (btn, ::ui::R_PILL, 0);
     lv_obj_set_size(btn, w, ::ui::H_BTN);
     lv_obj_set_pos(btn, x, y);
@@ -629,8 +643,8 @@ void update_dashboard(int printer_id) {
     if (s_dash_stop_armed_at != 0 && (lv_tick_get() - s_dash_stop_armed_at) > 3000)
         s_dash_stop_armed_at = 0;
     if (s_dash_btn_stop)
-        lv_obj_set_style_bg_color(s_dash_btn_stop,
-            lv_color_hex(s_dash_stop_armed_at ? ::ui::C_ERR : ::ui::C_WARN), 0);
+        tint_action_btn(s_dash_btn_stop,
+                        s_dash_stop_armed_at ? ::ui::C_ERR : ::ui::C_WARN);
 
     // If the context left "printing" while the picker was open, dismiss it.
     if (!show_speed && s_speed_menu &&
