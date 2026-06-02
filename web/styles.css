@@ -187,7 +187,7 @@ section { padding-block: clamp(56px, 9vw, 110px); position: relative; }
 .device-frame {
   background: linear-gradient(180deg, #15191e, #0b0e12);
   border: 1px solid var(--line); border-radius: 22px; padding: 16px;
-  box-shadow: var(--shadow-card); max-width: 720px; margin-inline: auto;
+  box-shadow: var(--shadow-card); max-width: 520px; margin-inline: auto;
 }
 .device-screen {
   position: relative; border-radius: 12px; overflow: hidden;
@@ -203,7 +203,7 @@ section { padding-block: clamp(56px, 9vw, 110px); position: relative; }
 .showcase:not(.js) .device-screen { aspect-ratio: auto; display: grid; gap: 12px; }
 .showcase:not(.js) .device-screen .shot { position: static; opacity: 1; height: auto; cursor: default; border-radius: 8px; }
 .shot-caption {
-  margin-top: 16px; max-width: 720px; margin-inline: auto;
+  margin-top: 16px; max-width: 520px; margin-inline: auto;
   display: flex; gap: 12px; align-items: flex-start;
 }
 .shot-caption .num {
