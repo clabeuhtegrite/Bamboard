@@ -17,6 +17,25 @@ The page is static and works without JavaScript; `app.js` is progressive
 enhancement (version badge, the tabbed screen showcase, lightbox, copy button,
 mobile nav, scroll reveals).
 
+## Languages
+
+The page ships in English and translates itself **client-side** into the
+languages the firmware supports — English, Spanish, French, Portuguese and
+German (mirroring `firmware/src/ui/i18n.cpp`) — with **English as the
+fallback**. No third-party widget: the dictionaries live in `i18n.js`, and the
+English DOM is both the source and the fallback, matching the project's
+local-first, no-external-cloud stance (a no-JS visitor still gets English).
+
+The language is picked from `?lang=xx` (then remembered in `localStorage`) →
+the browser's `Accept-Languages` → English, and a switcher in the nav lets
+visitors override it. Translatable nodes are tagged in `index.html` with
+`data-i18n` (textContent), `data-i18n-html` (innerHTML, for phrases with inline
+markup) and `data-i18n-attr` (attributes like `alt` / `aria-label`); brand and
+acronym terms (Bamboard, Bambuddy, AMS, HMS…), units and the device-screen tab
+names — the screenshots are rendered in English — stay verbatim. The JSON
+dictionary block in `i18n.js` is delimited by `i18n:json` markers so CI can
+validate it.
+
 ## Files
 
 Committed:
@@ -24,6 +43,8 @@ Committed:
 - `index.html` — the page (showcase + the `<esp-web-install-button>`).
 - `styles.css` — Bamboard-themed styles (palette mirrors `firmware/src/config.h`).
 - `app.js` — progressive-enhancement script.
+- `i18n.js` — self-hosted client-side translation (auto-detects the visitor's
+  language, English fallback). See **Languages** below.
 - `assets/favicon.svg` — site icon (the Live-screen progress-ring mark).
 - `assets/og-image.svg` — social-share card source; **rasterised to
   `og-image.png` by CI** at deploy time (crawlers want PNG/JPG, not SVG).

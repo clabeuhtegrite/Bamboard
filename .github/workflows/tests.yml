@@ -21,6 +21,20 @@ jobs:
           cmake --build tests/build -j
           ctest --test-dir tests/build --output-on-failure
 
+  # Site scripts: syntax-check the JS and validate the i18n dictionary (valid
+  # JSON, identical key set per language, every key used in index.html exists).
+  # No toolchain download — node + python3 are preinstalled on the runner.
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax-check the site scripts
+        run: |
+          node --check web/i18n.js
+          node --check web/app.js
+      - name: Validate i18n dictionary + key coverage
+        run: python3 scripts/validate_i18n.py
+
   cppcheck:
     runs-on: ubuntu-latest
     steps:
