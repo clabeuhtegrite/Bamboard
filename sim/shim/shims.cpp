@@ -50,6 +50,7 @@ String  g_cfg_api_key;
 uint8_t g_cfg_brightness_level = 3;
 void save_brightness_level(uint8_t level) { g_cfg_brightness_level = level; }
 void factory_reset() {}
+void reconfigure_wifi() {}
 
 // ---- HTTPClient over libcurl ----------------------------------------------
 bool HTTPClient::begin(const String& url) { url_ = url.std_str(); hdrs_.clear(); size_ = -1; code_ = 0; return true; }

@@ -77,6 +77,8 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*SERVER*/        {"Server", "Servidor", "Serveur", "Servidor", "Server"},
     /*FACTORY_RESET*/ {"Factory reset", "Restablecer", "Réinit. usine", "Repor fábrica", "Zurücksetzen"},
     /*CONFIRM_RESET*/ {"Tap again to confirm (3 s)", "Toca otra vez (3 s)", "Touchez encore (3 s)", "Toque novamente (3 s)", "Nochmal tippen (3 s)"},
+    /*WIFI_SETUP*/    {"Wi-Fi setup", "Config. Wi-Fi", "Config. Wi-Fi", "Config. Wi-Fi", "Wi-Fi-Setup"},
+    /*WIFI_OPENING*/  {"Opening Wi-Fi setup...", "Abriendo config. Wi-Fi...", "Ouverture config. Wi-Fi...", "A abrir config. Wi-Fi...", "Wi-Fi-Setup wird geöffnet..."},
     /*LANGUAGE*/      {"Language", "Idioma", "Langue", "Idioma", "Sprache"},
     // -- overlays --
     /*UPDATING_FW*/   {"Updating firmware", "Actualizando firmware", "Mise à jour du firmware", "A atualizar firmware", "Firmware-Update"},

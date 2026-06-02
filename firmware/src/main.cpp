@@ -132,6 +132,22 @@ void factory_reset() {
     ESP.restart();
 }
 
+// Public hook used by the Settings screen's "Wi-Fi setup" touch button
+// (declared `extern void reconfigure_wifi();` in settings.cpp). Unlike
+// factory_reset(), it does NOT wipe NVS: it sets a one-shot flag and reboots
+// into the captive portal, which pre-fills the saved Bambuddy host / API key /
+// Cloudflare token / timezone / language — so the user only re-picks their
+// Wi-Fi network instead of re-entering everything. The flag is consumed early
+// in setup().
+void reconfigure_wifi() {
+    log_w("Wi-Fi reconfigure requested from UI (config preserved)");
+    s_prefs.begin("bamboard", false);
+    s_prefs.putUChar("reprov", 1);
+    s_prefs.end();
+    delay(300);
+    ESP.restart();
+}
+
 // ---------------------------------------------------------------------------
 // Wi-Fi provisioning
 // ---------------------------------------------------------------------------
@@ -595,6 +611,15 @@ void setup() {
     load_prefs();
     ::i18n::set_language(g_cfg_lang);
 
+    // One-shot "reopen the captive portal without wiping" flag, set by the
+    // Settings "Wi-Fi setup" button (reconfigure_wifi()). Consume it now so it
+    // fires exactly once; start_provisioning() below then pre-fills the
+    // preserved Bambuddy creds and the user only re-picks their Wi-Fi.
+    s_prefs.begin("bamboard", false);
+    bool force_portal = s_prefs.getUChar("reprov", 0) != 0;
+    if (force_portal) s_prefs.remove("reprov");
+    s_prefs.end();
+
     ui::g_ui.begin();
     lv_timer_handler();
 
@@ -608,7 +633,8 @@ void setup() {
     WiFi.mode(WIFI_STA);
     WiFi.setHostname("bamboard");
 
-    if (g_cfg_bambuddy_url.length() == 0 || g_cfg_api_key.length() == 0) {
+    if (force_portal || g_cfg_bambuddy_url.length() == 0 ||
+        g_cfg_api_key.length() == 0) {
         start_provisioning();   // does not return (reboots after save)
     }
 

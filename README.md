@@ -37,7 +37,7 @@ other) printer with a 0.4 mm nozzle.
 - **Printers grid** — a control-wall grid of tiles, one per printer Bambuddy knows about: a progress ring (accent arc + % while printing, a full state-coloured ring otherwise), the name and inline temps + ETA, highlighted by state. **Tap a tile** to focus that printer and jump to Live.
 - **Print queue** — the jobs Bambuddy still has queued (pending), in order, with each job's target printer.
 - **History & stats** — last 10 prints, success rate, total filament, total time.
-- **Settings** — Bambuddy URL, the **Bambuddy server version + uptime**, local IP, Wi-Fi RSSI, device uptime, **brightness 1–5** segmented selector, and a two-tap **Factory reset** button.
+- **Settings** — Bambuddy URL, the **Bambuddy server version + uptime**, local IP, Wi-Fi RSSI, device uptime, **brightness 1–5** segmented selector, a two-tap **Wi-Fi setup** button (re-opens the captive portal **without** wiping your Bambuddy details — see Connectivity), and a two-tap **Factory reset** button.
 - **Ambient clock** — when the whole farm is quiet (nothing printing or faulted) and the panel has been untouched for a while, a full-screen clock floats over the screen — time, date and a one-line farm summary (the next queued job, or "all idle"). Tap to dismiss.
 
 ### Alerts
@@ -59,7 +59,7 @@ other) printer with a 0.4 mm nozzle.
 ### Connectivity
 
 - **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames. REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop.
-- **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy host + API key + timezone / daily-reboot-hour + **interface language** (EN / ES / FR / PT / DE) setup; no re-flash needed to change them. Hold the side **BOOT** button at boot to re-run it.
+- **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy host + API key + timezone / daily-reboot-hour + **interface language** (EN / ES / FR / PT / DE) setup; no re-flash needed to change them. Tap **Wi-Fi setup** on the Settings screen to re-open the portal **without** wiping your Bambuddy host / API key / token — handy for moving the device to a new network. (Holding the side **BOOT** button at boot also re-runs the portal, but wipes everything first, like a factory reset.)
 - **HTTP (LAN) or HTTPS (remote)** — by default the device talks to Bambuddy over plain HTTP on your LAN (a private IP or an `*.local` name). Tick **Use HTTPS** in the portal to reach it by **domain** over TLS instead — the server certificate is validated against a built-in, CI-refreshed root-CA bundle — with optional **Cloudflare Access** service-token fields for a Bambuddy published behind Cloudflare. One firmware build covers both.
 - **Auto-dim** — backlight drops after 60 s without a touch, wakes on the next tap.
 

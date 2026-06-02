@@ -5,6 +5,21 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.20.0 — 2026-06
+
+### Added
+
+- **Change your Wi-Fi without a factory reset.** A new **Wi-Fi setup** button on
+  the Settings screen (two-tap to confirm) reboots straight into the captive
+  portal — but, unlike Factory reset and the hold-**BOOT**-at-boot path, it
+  **keeps** everything in NVS. The portal comes up with your Bambuddy host, API
+  key, Cloudflare token, timezone and language already filled in, so moving the
+  device to a new network is just "pick the Wi-Fi and save" instead of
+  re-entering every credential. Implemented as a one-shot `reprov` NVS flag
+  consumed at boot; the existing portal flow (which already pre-filled those
+  fields) does the rest. The bottom of Settings is now a two-pill row —
+  **Wi-Fi setup** (left, arms teal) and **Factory reset** (right, arms red).
+
 ## v0.19.1 — 2026-06
 
 ### Security
