@@ -39,8 +39,9 @@ Pulled in at deploy time (**not committed**):
 - `screenshots/*.png` — the six demo screens, rendered by the host sim
   (`SIM_FIXTURES_ONLY=1`) from a deterministic dataset, so they always match the
   current UI. See `docs/screenshots/README.md`.
-- `assets/device_render.svg` — the hand-authored hero render, copied from
-  `docs/screenshots/` (single source, shared with the README hero).
+- `screenshots/hero.png` — the hero: `scripts/compose_hero.sh` warps the rendered
+  `live.png` onto TomE1337's case photo (`docs/screenshots/case.jpg`, CC BY-NC-SA
+  4.0) in perspective. A derivative of that photo, so likewise CC BY-NC-SA.
 - `assets/og-image.png` — rasterised from `assets/og-image.svg`.
 
 ## How it ships

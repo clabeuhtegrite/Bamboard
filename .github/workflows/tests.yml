@@ -59,7 +59,7 @@ jobs:
       - name: Compose hero render
         run: |
           sudo apt-get install -y imagemagick
-          HERO_DEBUG=1 bash scripts/compose_hero.sh docs/screenshots/case.jpg fx_out/live.png fx_out/hero.png
+          bash scripts/compose_hero.sh docs/screenshots/case.jpg fx_out/live.png fx_out/hero.png
       - name: Compare against committed baselines (or seed them)
         run: |
           if ls tests/fixtures_baseline/*.png >/dev/null 2>&1; then
