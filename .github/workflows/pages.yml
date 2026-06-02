@@ -44,8 +44,8 @@ jobs:
           set -euo pipefail
           mkdir -p _site/assets
 
-          # Static showcase site: page, styles, script and assets.
-          cp web/index.html web/styles.css web/app.js _site/
+          # Static showcase site: page, styles, scripts (incl. i18n) and assets.
+          cp web/index.html web/styles.css web/app.js web/i18n.js _site/
           cp web/assets/favicon.svg web/assets/og-image.svg _site/assets/
 
           # Rasterise the social card to PNG (crawlers don't read an SVG og:image).
