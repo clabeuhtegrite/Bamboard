@@ -75,6 +75,10 @@ void Manager::begin() {
     // build it last (LVGL z-orders by creation order within a parent).
     screens::build_tab_bar(s_root);
 
+    // Ambient idle clock — built after the tab bar so it floats above
+    // everything when shown; hidden (and inert) the rest of the time.
+    screens::build_ambient_overlay(s_root);
+
     // Show the initial screen directly. We can't use go_to() here: current_
     // already starts at Dashboard, so go_to(Dashboard) would early-return on
     // its `s == current_` guard and leave the screen hidden (the loop above
@@ -167,6 +171,33 @@ void Manager::refresh() {
         case Screen::History:   screens::update_history();                       break;
         case Screen::Settings:  screens::update_settings();                      break;
         default: break;
+    }
+
+    // --- Ambient idle clock ------------------------------------------------
+    // When the whole farm is quiet (nothing printing / paused / faulted) and the
+    // panel has been untouched for a while, float a clock over the current
+    // screen. A tap resets the inactivity timer, so it hides on the next tick.
+    {
+        using PState = ::bambuddy::PrinterState;
+        bool quiet = true;
+        for (uint8_t i = 0; i < n; ++i) {
+            PState st = ps[i].state;
+            if (st == PState::Printing || st == PState::Paused ||
+                st == PState::Error    || st == PState::Failed ||
+                (ps[i].hms.length() && ps[i].hms != "ok") ||
+                (st == PState::Finish && ps[i].awaiting_plate_clear)) {
+                quiet = false; break;
+            }
+        }
+        bool busy = screens::ota_is_active() || screens::camera_overlay_is_open() ||
+                    screens::hms_flash_is_visible() || screens::speed_menu_is_open();
+        bool idle = lv_disp_get_inactive_time(NULL) > ::display::AMBIENT_AFTER_MS;
+        if (quiet && idle && !busy) {
+            if (screens::ambient_is_visible()) screens::ambient_apply();
+            else                               screens::ambient_show();
+        } else if (screens::ambient_is_visible()) {
+            screens::ambient_hide();
+        }
     }
 
     // --- HMS full-screen flash state machine -------------------------------

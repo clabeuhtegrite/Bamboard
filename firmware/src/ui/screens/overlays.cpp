@@ -14,6 +14,7 @@
 
 #include "theme.h"
 
+#include <time.h>          // ambient clock (getLocalTime + strftime)
 #include <TJpg_Decoder.h>
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
@@ -476,5 +477,101 @@ void camera_attach_thumbnail(lv_obj_t* img, uint16_t w, uint16_t h) {
 // True once at least one camera frame has been decoded — the dashboard uses
 // this to reveal its thumbnail only when the camera actually works.
 bool camera_has_frame() { return s_cam_have_frame; }
+
+// =============================================================================
+// AMBIENT CLOCK
+// =============================================================================
+// Floated over the current screen by ui::Manager::refresh() when the whole farm
+// is quiet (nothing printing / paused / faulted) and the panel has been
+// untouched for a while — a big clock + date + a one-line farm summary, so an
+// idle desk monitor stays useful and good-looking. A tap (which resets the
+// inactivity timer) hides it on the next tick; the auto-dim still dims the
+// backlight underneath as usual.
+
+static lv_obj_t* s_amb_overlay = nullptr;
+static lv_obj_t* s_amb_clock   = nullptr;
+static lv_obj_t* s_amb_date    = nullptr;
+static lv_obj_t* s_amb_summary = nullptr;
+static bool      s_amb_visible = false;
+
+static void amb_overlay_clicked(lv_event_t*) { ambient_hide(); }
+
+lv_obj_t* build_ambient_overlay(lv_obj_t* parent) {
+    ensure_styles();
+    s_amb_overlay = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_amb_overlay);
+    lv_obj_set_size(s_amb_overlay, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(s_amb_overlay, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_bg_color(s_amb_overlay, lv_color_hex(::ui::C_BG), 0);
+    lv_obj_set_style_bg_opa(s_amb_overlay, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(s_amb_overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(s_amb_overlay, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_amb_overlay, amb_overlay_clicked, LV_EVENT_CLICKED, nullptr);
+
+    s_amb_clock = lv_label_create(s_amb_overlay);
+    lv_label_set_text(s_amb_clock, "--:--");
+    lv_obj_set_style_text_font(s_amb_clock, &bb_font_36, 0);
+    lv_obj_set_style_text_color(s_amb_clock, lv_color_hex(::ui::C_TEXT), 0);
+    lv_obj_align(s_amb_clock, LV_ALIGN_CENTER, 0, -30);
+
+    s_amb_date = lv_label_create(s_amb_overlay);
+    lv_label_set_text(s_amb_date, "");
+    lv_obj_set_style_text_font(s_amb_date, &bb_font_16, 0);
+    lv_obj_set_style_text_color(s_amb_date, lv_color_hex(::ui::C_TEXT_DIM), 0);
+    lv_obj_align(s_amb_date, LV_ALIGN_CENTER, 0, 10);
+
+    s_amb_summary = lv_label_create(s_amb_overlay);
+    lv_label_set_text(s_amb_summary, "");
+    lv_obj_set_width(s_amb_summary, LV_HOR_RES - 60);
+    lv_label_set_long_mode(s_amb_summary, LV_LABEL_LONG_DOT);
+    lv_obj_set_style_text_align(s_amb_summary, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(s_amb_summary, &bb_font_16, 0);
+    lv_obj_set_style_text_color(s_amb_summary, lv_color_hex(::ui::C_ACCENT), 0);
+    lv_obj_align(s_amb_summary, LV_ALIGN_CENTER, 0, 44);
+
+    lv_obj_add_flag(s_amb_overlay, LV_OBJ_FLAG_HIDDEN);
+    return s_amb_overlay;
+}
+
+void ambient_apply() {
+    if (!s_amb_overlay) return;
+    struct tm tmv;
+    if (getLocalTime(&tmv, 0)) {
+        char hm[8];  strftime(hm, sizeof(hm), "%H:%M", &tmv);
+        lv_label_set_text(s_amb_clock, hm);
+        char dt[32]; strftime(dt, sizeof(dt), "%a %d %b", &tmv);
+        lv_label_set_text(s_amb_date, dt);
+    }
+    // Farm summary: the next queued job if any, else "<n> Printers · All idle".
+    ::bambuddy::QueueItem q[10]; uint8_t qn = 0;
+    ::bambuddy::g_client.snapshot_queue(q, qn);
+    char sum[96];
+    if (qn > 0) {
+        snprintf(sum, sizeof(sum), "%s: %s",
+                 i18n::tr(i18n::Str::AMBIENT_NEXT), q[0].name.c_str());
+    } else {
+        ::bambuddy::Printer ps[::bambuddy::MAX_PRINTERS]; uint8_t n = 0;
+        ::bambuddy::g_client.snapshot_printers(ps, n);
+        snprintf(sum, sizeof(sum), "%u %s  \xC2\xB7  %s", (unsigned)n,
+                 i18n::tr(i18n::Str::TAB_PRINTERS), i18n::tr(i18n::Str::AMBIENT_ALL_IDLE));
+    }
+    lv_label_set_text(s_amb_summary, sum);
+}
+
+void ambient_show() {
+    if (!s_amb_overlay) return;
+    ambient_apply();
+    lv_obj_clear_flag(s_amb_overlay, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_amb_overlay);
+    s_amb_visible = true;
+}
+
+void ambient_hide() {
+    if (!s_amb_overlay) return;
+    lv_obj_add_flag(s_amb_overlay, LV_OBJ_FLAG_HIDDEN);
+    s_amb_visible = false;
+}
+
+bool ambient_is_visible() { return s_amb_visible; }
 
 }  // namespace ui::screens

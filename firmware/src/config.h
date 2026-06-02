@@ -75,6 +75,9 @@ constexpr uint16_t DRAW_BUF_LINES = 40;
 
 // Auto-dim: backlight drops after this many ms of no touch activity.
 constexpr uint32_t DIM_AFTER_MS = 60UL * 1000UL;
+// Ambient idle clock: floats over the current screen once the panel has been
+// untouched this long AND the whole farm is quiet (nothing printing/faulted).
+constexpr uint32_t AMBIENT_AFTER_MS = 45UL * 1000UL;
 constexpr uint8_t  BL_FULL = 255;
 constexpr uint8_t  BL_DIM  = 40;
 

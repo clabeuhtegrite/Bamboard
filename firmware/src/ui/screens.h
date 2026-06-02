@@ -77,6 +77,16 @@ void      camera_apply();                                        // UI task
 void      camera_attach_thumbnail(lv_obj_t* img, uint16_t w, uint16_t h);
 bool      camera_has_frame();
 
+// Ambient idle clock overlay. The manager floats it over the current screen
+// when the farm is quiet and the panel has been untouched for a while (see
+// ui::Manager::refresh); a tap dismisses it. ambient_apply() refreshes the
+// clock / date / farm-summary text and is safe to call only from the UI task.
+lv_obj_t* build_ambient_overlay(lv_obj_t* parent);
+void      ambient_show();
+void      ambient_hide();
+void      ambient_apply();
+bool      ambient_is_visible();
+
 // Shared header (title + connectivity indicator). Used by the carousel.
 // header_set_online() is safe to call from any task — it parks the new
 // state and header_apply() (pumped by the UI manager) syncs it into the
