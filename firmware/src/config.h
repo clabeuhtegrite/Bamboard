@@ -212,6 +212,15 @@ namespace ota {
 constexpr const char* MANIFEST_URL =
     "https://github.com/clabeuhtegrite/Bamboard/releases/latest/download/manifest.json";
 
+// Provenance pin for the firmware binary. release.yml always publishes the .bin
+// under this repo's own release-download path, so the device refuses to flash a
+// manifest whose `url` points anywhere else (see github_ota.cpp). Combined with
+// the CA-bundle TLS validation, a tampered manifest can neither downgrade the
+// transport nor redirect the flash to an attacker-controlled host. Shares the
+// repo path with MANIFEST_URL above — both move together if the repo is renamed.
+constexpr const char* BIN_URL_PREFIX =
+    "https://github.com/clabeuhtegrite/Bamboard/releases/download/";
+
 // Give up the check after this long. An offline device — or a GitHub outage —
 // must still fall through to normal operation instead of hanging at boot.
 constexpr uint32_t CHECK_TIMEOUT_MS = 8000;
