@@ -102,6 +102,8 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*DRYING_STARTED*/{"Drying %s @ %d °C", "Secando %s @ %d °C", "Séchage %s @ %d °C", "Secagem %s @ %d °C", "Trocknen %s @ %d °C"},
     /*QUEUE_EMPTY*/   {"Queue is empty.", "La cola está vacía.", "La file est vide.", "A fila está vazia.", "Warteschlange leer."},
     /*QUEUE_POS*/     {"#%d", "#%d", "#%d", "#%d", "#%d"},
+    /*AMBIENT_ALL_IDLE*/ {"All idle", "Todo inactivo", "Tout au repos", "Tudo parado", "Alles im Leerlauf"},
+    /*AMBIENT_NEXT*/  {"Next", "Siguiente", "Suivant", "Próximo", "Nächste"},
 };
 
 static_assert(sizeof(T) / sizeof(T[0]) == (size_t)Str::_COUNT,

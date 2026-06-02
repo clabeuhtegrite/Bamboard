@@ -18,6 +18,11 @@ A round of new at-a-glance features.
   (nozzle/bed temps + ETA while printing, model + state otherwise). Tap a tile
   to focus that printer and jump to Live, as before — a control-wall view for a
   multi-printer farm.
+- **Ambient idle clock.** When the whole farm is quiet (nothing printing,
+  paused or faulted) and the panel has been untouched for a while, a full-screen
+  clock floats over the current screen — big time, date and a one-line summary
+  (the next queued job, or "N Printers · All idle"). Tap to dismiss; it re-arms
+  after the idle delay. The auto-dim still dims the backlight underneath.
 
 ## v0.18.2 — 2026-06
 

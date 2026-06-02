@@ -170,6 +170,13 @@ static void render_fixtures(const std::string& out) {
     ui::g_ui.go_to(ui::Screen::Queue);     pump(30); dump_png(out, "queue");
     ui::g_ui.go_to(ui::Screen::History);   pump(30); dump_png(out, "history");
     ui::g_ui.go_to(ui::Screen::Settings);  pump(30); dump_png(out, "settings");
+
+    // Ambient idle clock — forced on (refresh()'s idle/quiet gating isn't run
+    // in fixtures mode); the pinned shim clock makes it render deterministically.
+    ui::screens::ambient_show();
+    pump(2);
+    dump_png(out, "ambient");
+    ui::screens::ambient_hide();
 }
 
 int main(int argc, char** argv) {

@@ -53,6 +53,8 @@ enum class Str : uint16_t {
     DRYING_STARTED,
     // print queue
     QUEUE_EMPTY, QUEUE_POS,
+    // ambient idle clock
+    AMBIENT_ALL_IDLE, AMBIENT_NEXT,
     _COUNT
 };
 
