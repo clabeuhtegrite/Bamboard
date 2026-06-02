@@ -200,6 +200,15 @@ class Client {
     // the same schema this method already parses.
     bool apply_status_payload(int printer_id, JsonVariantConst doc);
 
+    // Apply a parsed payload into the matching cache. Split out of the fetch_*
+    // methods (which now do_get + call these) so the parse logic is reusable —
+    // the host simulator populates demo data through them offline, and they're
+    // unit-testable. Same JSON shapes the fetch_* methods read.
+    bool apply_stats_payload      (JsonVariantConst doc);   // GET /archives/stats
+    bool apply_recent_payload     (JsonVariantConst doc);   // GET /archives/slim (array)
+    bool apply_queue_payload      (JsonVariantConst doc);   // GET /queue (array)
+    bool apply_system_info_payload(JsonVariantConst doc);   // GET /system/info
+
     // --- Snapshots (cheap; safe to call from the LVGL task) ---
     void snapshot_printers(Printer* out, uint8_t& count) const;
     Stats snapshot_stats() const;

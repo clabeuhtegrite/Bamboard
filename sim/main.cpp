@@ -65,61 +65,88 @@ static void pump(int frames) {
     }
 }
 
+// Bambuddy URL the Settings screen reads (owned by main.cpp on device; the
+// shim defines it). The demo points it at a placeholder host.
+extern String g_cfg_bambuddy_url;
+
 // Push a synthetic /status payload through the REAL handler (the same one the
-// WebSocket push path calls). apply_status_payload creates the printer on first
+// REST + WebSocket paths use). apply_status_payload creates the printer on first
 // sight, so no network / fetch is needed.
-static void fixture_apply(int id, const char* json) {
+static void demo_status(int id, const char* json) {
     JsonDocument d;
-    DeserializationError e = deserializeJson(d, json);
-    if (e) { fprintf(stderr, "[sim] fixture parse error: %s\n", e.c_str()); return; }
+    if (deserializeJson(d, json)) return;   // ignore malformed demo JSON
     bambuddy::g_client.apply_status_payload(id, d.as<JsonVariantConst>());
 }
 
-// Deterministic synthetic states (no network, no secrets) so CI can validate —
-// and pixel-diff against committed baselines — the printing / multi-AMS / HMS
-// UI that the live data may never happen to show. getLocalTime() is pinned in
-// the shim so the wall-clock ETA renders reproducibly.
+// A deterministic demo dataset (no network, no secrets) so the README
+// screenshots show the device IN ACTION — a print running, a populated queue, a
+// drying multi-slot AMS, real-looking history — instead of whatever the owner's
+// printer happens to be doing. Renders the six README screens, driving the real
+// apply_*_payload handlers. The shim's getLocalTime()/millis() are pinned so the
+// time-derived UI (ETA, uptime) renders byte-reproducibly for visual regression.
 static void render_fixtures(const std::string& out) {
-    static const char* PRINTING =
+    auto& C = bambuddy::g_client;
+    JsonDocument d;
+
+    // A small farm: #1 (focused) mid-print with a chained AMS — first unit
+    // drying; #2 also printing; #3 idle.
+    demo_status(1,
         "{\"name\":\"Workshop X1C\",\"model\":\"X1C\",\"state\":\"printing\","
         "\"progress\":62,\"remaining_time\":4320,\"layer_num\":164,\"total_layers\":267,"
         "\"subtask_name\":\"benchy_v2_pla.3mf\","
         "\"temperatures\":{\"nozzle\":220,\"bed\":60,\"chamber\":38},"
         "\"speed_level\":2,\"chamber_light\":true,"
-        "\"cooling_fan_speed\":100,\"big_fan1_speed\":40,\"big_fan2_speed\":0,"
-        "\"hms_errors\":[]}";
-    static const char* MULTI_AMS =
-        "{\"name\":\"Workshop X1C\",\"model\":\"X1C\",\"state\":\"printing\","
-        "\"progress\":62,\"remaining_time\":4320,"
-        "\"temperatures\":{\"nozzle\":220,\"bed\":60,\"chamber\":38},"
+        "\"cooling_fan_speed\":100,\"big_fan1_speed\":40,\"big_fan2_speed\":0,\"hms_errors\":[],"
         "\"ams_exists\":true,\"ams\":["
-          "{\"id\":0,\"is_ams_ht\":false,\"humidity\":25,\"temp\":31,\"dry_time\":0,\"tray\":["
-            "{\"id\":0,\"tray_color\":\"FFFFFFFF\",\"tray_type\":\"PLA\",\"remain\":100},"
-            "{\"id\":1,\"tray_color\":\"000000FF\",\"tray_type\":\"PLA\",\"remain\":63},"
-            "{\"id\":2,\"tray_color\":\"\",\"tray_type\":\"\",\"remain\":0},"
-            "{\"id\":3,\"tray_color\":\"00000000\",\"tray_type\":\"PETG\",\"remain\":100}]},"
-          "{\"id\":1,\"is_ams_ht\":true,\"humidity\":18,\"temp\":48,\"dry_time\":135,\"tray\":["
-            "{\"id\":0,\"tray_color\":\"FF6A00FF\",\"tray_type\":\"ABS\",\"remain\":80}]}]}";
-    static const char* HMS =
-        "{\"name\":\"Workshop X1C\",\"model\":\"X1C\",\"state\":\"failed\",\"progress\":42,"
-        "\"temperatures\":{\"nozzle\":218,\"bed\":60,\"chamber\":40},"
-        "\"hms_errors\":[{\"code\":\"0300_0100\",\"severity\":\"fatal\"}]}";
+          "{\"id\":0,\"is_ams_ht\":false,\"humidity\":24,\"temp\":35,\"dry_time\":92,\"tray\":["
+            "{\"id\":0,\"tray_color\":\"F5F5F5FF\",\"tray_type\":\"PLA\",\"remain\":100},"
+            "{\"id\":1,\"tray_color\":\"101010FF\",\"tray_type\":\"PLA\",\"remain\":63},"
+            "{\"id\":2,\"tray_color\":\"00000000\",\"tray_type\":\"PETG\",\"remain\":88},"
+            "{\"id\":3,\"tray_color\":\"FF6A00FF\",\"tray_type\":\"TPU\",\"remain\":41}]},"
+          "{\"id\":1,\"is_ams_ht\":true,\"humidity\":12,\"temp\":52,\"dry_time\":0,\"tray\":["
+            "{\"id\":0,\"tray_color\":\"1E5FBEFF\",\"tray_type\":\"PA-CF\",\"remain\":77}]}]}");
+    demo_status(2,
+        "{\"name\":\"Garage P1S\",\"model\":\"P1S\",\"state\":\"printing\","
+        "\"progress\":34,\"remaining_time\":7980,"
+        "\"temperatures\":{\"nozzle\":245,\"bed\":80,\"chamber\":42}}");
+    demo_status(3,
+        "{\"name\":\"Office A1\",\"model\":\"A1\",\"state\":\"idle\","
+        "\"temperatures\":{\"nozzle\":28,\"bed\":24}}");
 
-    const int ID = 1;
-    ui::g_ui.set_selected_printer(ID);
+    // Pending print queue (targets resolve to the printers above; -1 = unassigned).
+    if (!deserializeJson(d,
+        "[{\"status\":\"pending\",\"archive_name\":\"phone_stand_v3.3mf\",\"printer_id\":1,\"position\":1},"
+        "{\"status\":\"pending\",\"archive_name\":\"calibration_cube.3mf\",\"printer_id\":2,\"position\":2},"
+        "{\"status\":\"pending\",\"archive_name\":\"gridfinity_2x2.3mf\",\"printer_id\":-1,\"position\":3}]"))
+        C.apply_queue_payload(d.as<JsonVariantConst>());
 
-    fixture_apply(ID, PRINTING);                 // Live while printing
-    ui::g_ui.go_to(ui::Screen::Dashboard); pump(30); dump_png(out, "fx_live_printing");
+    // History: lifetime stats + recent prints.
+    if (!deserializeJson(d,
+        "{\"total_prints\":128,\"successful_prints\":120,\"failed_prints\":8,"
+        "\"total_print_time_hours\":412.5,\"total_filament_grams\":3240}"))
+        C.apply_stats_payload(d.as<JsonVariantConst>());
+    if (!deserializeJson(d,
+        "[{\"print_name\":\"benchy_v2_pla.3mf\",\"status\":\"success\",\"actual_time_seconds\":1080,\"filament_used_grams\":12},"
+        "{\"print_name\":\"phone_stand_v3.3mf\",\"status\":\"success\",\"actual_time_seconds\":3840,\"filament_used_grams\":41},"
+        "{\"print_name\":\"vase_spiral.3mf\",\"status\":\"failed\",\"actual_time_seconds\":600,\"filament_used_grams\":7},"
+        "{\"print_name\":\"bracket_v2.3mf\",\"status\":\"success\",\"actual_time_seconds\":5400,\"filament_used_grams\":58}]"))
+        C.apply_recent_payload(d.as<JsonVariantConst>());
 
-    ui::g_ui.go_to(ui::Screen::Printers);  pump(30); dump_png(out, "fx_printers");
+    // Bambuddy server info + a configured URL (Settings shows both).
+    if (!deserializeJson(d, "{\"app\":{\"version\":\"0.2.4\"},\"system\":{\"uptime_formatted\":\"5d 12h 18m\"}}"))
+        C.apply_system_info_payload(d.as<JsonVariantConst>());
+    g_cfg_bambuddy_url = "https://bambuddy.local";
 
-    fixture_apply(ID, MULTI_AMS);                // unit 1: 4 slots (white / black / empty / clear PETG)
-    ui::g_ui.go_to(ui::Screen::Ams);       pump(30); dump_png(out, "fx_ams_multi");
-    ui::screens::ams_cycle_unit(+1);             // unit 2: AMS-HT with a live drying countdown
-    pump(30); dump_png(out, "fx_ams_dry");
+    ui::g_ui.set_selected_printer(1);
+    ui::screens::header_set_online(true, 24);
 
-    fixture_apply(ID, HMS);                       // HMS full-screen flash
-    ui::g_ui.go_to(ui::Screen::Dashboard); pump(30); dump_png(out, "fx_hms");
+    // The six README screens, named to match docs/screenshots / the Pages deploy.
+    ui::g_ui.go_to(ui::Screen::Dashboard); pump(30); dump_png(out, "live");
+    ui::g_ui.go_to(ui::Screen::Ams);       pump(30); dump_png(out, "ams");
+    ui::g_ui.go_to(ui::Screen::Printers);  pump(30); dump_png(out, "printers");
+    ui::g_ui.go_to(ui::Screen::Queue);     pump(30); dump_png(out, "queue");
+    ui::g_ui.go_to(ui::Screen::History);   pump(30); dump_png(out, "history");
+    ui::g_ui.go_to(ui::Screen::Settings);  pump(30); dump_png(out, "settings");
 }
 
 int main(int argc, char** argv) {

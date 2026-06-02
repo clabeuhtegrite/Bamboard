@@ -399,14 +399,7 @@ bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
     return true;
 }
 
-bool Client::fetch_statistics() {
-    // Bambuddy 0.2.x exposes archive stats under /archives/stats, not
-    // /statistics. Field names changed too: total_print_time_hours
-    // replaces total_print_time, total_filament_grams replaces
-    // total_filament_used, and success_rate isn't returned (we compute
-    // it from the counts).
-    JsonDocument doc(&psram_json_allocator());
-    if (!do_get("/api/v1/archives/stats", doc)) return false;
+bool Client::apply_stats_payload(JsonVariantConst doc) {
     xSemaphoreTake(mtx_, portMAX_DELAY);
     stats_.total_prints      = doc["total_prints"]      | 0;
     stats_.successful_prints = doc["successful_prints"] | 0;
@@ -421,23 +414,26 @@ bool Client::fetch_statistics() {
     return true;
 }
 
-bool Client::fetch_recent_archives(uint8_t limit) {
-    if (limit == 0 || limit > MAX_RECENT_ARCHIVES) limit = MAX_RECENT_ARCHIVES;
-    // /archives/slim returns a leaner shape — exactly what we render.
-    // Field renames vs. v0.1: name → print_name, duration → actual_time_seconds
-    // (falling back to print_time_seconds if the run wasn't tracked),
-    // filament_used → filament_used_grams.
-    String path = String("/api/v1/archives/slim?limit=") + limit;
+bool Client::fetch_statistics() {
+    // Bambuddy 0.2.x exposes archive stats under /archives/stats, not
+    // /statistics. Field names changed too: total_print_time_hours
+    // replaces total_print_time, total_filament_grams replaces
+    // total_filament_used, and success_rate isn't returned (we compute
+    // it from the counts).
     JsonDocument doc(&psram_json_allocator());
-    if (!do_get(path, doc)) return false;
-    if (!doc.is<JsonArray>()) {
+    if (!do_get("/api/v1/archives/stats", doc)) return false;
+    return apply_stats_payload(doc.as<JsonVariantConst>());
+}
+
+bool Client::apply_recent_payload(JsonVariantConst doc) {
+    if (!doc.is<JsonArrayConst>()) {
         last_error_ = "archives/slim: expected array";
         return false;
     }
-    JsonArray arr = doc.as<JsonArray>();
+    JsonArrayConst arr = doc.as<JsonArrayConst>();
     xSemaphoreTake(mtx_, portMAX_DELAY);
     recent_count_ = 0;
-    for (JsonObject obj : arr) {
+    for (JsonObjectConst obj : arr) {
         if (recent_count_ >= MAX_RECENT_ARCHIVES) break;
         Archive& a    = recent_[recent_count_++];
         a.name        = (const char*)(obj["print_name"] | "");
@@ -451,19 +447,27 @@ bool Client::fetch_recent_archives(uint8_t limit) {
     return true;
 }
 
-bool Client::fetch_queue() {
-    // The queue endpoint also carries completed/cancelled history; a desk
-    // monitor only cares about what's still waiting, so keep "pending" items.
+bool Client::fetch_recent_archives(uint8_t limit) {
+    if (limit == 0 || limit > MAX_RECENT_ARCHIVES) limit = MAX_RECENT_ARCHIVES;
+    // /archives/slim returns a leaner shape — exactly what we render.
+    // Field renames vs. v0.1: name → print_name, duration → actual_time_seconds
+    // (falling back to print_time_seconds if the run wasn't tracked),
+    // filament_used → filament_used_grams.
+    String path = String("/api/v1/archives/slim?limit=") + limit;
     JsonDocument doc(&psram_json_allocator());
-    if (!do_get("/api/v1/queue", doc)) return false;
-    if (!doc.is<JsonArray>()) {
+    if (!do_get(path, doc)) return false;
+    return apply_recent_payload(doc.as<JsonVariantConst>());
+}
+
+bool Client::apply_queue_payload(JsonVariantConst doc) {
+    if (!doc.is<JsonArrayConst>()) {
         last_error_ = "queue: expected array";
         return false;
     }
-    JsonArray arr = doc.as<JsonArray>();
+    JsonArrayConst arr = doc.as<JsonArrayConst>();
     xSemaphoreTake(mtx_, portMAX_DELAY);
     queue_count_ = 0;
-    for (JsonObject obj : arr) {
+    for (JsonObjectConst obj : arr) {
         const char* st = obj["status"] | "";
         if (strcmp(st, "pending") != 0) continue;
         if (queue_count_ >= MAX_QUEUE_ITEMS) break;
@@ -478,14 +482,26 @@ bool Client::fetch_queue() {
     return true;
 }
 
-bool Client::fetch_system_info() {
+bool Client::fetch_queue() {
+    // The queue endpoint also carries completed/cancelled history; a desk
+    // monitor only cares about what's still waiting, so keep "pending" items.
     JsonDocument doc(&psram_json_allocator());
-    if (!do_get("/api/v1/system/info", doc)) return false;
+    if (!do_get("/api/v1/queue", doc)) return false;
+    return apply_queue_payload(doc.as<JsonVariantConst>());
+}
+
+bool Client::apply_system_info_payload(JsonVariantConst doc) {
     xSemaphoreTake(mtx_, portMAX_DELAY);
     sysinfo_.version = (const char*)(doc["app"]["version"]              | "");
     sysinfo_.uptime  = (const char*)(doc["system"]["uptime_formatted"] | "");
     xSemaphoreGive(mtx_);
     return true;
+}
+
+bool Client::fetch_system_info() {
+    JsonDocument doc(&psram_json_allocator());
+    if (!do_get("/api/v1/system/info", doc)) return false;
+    return apply_system_info_payload(doc.as<JsonVariantConst>());
 }
 
 bool Client::ping_health(uint32_t* latency_ms_out) {

@@ -24,6 +24,10 @@
 
 // ---- timing ----------------------------------------------------------------
 uint32_t millis() {
+    // Pinned in demo-fixture mode so time-derived UI (Settings uptime) renders
+    // byte-reproducibly for the visual-regression baselines. Real clock otherwise.
+    static const bool demo = getenv("SIM_FIXTURES_ONLY") != nullptr;
+    if (demo) return 70980000u;   // -> uptime "19h 43m 00s"
     static auto t0 = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
     return (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(now - t0).count();
