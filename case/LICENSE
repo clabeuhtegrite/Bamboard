@@ -1,0 +1,28 @@
+Bamboard enclosure — license & attribution
+===========================================
+
+The 3D-printable enclosure in this directory (case.stl, cover.stl,
+stand.stl) is NOT part of Bamboard's MIT-licensed code. It is the work of a
+third-party designer, redistributed here under its original license.
+
+  Work:     "ESP32-S3 Klipper Dashboard Case with Weather, Crypto & Moonraker"
+  Author:   TomE1337
+  Source:   https://www.printables.com/model/1716582-esp32-s3-klipper-dashboard-case-with-weather-crypt
+  Profile:  https://www.printables.com/@TomE1337_2178164
+  License:  Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+            International (CC BY-NC-SA 4.0)
+            https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+  Modifications: none — the STL files are redistributed as published.
+
+Under CC BY-NC-SA 4.0 you are free to share and adapt these files for
+NON-COMMERCIAL purposes, provided you give appropriate credit to TomE1337,
+link to the license, indicate if changes were made, and license any
+derivative works under the same terms (ShareAlike).
+
+The project's hero render (docs/screenshots/) composites Bamboard's live UI
+onto TomE1337's product photo. As a derivative of that photo it is likewise
+licensed CC BY-NC-SA 4.0, with attribution to TomE1337.
+
+Bamboard's own source code, documentation and other assets remain under the
+MIT license — see the repository-root LICENSE file.

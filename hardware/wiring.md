@@ -37,7 +37,7 @@ USB-C from any reasonable 5 V / 1 A source. Total draw is ~250 mA peak
       cables bundled with phone chargers are a common gotcha — the
       device will boot but PlatformIO won't see it for the first flash).
 - [ ] The board's BOOT button is reachable from the outside of the case
-      (the parametric SCAD model leaves it exposed by default).
+      (TomE1337's enclosure exposes it by default).
 
 ## Factory reset (wipe all persisted settings)
 

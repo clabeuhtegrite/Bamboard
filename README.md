@@ -11,9 +11,10 @@ printers are doing. It talks **only** to your self-hosted Bambuddy
 instance over its REST + WebSocket API — your printers never see a
 third-party cloud.
 
-Total BOM is around **20 €** (single all-in-one board, USB-C cable, 4
-screws, ~70 g of filament for the case). The enclosure is FDM-printable
-on any Bambu (or other) printer with a 0.4 mm nozzle.
+Total BOM is around **20 €** (single all-in-one board, USB-C cable, a few
+screws, ~120 g of filament for the case). The enclosure is a community
+design by **TomE1337** (CC BY-NC-SA 4.0), FDM-printable on any Bambu (or
+other) printer with a 0.4 mm nozzle.
 
 ![Bamboard assembled](docs/screenshots/device_render.svg)
 
@@ -70,9 +71,12 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 ## Quick start
 
 1. Order the parts from `hardware/bom.md` (~20 €).
-2. Print the enclosure: `case/bamboard.scad` → export STL → slice → print PLA / PETG.
-3. Drop the Guition board into the front shell, clip the back shell on,
-   drive four M3 × 6 mm screws. (No wiring — everything's on the one PCB.)
+2. Print the enclosure (3 parts) from [`case/`](case/) — TomE1337's ESP32-S3
+   dashboard case — then slice → print in PLA / PETG.
+3. Seat the Guition board in the case, close the cover, and drop it into the
+   stand. (No wiring — everything's on the one PCB.) See [`case/`](case/) and
+   TomE1337's [Printables page](https://www.printables.com/model/1716582-esp32-s3-klipper-dashboard-case-with-weather-crypt)
+   for the exact fit + fasteners.
 4. Flash the firmware: plug the board in via USB-C, open the
    [web installer](https://clabeuhtegrite.github.io/Bamboard/) in Chrome /
    Edge / Opera and click **Connect**. See [docs/flashing.md](docs/flashing.md)
@@ -99,7 +103,7 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
 ├── sim/             Host LVGL simulator — CI renders every screen to PNG for review
 ├── web/             Browser-based flasher (ESP Web Tools → GitHub Pages)
 ├── hardware/        Bill of materials, wiring diagram
-├── case/            Parametric OpenSCAD enclosure + STL exports
+├── case/            3D-printable enclosure (STL) by TomE1337 — CC BY-NC-SA
 └── docs/            Assembly, flashing, configuration guides
 ```
 
@@ -110,7 +114,18 @@ on any Bambu (or other) printer with a 0.4 mm nozzle.
   permissions (add `printers:control` if you want to use the inline
   Speed / Clear plate / Clear HMS actions).
 
+## Credits
+
+The 3D-printable enclosure is the **"ESP32-S3 Klipper Dashboard Case"** by
+**[TomE1337](https://www.printables.com/@TomE1337_2178164)**
+([model](https://www.printables.com/model/1716582-esp32-s3-klipper-dashboard-case-with-weather-crypt)),
+used and redistributed under **CC BY-NC-SA 4.0**. The hero render composites
+Bamboard's live UI onto TomE1337's product photo and is likewise CC BY-NC-SA 4.0.
+See [`case/LICENSE`](case/LICENSE).
+
 ## License
 
-MIT — see [LICENSE](LICENSE). Bamboard is not affiliated with Bambu Lab
-or with the Bambuddy project.
+Bamboard's own code and documentation are **MIT** — see [LICENSE](LICENSE).
+The enclosure in [`case/`](case/) and the hero render are **CC BY-NC-SA 4.0**
+(© TomE1337), **not** MIT. Bamboard is not affiliated with Bambu Lab, with the
+Bambuddy project, or with TomE1337.

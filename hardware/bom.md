@@ -12,8 +12,8 @@ trivial — there's literally one cable to plug in.
 |---|-------------------------------------------------------|-----|--------|-------|
 | 1 | Guition **JC4827W543** all-in-one board               | 1   | 16 €   | ESP32-S3-WROOM-1 (8 MB PSRAM / 4 MB flash) + 4.3" IPS 480×272 + capacitive touch (GT911) + USB-C native. Sometimes labelled "Guition ESP32-S3 4.3 inch IPS LCD touch module". |
 | 2 | USB-C cable (data, not power-only)                    | 1   | 2 €    | For flashing and powering the device. The thin white cables bundled with phone chargers are often charge-only — look for "data" / "USB 2.0" in the listing. |
-| 3 | M3 × 6 mm self-tapping screws                         | 4   | 0.50 € | To clip the case halves together. The case is parametric — you can swap for M2.5 by editing `case/bamboard.scad`. |
-| 4 | PLA / PETG filament                                   | ~70 g | 1.10 € | For the printed enclosure. PETG is preferred since the board runs slightly warm. |
+| 3 | Case fasteners                                        | —   | ~0.50 € | Per TomE1337's enclosure — see the [Printables page](https://www.printables.com/model/1716582-esp32-s3-klipper-dashboard-case-with-weather-crypt) for the exact screws / heat-set inserts (if any). |
+| 4 | PLA / PETG filament                                   | ~120 g | 1.90 € | For the 3-part printed enclosure (case + cover + stand) designed by **TomE1337** (CC BY-NC-SA 4.0). PETG preferred — the board runs slightly warm. See [`case/`](../case/). |
 
 **Total: ~20 €**
 
