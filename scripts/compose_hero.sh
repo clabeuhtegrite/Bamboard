@@ -45,11 +45,14 @@ echo "case ${W}x${H} | live ${LW}x${LH} | quad TL($tlx,$tly) TR($trx,$try) BR($b
 
 # Warp the live screenshot onto a transparent canvas the size of the photo,
 # mapping its four corners to the screen quad, then composite it over the photo.
-# -background none so -extent pads with transparency (not the default white,
-# which -distort would then smear across the photo).
-$IM "$LIVE" -alpha set -virtual-pixel transparent -background none -extent "${W}x${H}" \
-  -distort Perspective "0,0 ${tlx},${tly} ${LW},0 ${trx},${try} ${LW},${LH} ${brx},${bry} 0,${LH} ${blx},${bly}" \
-  miff:- | $IM "$CASE" miff:- -composite "$OUT"
+# Warp the (upscaled) screenshot onto the screen quad with +distort, which sizes
+# and offsets the layer itself, then flatten it onto the photo. Using -extent to
+# the photo size would crop the layer whenever the upscaled screenshot is wider
+# than the photo (that crop let the original screen show through = "two photos").
+$IM "$CASE" \
+  \( "$LIVE" -alpha set -virtual-pixel none \
+     +distort Perspective "0,0 ${tlx},${tly} ${LW},0 ${trx},${try} ${LW},${LH} ${brx},${bry} 0,${LH} ${blx},${bly}" \) \
+  -flatten "$OUT"
 echo "wrote $OUT"
 
 if [ "${HERO_DEBUG:-0}" = "1" ]; then
