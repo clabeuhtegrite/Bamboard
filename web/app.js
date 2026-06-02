@@ -58,7 +58,16 @@
     var shots = $$(".shot", showcase);
     var numEl = $("#shotNum"), descEl = $("#shotDesc");
 
+    var activeKey = "live";
+    // Showcase descriptions live in the i18n dictionary (scr.desc.*) so they
+    // follow the active language; fall back to the English SCREENS table.
+    var descFor = function (key) {
+      var v = (window.BB_I18N && window.BB_I18N.t) ? window.BB_I18N.t("scr.desc." + key) : null;
+      return (typeof v === "string" && v) ? v : (SCREENS[key] ? SCREENS[key][1] : "");
+    };
+
     var select = function (key, focus) {
+      activeKey = key;
       tabs.forEach(function (t) {
         var on = t.getAttribute("data-screen") === key;
         t.classList.toggle("is-active", on);
@@ -69,7 +78,7 @@
       shots.forEach(function (s) { s.classList.toggle("is-active", s.getAttribute("data-screen") === key); });
       if (SCREENS[key]) {
         if (numEl) numEl.textContent = SCREENS[key][0];
-        if (descEl) descEl.innerHTML = SCREENS[key][1];
+        if (descEl) descEl.innerHTML = descFor(key);
       }
     };
 
@@ -82,6 +91,13 @@
         var n = (i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
         select(tabs[n].getAttribute("data-screen"), true);
       });
+    });
+
+    // Render the initial description in the detected language, and re-render it
+    // when the visitor switches language (i18n.js dispatches bb:lang).
+    select(activeKey);
+    document.addEventListener("bb:lang", function () {
+      if (descEl) descEl.innerHTML = descFor(activeKey);
     });
   }
 
