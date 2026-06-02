@@ -49,7 +49,7 @@
     printers: ["03", "<b>Printers list.</b> Every printer Bambuddy knows, highlighted by state. Rows that are printing carry inline temperatures and ETA; tap one to focus it and jump to Live."],
     queue:    ["04", "<b>Print queue.</b> The jobs Bambuddy still has pending, in order, each tagged with its target printer."],
     history:  ["05", "<b>History &amp; stats.</b> The last prints alongside lifetime KPIs — success rate, total filament and total print time."],
-    settings: ["06", "<b>Settings.</b> Bambuddy URL and the server’s version + uptime, local IP, Wi-Fi RSSI and device uptime, a 1–5 brightness selector, and a two-tap factory reset."]
+    settings: ["06", "<b>Settings.</b> Bambuddy URL and the server’s version + uptime, local IP, Wi-Fi RSSI and device uptime, a 1–5 brightness selector, a Wi-Fi-setup button (re-opens the captive portal without wiping your details), and a two-tap factory reset."]
   };
   var showcase = $("#showcase");
   var tabs = $$(".screen-tab");

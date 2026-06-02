@@ -99,8 +99,9 @@ on the latest version, boot just continues.
 
 The device also **reboots itself once a day at local midnight** so this check
 runs unattended — a device that's never manually power-cycled still picks up
-new releases overnight. The hour and timezone are configurable in the
-`schedule` namespace in `config.h` (see [configuration.md](configuration.md)).
+new releases overnight. The hour and timezone are set in the captive portal
+(stored in NVS); the `schedule` namespace in `config.h` only holds the
+first-boot defaults (see [configuration.md](configuration.md)).
 
 How it works:
 

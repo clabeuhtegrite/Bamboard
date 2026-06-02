@@ -30,9 +30,14 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- ESP Web Tools: the <esp-web-install-button> web component. Pinned to a
-       major version so a breaking release can't silently change the flow. -->
-  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <!-- ESP Web Tools: the <esp-web-install-button> web component. Pinned to an
+       EXACT version + Subresource Integrity so a floating tag or a CDN
+       compromise can't silently change the bytes that drive Web Serial
+       flashing. (The module's own sub-imports from unpkg aren't SRI-covered;
+       vendoring the bundle same-origin would close that — possible follow-up.) -->
+  <script type="module" crossorigin="anonymous"
+          integrity="sha384-2Ea4WL8tjFb0qQKUqBoX45KlPVoUgL+Z3zUqsD0MHmtJ3faDbfNyZulLg/LfYDUZ"
+          src="https://unpkg.com/esp-web-tools@10.2.1/dist/web/install-button.js?module"></script>
 
   <script type="application/ld+json">
   {

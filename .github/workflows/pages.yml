@@ -56,11 +56,18 @@ jobs:
           rsvg-convert -w 1200 -h 630 web/assets/og-image.svg -o _site/assets/og-image.png
 
           # Pull the factory image + version from the latest published release.
-          TAG="$(gh release view --repo "$REPO" --json tagName -q .tagName)"
-          FULL="${TAG#v}"
-          echo "latest release: $TAG (version $FULL)"
-          gh release download "$TAG" --repo "$REPO" \
-            --pattern bamboard-factory.bin --dir _site
+          # Tolerate "no release yet" (fresh repo / web-only edit before the
+          # first v* tag): deploy the showcase with the dev-sentinel manifest
+          # (app.js hides Install on 0.0.0-dev) instead of aborting the deploy.
+          if TAG="$(gh release view --repo "$REPO" --json tagName -q .tagName 2>/dev/null)"; then
+            FULL="${TAG#v}"
+            echo "latest release: $TAG (version $FULL)"
+            gh release download "$TAG" --repo "$REPO" \
+              --pattern bamboard-factory.bin --dir _site
+          else
+            FULL="0.0.0-dev"
+            echo "no published release yet — deploying showcase with the dev manifest"
+          fi
 
           # Version-stamped ESP Web Tools manifest; the factory bin sits next to
           # it (same origin), so its path is just the filename.
