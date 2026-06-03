@@ -67,6 +67,7 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*FILAMENT*/      {"FILAMENT", "FILAMENTO", "FILAMENT", "FILAMENTO", "FILAMENT"},
     /*TIME*/          {"TIME", "TIEMPO", "TEMPS", "TEMPO", "ZEIT"},
     /*NO_PRINTS*/     {"No prints yet.", "Sin impresiones.", "Aucune impression.", "Sem impressões.", "Noch keine Drucke."},
+    /*UNNAMED*/       {"(unnamed)", "(sin nombre)", "(sans nom)", "(sem nome)", "(ohne Name)"},
     // -- settings --
     /*BRIGHTNESS*/    {"Brightness", "Brillo", "Luminosité", "Brilho", "Helligkeit"},
     /*BRIGHTNESS_FMT*/{"Brightness %u / 5", "Brillo %u / 5", "Luminosité %u / 5", "Brilho %u / 5", "Helligkeit %u / 5"},
@@ -79,7 +80,6 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*CONFIRM_RESET*/ {"Tap again to confirm (3 s)", "Toca otra vez (3 s)", "Touchez encore (3 s)", "Toque novamente (3 s)", "Nochmal tippen (3 s)"},
     /*WIFI_SETUP*/    {"Wi-Fi setup", "Config. Wi-Fi", "Config. Wi-Fi", "Config. Wi-Fi", "Wi-Fi-Setup"},
     /*WIFI_OPENING*/  {"Opening Wi-Fi setup...", "Abriendo config. Wi-Fi...", "Ouverture config. Wi-Fi...", "A abrir config. Wi-Fi...", "Wi-Fi-Setup wird geöffnet..."},
-    /*LANGUAGE*/      {"Language", "Idioma", "Langue", "Idioma", "Sprache"},
     // -- overlays --
     /*UPDATING_FW*/   {"Updating firmware", "Actualizando firmware", "Mise à jour du firmware", "A atualizar firmware", "Firmware-Update"},
     /*DONT_POWER_OFF*/{"Do not power off the device.", "No apague el dispositivo.", "N'éteignez pas l'appareil.", "Não desligue o aparelho.", "Gerät nicht ausschalten."},
@@ -101,11 +101,12 @@ static const char* const T[][(int)Lang::COUNT] = {
         "Keine Drucker in Bambuddy.\nFügen Sie einen in der Bambuddy-Oberfläche hinzu."},
     /*RESETTING*/     {"Resetting...", "Restableciendo...", "Réinitialisation...", "A repor...", "Zurücksetzen..."},
     /*NOT_CONFIGURED*/{"(not configured)", "(sin configurar)", "(non configuré)", "(não configurado)", "(nicht konfiguriert)"},
-    /*DRYING_STARTED*/{"Drying %s @ %d °C", "Secando %s @ %d °C", "Séchage %s @ %d °C", "Secagem %s @ %d °C", "Trocknen %s @ %d °C"},
+    /*DRYING_STARTED*/{"Drying started", "Secado iniciado", "Séchage démarré", "Secagem iniciada", "Trocknen gestartet"},
     /*QUEUE_EMPTY*/   {"Queue is empty.", "La cola está vacía.", "La file est vide.", "A fila está vazia.", "Warteschlange leer."},
     /*QUEUE_POS*/     {"#%d", "#%d", "#%d", "#%d", "#%d"},
     /*QUEUE_REMOVED*/      {"Removed from queue", "Eliminado de la cola", "Retiré de la file", "Removido da fila", "Aus Warteschlange entfernt"},
     /*QUEUE_REMOVE_FAILED*/{"Remove failed", "Error al eliminar", "Échec du retrait", "Falha ao remover", "Entfernen fehlgeschlagen"},
+    /*CONFIRM_REMOVE*/{"Tap again to remove (3 s)", "Toca otra vez para quitar (3 s)", "Touchez encore pour retirer (3 s)", "Toque novamente p/ remover (3 s)", "Nochmal zum Entfernen (3 s)"},
     /*AMBIENT_ALL_IDLE*/ {"All idle", "Todo inactivo", "Tout au repos", "Tudo parado", "Alles im Leerlauf"},
     /*AMBIENT_NEXT*/  {"Next", "Siguiente", "Suivant", "Próximo", "Nächste"},
 };

@@ -8,8 +8,9 @@
 // (Montserrat + Latin-1). Order matters — it's the on-wire NVS index.
 //
 // NOT translated (kept verbatim): brand/acronym terms (Bamboard, Bambuddy,
-// AMS, HMS), units (°C, %, mm, ms), and the Bambu speed-mode names
-// (Silent / Standard / Sport / Ludicrous).
+// AMS, HMS), units (°C, %, mm, ms), the Bambu speed-mode names
+// (Silent / Standard / Sport / Ludicrous), and the 3-letter fan tags on the
+// Live fan readout (Fan / Aux / Cha) — universal technical abbreviations.
 
 #pragma once
 
@@ -39,10 +40,10 @@ enum class Str : uint16_t {
     // printers
     ADD_IN_BAMBUDDY,
     // history
-    PRINTS, SUCCESS, FILAMENT, TIME, NO_PRINTS,
+    PRINTS, SUCCESS, FILAMENT, TIME, NO_PRINTS, UNNAMED,
     // settings
     BRIGHTNESS, BRIGHTNESS_FMT, FIRMWARE, LOCAL_IP, WIFI_RSSI, UPTIME, SERVER,
-    FACTORY_RESET, CONFIRM_RESET, WIFI_SETUP, WIFI_OPENING, LANGUAGE,
+    FACTORY_RESET, CONFIRM_RESET, WIFI_SETUP, WIFI_OPENING,
     // overlays
     UPDATING_FW, DONT_POWER_OFF, UPDATE_FAILED, HMS_ERROR, CHECK_PRINTER,
     TAP_DISMISS,
@@ -52,7 +53,7 @@ enum class Str : uint16_t {
     LAYER, NO_FILE, IDLE_PAREN, NO_PRINTERS_FOUND, RESETTING, NOT_CONFIGURED,
     DRYING_STARTED,
     // print queue
-    QUEUE_EMPTY, QUEUE_POS, QUEUE_REMOVED, QUEUE_REMOVE_FAILED,
+    QUEUE_EMPTY, QUEUE_POS, QUEUE_REMOVED, QUEUE_REMOVE_FAILED, CONFIRM_REMOVE,
     // ambient idle clock
     AMBIENT_ALL_IDLE, AMBIENT_NEXT,
     _COUNT

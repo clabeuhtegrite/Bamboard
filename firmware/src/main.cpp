@@ -580,6 +580,7 @@ static void control_process() {
             case ui::ctrl::Light:  ok = cl.set_chamber_light(c.pid, c.a != 0); break;
             case ui::ctrl::DryStart:
                 ok = cl.start_ams_drying(c.pid, c.a, c.c, c.b);   // a=unit c=min b=°C
+                ok_str = i18n::Str::DRYING_STARTED;
                 fail_str = i18n::Str::START_DRYING_FAILED; break;
             case ui::ctrl::DryStop:
                 ok = cl.stop_ams_drying(c.pid, c.a);

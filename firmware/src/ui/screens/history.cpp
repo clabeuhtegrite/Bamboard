@@ -165,7 +165,8 @@ void update_history() {
             lv_color_hex(archive_status_color(ar[i].status)), 0);
 
         lv_label_set_text(r.name,
-            ar[i].name.length() ? ar[i].name.c_str() : "(unnamed)");
+            ar[i].name.length() ? ar[i].name.c_str()
+                                : i18n::tr(i18n::Str::UNNAMED));
 
         char meta[24];
         snprintf(meta, sizeof(meta), "%lum \xC2\xB7 %.0fg",
