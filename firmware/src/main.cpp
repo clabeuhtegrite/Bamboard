@@ -256,7 +256,39 @@ static WiFiManager s_wm;
 // live in net/host_valid.h so they can be unit-tested on the host. Used below
 // in start_provisioning() via the netcfg:: namespace.
 
+// Minimal HTML-attribute escape for values pre-filled into the captive-portal
+// form. The stored host is restricted to a safe charset by host_valid, but the
+// API key and CF tokens are free-form: a stored value containing a double quote
+// would otherwise break out of the value="..." attribute (a self-inflicted XSS
+// in the AP-only portal). The browser decodes the entities back on submit, so a
+// round-trip with no edit still yields the original secret.
+static String html_attr_escape(const String& in) {
+    String out;
+    out.reserve(in.length() + 8);
+    for (size_t i = 0; i < in.length(); ++i) {
+        char c = in[i];
+        switch (c) {
+            case '&':  out += "&amp;";  break;
+            case '"':  out += "&quot;"; break;
+            case '\'': out += "&#39;";  break;
+            case '<':  out += "&lt;";   break;
+            case '>':  out += "&gt;";   break;
+            default:   out += c;        break;
+        }
+    }
+    return out;
+}
+
 static void start_provisioning() {
+    // Per-device setup-AP password: derive it from the MAC so every unit differs
+    // (see provision::AP_PASSWORD_PREFIX). The user reads the full value off the
+    // on-screen prompt below, so a per-device secret costs them nothing.
+    uint8_t mac[6] = {0};
+    WiFi.macAddress(mac);
+    char ap_pass[20];
+    snprintf(ap_pass, sizeof(ap_pass), "%s%02X%02X",
+             provision::AP_PASSWORD_PREFIX, mac[4], mac[5]);
+
     // Show a friendly screen while we run the captive portal.
     lv_obj_t* scr = lv_scr_act();
     lv_obj_clean(scr);
@@ -268,12 +300,15 @@ static void start_provisioning() {
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 24);
 
     lv_obj_t* sub = lv_label_create(scr);
-    lv_label_set_text(sub,
+    char sub_txt[256];
+    snprintf(sub_txt, sizeof(sub_txt),
         "Connect to Wi-Fi network:\n"
-        "    Bamboard-setup\n"
-        "Password: bamboard\n\n"
+        "    %s\n"
+        "Password: %s\n\n"
         "Then open http://192.168.4.1 in a browser\n"
-        "and fill in Wi-Fi, Bambuddy + timezone details.");
+        "and fill in Wi-Fi, Bambuddy + timezone details.",
+        provision::AP_SSID, ap_pass);
+    lv_label_set_text(sub, sub_txt);
     lv_obj_set_style_text_color(sub, lv_color_hex(::ui::C_TEXT), 0);
     lv_obj_set_style_text_font(sub, &bb_font_20, 0);
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 0);
@@ -296,8 +331,9 @@ static void start_provisioning() {
     WiFiManagerParameter p_https("https",
         "Use HTTPS (enables a domain + Cloudflare Access)", "T", 2,
         pre_https ? "type=\"checkbox\" checked" : "type=\"checkbox\"");
+    String pre_key = html_attr_escape(g_cfg_api_key);
     WiFiManagerParameter p_key("key", "Bambuddy API key",
-        g_cfg_api_key.c_str(), 79);
+        pre_key.c_str(), 79);
 
     // Cloudflare Access service token — only meaningful (and only saved) when
     // HTTPS is on; the script below reveals these two rows only then.
@@ -305,10 +341,12 @@ static void start_provisioning() {
         "<p id=\"cf_hint\"><b>Cloudflare Access</b> (optional, HTTPS only): paste a "
         "service token to reach a Bambuddy published behind CF Access. Leave blank "
         "for a plain HTTPS endpoint.</p>");
+    String pre_cf_id     = html_attr_escape(g_cfg_cf_id);
+    String pre_cf_secret = html_attr_escape(g_cfg_cf_secret);
     WiFiManagerParameter p_cf_id("cf_id", "CF-Access-Client-Id",
-        g_cfg_cf_id.c_str(), 80);
+        pre_cf_id.c_str(), 80);
     WiFiManagerParameter p_cf_secret("cf_secret", "CF-Access-Client-Secret",
-        g_cfg_cf_secret.c_str(), 96, "type=\"password\"");
+        pre_cf_secret.c_str(), 96, "type=\"password\"");
 
     // Timezone (POSIX TZ string — cryptic, so show ready-to-paste examples)
     // and the daily-reboot hour (0-23, or blank to turn the reboot off).
@@ -378,7 +416,7 @@ static void start_provisioning() {
     s_wm.setConfigPortalTimeout(provision::PORTAL_TIMEOUT_S);
     s_wm.setBreakAfterConfig(true);
 
-    if (!s_wm.startConfigPortal(provision::AP_SSID, provision::AP_PASSWORD)) {
+    if (!s_wm.startConfigPortal(provision::AP_SSID, ap_pass)) {
         log_w("Captive portal timed out; rebooting");
         delay(500);
         ESP.restart();
@@ -407,6 +445,11 @@ static void start_provisioning() {
 
     g_cfg_bambuddy_url = String(use_https ? "https://" : "http://") + raw;
     g_cfg_api_key      = p_key.getValue();
+    g_cfg_api_key.trim();
+    // Strip CR/LF: the key is emitted verbatim as the X-API-Key request header
+    // (bambuddy_client.cpp); a pasted trailing newline must not be able to
+    // inject extra HTTP headers. Mirrors the CF-token sanitisation below.
+    g_cfg_api_key.replace("\r", ""); g_cfg_api_key.replace("\n", "");
 
     // The CF service token only applies to https; drop it on http so a stale
     // token can't linger and leak onto a plain-text connection.

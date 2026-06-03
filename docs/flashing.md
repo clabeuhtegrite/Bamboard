@@ -65,8 +65,9 @@ WiFiManager and the WebSockets client.
 On a fresh device with no saved settings:
 
 1. The screen displays the **Bamboard setup** instructions.
-2. The device exposes a Wi-Fi AP called `Bamboard-setup` (password
-   `bamboard`).
+2. The device exposes a Wi-Fi AP called `Bamboard-setup`. The password is
+   **unique per device** (`bamboard` + the last 4 hex of the MAC, e.g.
+   `bamboardA1B2`) and is shown on the device's own screen — read it there.
 3. Connect any phone/laptop to it. Most OSes will open a captive portal
    automatically. If not, browse to `http://192.168.4.1`.
 4. Pick your home Wi-Fi network, enter the password, **and** fill in the

@@ -237,6 +237,13 @@ constexpr const char* BIN_URL_PREFIX =
 // must still fall through to normal operation instead of hanging at boot.
 constexpr uint32_t CHECK_TIMEOUT_MS = 8000;
 
+// Hard cap on the manifest response body. The real manifest is a few hundred
+// bytes; a spoofed or misbehaving server (or a MITM that somehow presented a
+// valid chain) returning a multi-megabyte "manifest" would otherwise be slurped
+// whole into a heap String and could exhaust RAM — an OOM that, at boot, could
+// loop. Reject anything that declares a larger body before reading it.
+constexpr int MANIFEST_MAX_BYTES = 8192;
+
 // Anti-brick boot verification. A freshly-OTA'd image (which passed the MD5
 // check but could still be a bad *build*) must reach VERIFY_HEALTHY_MS of uptime
 // to confirm itself; if it crash-loops / hangs and fails to confirm for
@@ -295,7 +302,12 @@ constexpr const char* NTP_SERVER2 = "time.nist.gov";
 namespace provision {
 
 constexpr const char* AP_SSID     = "Bamboard-setup";
-constexpr const char* AP_PASSWORD = "bamboard";
+// Prefix only: start_provisioning() appends the last two bytes of the device
+// MAC (e.g. "bamboardA1B2") so every unit's setup-AP password is unique. A
+// single shared password would let any bystander within Wi-Fi range join the
+// portal during the provisioning window and overwrite the device's config. The
+// user reads the full per-device password straight off the on-screen prompt.
+constexpr const char* AP_PASSWORD_PREFIX = "bamboard";
 constexpr uint32_t    PORTAL_TIMEOUT_S = 300;
 
 }  // namespace provision
