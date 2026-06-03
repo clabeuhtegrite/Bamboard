@@ -68,6 +68,7 @@ void Manager::begin() {
 
     screens::build_toast(s_root);
     screens::build_hms_flash(s_root);
+    screens::build_print_done(s_root);
     screens::build_ota_overlay(s_root);
     screens::build_camera_overlay(s_root);
 
@@ -146,15 +147,12 @@ void Manager::refresh() {
             for (uint8_t k = 0; k < s_prev_state_n; ++k)
                 if (s_prev_state[k].id == ps[i].id) { prev = s_prev_state[k].state; known = true; break; }
             if (known && (prev == PState::Printing || prev == PState::Paused)) {
-                char m[64];
+                // Full-screen one-shot notification (legible across the room);
+                // auto-dismisses, or a tap closes it. Replaces the old toast.
                 if (ps[i].state == PState::Finish) {
-                    snprintf(m, sizeof(m), "%s  " LV_SYMBOL_OK " %s",
-                             ps[i].name.c_str(), ::i18n::tr(::i18n::Str::PRINT_DONE));
-                    screens::show_toast(m, lv_color_hex(::ui::C_OK));
+                    screens::print_done_show(ps[i].name.c_str(), true);
                 } else if (ps[i].state == PState::Failed || ps[i].state == PState::Error) {
-                    snprintf(m, sizeof(m), "%s  " LV_SYMBOL_WARNING " %s",
-                             ps[i].name.c_str(), ::i18n::tr(::i18n::Str::PRINT_FAILED));
-                    screens::show_toast(m, lv_color_hex(::ui::C_ERR));
+                    screens::print_done_show(ps[i].name.c_str(), false);
                 }
             }
         }
@@ -165,6 +163,9 @@ void Manager::refresh() {
             ++s_prev_state_n;
         }
     }
+
+    // Auto-dismiss the print-complete/failed overlay once its window elapses.
+    screens::print_done_tick();
 
     switch (current_) {
         case Screen::Dashboard: screens::update_dashboard(selected_printer_id_); break;
@@ -213,7 +214,7 @@ void Manager::refresh() {
         }
         bool busy = screens::ota_is_active() || screens::camera_overlay_is_open() ||
                     screens::hms_flash_is_visible() || screens::speed_menu_is_open() ||
-                    screens::temp_graph_is_open();
+                    screens::temp_graph_is_open() || screens::print_done_is_visible();
         bool idle = lv_disp_get_inactive_time(NULL) > ::display::AMBIENT_AFTER_MS;
         if (quiet && idle && !busy) {
             if (screens::ambient_is_visible()) screens::ambient_apply();

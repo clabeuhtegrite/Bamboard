@@ -143,6 +143,11 @@ constexpr uint32_t WS_RECONNECT_MAX_MS  = 60000;
 constexpr uint32_t HMS_FLASH_VISIBLE_MS  = 5000;
 constexpr uint32_t HMS_FLASH_COOLDOWN_MS = 30000;
 
+// Full-screen print-complete / print-failed notification: how long it stays up
+// before auto-dismissing (a tap closes it sooner). Shown once per finish, unlike
+// the HMS flash which re-pulses while the fault persists.
+constexpr uint32_t PRINT_DONE_VISIBLE_MS = 8000;
+
 // Max printers we keep in RAM (more than enough for desk-side monitoring).
 constexpr uint8_t  MAX_PRINTERS = 8;
 

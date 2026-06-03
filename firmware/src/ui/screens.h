@@ -57,6 +57,16 @@ void      hms_flash_hide      ();
 void      hms_flash_update_msg(const char* msg);
 bool      hms_flash_is_visible();
 
+// Full-screen print-complete / print-failed notification. Shown once when a
+// printer leaves a printing state for Finish (green check) or Failed/Error
+// (red warning); a tap dismisses it, and print_done_tick() (called from the UI
+// refresh) auto-dismisses it after PRINT_DONE_VISIBLE_MS. UI task only.
+lv_obj_t* build_print_done(lv_obj_t* parent);
+void      print_done_show(const char* printer_name, bool success);
+void      print_done_hide();
+void      print_done_tick();
+bool      print_done_is_visible();
+
 // Full-screen OTA progress overlay. Same shape as before — the setters
 // are safe to call from any task, ota_apply() is called from the UI
 // task once per refresh tick to sync the shared state into the widget.

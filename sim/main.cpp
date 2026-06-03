@@ -192,6 +192,13 @@ static void render_fixtures(const std::string& out) {
     lv_tick_inc(8); lv_timer_handler();
     dump_png(out, "tempgraph");
     ui::screens::temp_graph_close();
+
+    // Print-complete notification (full-screen). Same direct-redraw trick.
+    ui::screens::print_done_show("Workshop X1C", true);
+    lv_tick_inc(8); lv_timer_handler();
+    lv_tick_inc(8); lv_timer_handler();
+    dump_png(out, "printdone");
+    ui::screens::print_done_hide();
 }
 
 int main(int argc, char** argv) {
