@@ -47,7 +47,7 @@ static void q_del_clicked(lv_event_t* e) {
     } else {
         s_q_armed_id = id;
         s_q_armed_at = now;
-        show_toast(i18n::tr(i18n::Str::CONFIRM_RESET), lv_color_hex(::ui::C_WARN));
+        show_toast(i18n::tr(i18n::Str::CONFIRM_REMOVE), lv_color_hex(::ui::C_WARN));
     }
 }
 

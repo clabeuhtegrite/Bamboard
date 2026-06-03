@@ -352,6 +352,11 @@ lv_obj_t* build_dashboard(lv_obj_t* parent) {
     s_dash_eta_lbl = lv_label_create(s_dash_root);
     lv_label_set_text(s_dash_eta_lbl, i18n::tr(i18n::Str::ETA_NONE));
     lv_obj_set_pos(s_dash_eta_lbl, 320, 0);
+    // Bound to the right edge (320 + 158 = 478, clear of the 480 px panel) and
+    // dot-truncate: the longest form — 12-hour clock, e.g. "ETA 16h00 · 12:00 AM"
+    // — otherwise overflows off-screen instead of clipping cleanly.
+    lv_obj_set_width(s_dash_eta_lbl, 158);
+    lv_label_set_long_mode(s_dash_eta_lbl, LV_LABEL_LONG_DOT);
     lv_obj_set_style_text_font(s_dash_eta_lbl, &bb_font_16, 0);
     lv_obj_set_style_text_color(s_dash_eta_lbl, lv_color_hex(::ui::C_TEXT), 0);
 

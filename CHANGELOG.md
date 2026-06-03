@@ -5,6 +5,36 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.29.0 — 2026-06
+
+UI / i18n polish from the pre-V1 audit.
+
+### Fixed
+
+- **Live ETA no longer overflows off-screen.** The ETA label had no width bound,
+  so the longest form (12-hour clock, e.g. `ETA 16h00 · 12:00 AM`) ran past the
+  right edge and clipped silently. It's now width-bounded with dot-truncation.
+- **A finished/failed print card can no longer be swiped away by accident.** A
+  lateral swipe while the full-screen print-complete notification was up used to
+  navigate the carousel underneath it; the gesture is now ignored while it's
+  shown (matching the HMS / OTA / camera overlays).
+- **Drying start now confirms.** Starting an AMS drying cycle shows a "Drying
+  started" toast (it was silent; only failures and stops were reported).
+
+### Changed
+
+- **Queue removal has its own confirmation text.** The trash button's first tap
+  now reads "Tap again to remove" instead of borrowing the factory-reset
+  "Tap again to confirm" string.
+
+### Internal
+
+- i18n housekeeping: the history "(unnamed)" placeholder is now translated
+  (new `UNNAMED` key); removed the dead `LANGUAGE` key (never shown — the portal
+  draws its own label); documented the Live fan tags (`Fan`/`Aux`/`Cha`) as
+  deliberately-verbatim technical abbreviations. All five language tables stay
+  key-aligned; every visual fixture is byte-identical (no on-screen change).
+
 ## v0.28.0 — 2026-06
 
 A concurrency-hardening pass from the pre-V1 audit (no user-visible behaviour

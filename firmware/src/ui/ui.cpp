@@ -275,6 +275,7 @@ void Manager::show_toast(const char* text, lv_color_t colour) {
 static void screen_gesture_cb(lv_event_t* e) {
     if (screens::ota_is_active())        return;
     if (screens::hms_flash_is_visible()) return;
+    if (screens::print_done_is_visible()) return;
     if (screens::camera_overlay_is_open()) return;
     if (screens::temp_graph_is_open())     return;
     if (screens::speed_menu_is_open())     return;
