@@ -5,40 +5,10 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
-## v0.30.0 — 2026-06
+## v0.28.0 — 2026-06
 
-Test, CI and documentation hardening from the pre-V1 audit (no firmware
-behaviour change).
-
-### Internal
-
-- **HMS full-screen alert now has a visual baseline.** The most important
-  safety signal was rendered only in the live sim (never byte-compared); it's
-  now part of the deterministic fixture set (`hmsflash`, en + es/fr/pt/de) and
-  guarded against regressions like every other screen.
-- **OTA manifest verification is unit-tested.** The two post-TLS MITM barriers —
-  the release-download URL prefix pin and the 32-hex-char MD5 check — moved into
-  a pure, host-testable `net/ota_verify.{h,cpp}` (`bin_url_is_safe` /
-  `md5_is_valid`) with tests for look-alike hosts, http downgrade, and
-  wrong-length / non-hex hashes. `github_ota.cpp` now calls them.
-- **Visual gate fails instead of passing silently when baselines are missing.**
-  `tests.yml` previously emitted a warning and exited 0 if no baselines were
-  found (so a mass-deletion would slip through); it now errors and fails.
-- **sim.yml renders the deterministic fixtures in a hard-gated step** ahead of
-  the live render, so a crash in the fixture path is no longer masked by the
-  live render's `|| true`.
-- **Pinned `softprops/action-gh-release` to a commit SHA** (v2.6.2) in
-  `release.yml` — a mutable tag on a third-party action with release/token
-  access is a supply-chain risk.
-
-### Docs
-
-- `flashing.md` "Re-configuring later" now documents the **Wi-Fi setup** button
-  (reconfigure without wiping), the standard "moved to a new network" path.
-
-## v0.29.0 — 2026-06
-
-UI / i18n polish from the pre-V1 audit.
+UI / i18n polish plus a concurrency, test and CI hardening pass from the
+pre-V1 audit.
 
 ### Fixed
 
@@ -60,39 +30,30 @@ UI / i18n polish from the pre-V1 audit.
 
 ### Internal
 
-- i18n housekeeping: the history "(unnamed)" placeholder is now translated
-  (new `UNNAMED` key); removed the dead `LANGUAGE` key (never shown — the portal
-  draws its own label); documented the Live fan tags (`Fan`/`Aux`/`Cha`) as
-  deliberately-verbatim technical abbreviations. All five language tables stay
-  key-aligned; every visual fixture is byte-identical (no on-screen change).
+- **Concurrency hardening.** Brightness writes are deferred off the LVGL touch
+  handler into the UI loop (and coalesced) so a flash commit never lands inside
+  event dispatch — while keeping all NVS on a single task; `WsClient::connected_`
+  is marked `volatile` (written on the net task, read on the UI task); release/
+  acquire fences guard the cross-task toast and OTA-error buffers against the
+  Xtensa LX7's weak cross-core store order; and the UI task stack grows 6 KB →
+  8 KB for headroom against the per-refresh `Printer[MAX_PRINTERS]` snapshot.
+- **Test & CI hardening.** The HMS full-screen alert joins the deterministic
+  visual fixture set (`hmsflash`, en + es/fr/pt/de); the two post-TLS OTA MITM
+  barriers (release-URL prefix pin + 32-hex MD5) moved into a host-unit-tested
+  `net/ota_verify.{h,cpp}`; the visual gate now fails (was a silent warning) when
+  baselines are missing; `sim.yml` renders the deterministic fixtures in a
+  hard-gated step ahead of the live render; and `softprops/action-gh-release` is
+  pinned to a commit SHA (v2.6.2).
+- **i18n housekeeping.** The history "(unnamed)" placeholder is now translated
+  (new `UNNAMED` key); the dead `LANGUAGE` key is removed (never shown — the
+  portal draws its own label); the Live fan tags (`Fan`/`Aux`/`Cha`) are
+  documented as deliberately-verbatim abbreviations. All five language tables
+  stay key-aligned; every visual fixture is byte-identical bar the new HMS one.
 
-## v0.28.0 — 2026-06
+### Docs
 
-A concurrency-hardening pass from the pre-V1 audit (no user-visible behaviour
-change; all internal robustness).
-
-### Changed
-
-- **Brightness writes are deferred off the touch handler.** Tapping a level in
-  Settings used to commit to NVS *synchronously inside the LVGL event dispatch*
-  on the watchdog-guarded UI task. The backlight still changes instantly, but
-  the flash write is now deferred to the UI loop and coalesced (a quick level
-  sweep is one write, not several) — keeping flash I/O out of event handling
-  while preserving the "all NVS on a single task" invariant.
-
-### Internal
-
-- Mark `WsClient::connected_` `volatile` — it's written on the net task and read
-  on the UI task (the Settings live-link badge); without it the compiler could
-  cache a stale value.
-- Add release/acquire fences around the cross-task toast and OTA-error buffers
-  (`request_toast`/`pump_toast_request`, `ota_set_error`/`ota_apply`) so the UI
-  task can't observe the dirty flag ahead of the buffer write on the Xtensa
-  LX7's weak cross-core memory order.
-- Grow the UI task stack 6 KB → 8 KB. LVGL's redraw call chain plus a
-  per-refresh `Printer[MAX_PRINTERS]` snapshot (~3 KB) left little headroom; a
-  stack overflow here corrupts the heap silently (the task WDT only catches a
-  hang).
+- `flashing.md` "Re-configuring later" now documents the **Wi-Fi setup** button
+  (reconfigure without wiping), the standard "moved to a new network" path.
 
 ## v0.27.0 — 2026-06
 
