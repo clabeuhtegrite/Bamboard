@@ -5,6 +5,21 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.26.0 — 2026-06
+
+### Added
+
+- **Full-screen print-complete / print-failed notification.** When a printer
+  leaves a printing state for Finish (green ✓ "Print done") or Failed/Error
+  (red ⚠ "Print failed"), a calm full-screen card naming the printer pops up —
+  legible across the room. It auto-dismisses after 8 s, or a tap closes it
+  sooner. Replaces the previous small toast for completions. (Filament runout
+  already surfaces through the full-screen HMS alert.)
+
+### Internal
+
+- New `printdone` visual fixture (en + es/fr/pt/de baselines).
+
 ## v0.25.0 — 2026-06
 
 ### Added

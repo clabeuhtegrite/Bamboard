@@ -193,6 +193,94 @@ void hms_flash_update_msg(const char* msg) {
 bool hms_flash_is_visible() { return s_hms_visible; }
 
 // =============================================================================
+// PRINT-COMPLETE / PRINT-FAILED NOTIFICATION
+// =============================================================================
+//
+// A calm full-screen card shown once when a print finishes (green check) or
+// fails (red warning) — legible across the room. Unlike the HMS flash it
+// neither pulses nor re-arms: a tap closes it and print_done_tick() (driven from
+// the UI refresh) auto-dismisses it after PRINT_DONE_VISIBLE_MS.
+
+static lv_obj_t* s_pd_overlay = nullptr;
+static lv_obj_t* s_pd_icon    = nullptr;
+static lv_obj_t* s_pd_title   = nullptr;
+static lv_obj_t* s_pd_name    = nullptr;
+static bool      s_pd_visible = false;
+static uint32_t  s_pd_hide_at = 0;
+
+static void pd_overlay_clicked(lv_event_t*) { print_done_hide(); }
+
+lv_obj_t* build_print_done(lv_obj_t* parent) {
+    ensure_styles();
+    s_pd_overlay = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_pd_overlay);
+    lv_obj_set_size(s_pd_overlay, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(s_pd_overlay, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_bg_color(s_pd_overlay, lv_color_hex(::ui::C_BG), 0);
+    lv_obj_set_style_bg_opa(s_pd_overlay, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(s_pd_overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(s_pd_overlay, pd_overlay_clicked, LV_EVENT_CLICKED, nullptr);
+
+    s_pd_icon = lv_label_create(s_pd_overlay);
+    lv_label_set_text(s_pd_icon, LV_SYMBOL_OK);
+    lv_obj_set_style_text_font(s_pd_icon, &bb_font_36, 0);
+    lv_obj_set_style_text_color(s_pd_icon, lv_color_hex(::ui::C_OK), 0);
+    lv_obj_align(s_pd_icon, LV_ALIGN_CENTER, 0, -54);
+
+    s_pd_title = lv_label_create(s_pd_overlay);
+    lv_label_set_text(s_pd_title, i18n::tr(i18n::Str::PRINT_DONE));
+    lv_obj_set_style_text_font(s_pd_title, &bb_font_28, 0);
+    lv_obj_set_style_text_color(s_pd_title, lv_color_hex(::ui::C_OK), 0);
+    lv_obj_align(s_pd_title, LV_ALIGN_CENTER, 0, -8);
+
+    s_pd_name = lv_label_create(s_pd_overlay);
+    lv_label_set_text(s_pd_name, "");
+    lv_obj_set_width(s_pd_name, LV_HOR_RES - 60);
+    lv_label_set_long_mode(s_pd_name, LV_LABEL_LONG_DOT);
+    lv_obj_set_style_text_align(s_pd_name, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(s_pd_name, &bb_font_16, 0);
+    lv_obj_set_style_text_color(s_pd_name, lv_color_hex(::ui::C_TEXT), 0);
+    lv_obj_align(s_pd_name, LV_ALIGN_CENTER, 0, 26);
+
+    lv_obj_t* hint = lv_label_create(s_pd_overlay);
+    lv_label_set_text(hint, i18n::tr(i18n::Str::TAP_DISMISS));
+    lv_obj_set_style_text_font(hint, &bb_font_14, 0);
+    lv_obj_set_style_text_color(hint, lv_color_hex(::ui::C_TEXT_DIM), 0);
+    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -14);
+
+    lv_obj_add_flag(s_pd_overlay, LV_OBJ_FLAG_HIDDEN);
+    return s_pd_overlay;
+}
+
+void print_done_show(const char* printer_name, bool success) {
+    if (!s_pd_overlay) return;
+    uint32_t col = success ? ::ui::C_OK : ::ui::C_ERR;
+    lv_label_set_text(s_pd_icon, success ? LV_SYMBOL_OK : LV_SYMBOL_WARNING);
+    lv_obj_set_style_text_color(s_pd_icon, lv_color_hex(col), 0);
+    lv_label_set_text(s_pd_title,
+        i18n::tr(success ? i18n::Str::PRINT_DONE : i18n::Str::PRINT_FAILED));
+    lv_obj_set_style_text_color(s_pd_title, lv_color_hex(col), 0);
+    lv_label_set_text(s_pd_name, (printer_name && *printer_name) ? printer_name : "");
+    lv_obj_clear_flag(s_pd_overlay, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_pd_overlay);
+    s_pd_visible = true;
+    s_pd_hide_at = lv_tick_get() + ::bambuddy::PRINT_DONE_VISIBLE_MS;
+}
+
+void print_done_hide() {
+    if (!s_pd_overlay) return;
+    lv_obj_add_flag(s_pd_overlay, LV_OBJ_FLAG_HIDDEN);
+    s_pd_visible = false;
+}
+
+// UI refresh tick: auto-dismiss once the visible window elapses (wrap-safe).
+void print_done_tick() {
+    if (s_pd_visible && (int32_t)(lv_tick_get() - s_pd_hide_at) >= 0) print_done_hide();
+}
+
+bool print_done_is_visible() { return s_pd_visible; }
+
+// =============================================================================
 // OTA PROGRESS OVERLAY
 // =============================================================================
 //
