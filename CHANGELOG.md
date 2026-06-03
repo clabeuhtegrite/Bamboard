@@ -5,6 +5,27 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.24.0 — 2026-06
+
+### Added
+
+- **Live-link badge on Settings.** The Server line now ends with a
+  language-neutral `WS` badge — a **green checkmark** when the live WebSocket
+  push is connected, a **dim refresh-loop** glyph when the device has fallen back
+  to the slower REST polling — so you can tell at a glance whether printer
+  updates are arriving in real time or on the safety-net poll.
+
+### Changed
+
+- **WebSocket reconnect backoff.** A dropped `/ws` connection used to be retried
+  every 5 s indefinitely. The reconnect interval now widens on each consecutive
+  miss (5 s → 10 → 20 → 40 → capped at 60 s) and snaps back to 5 s on a
+  successful connect, so a Bambuddy that's down or rebooting isn't hammered.
+
+### Internal
+
+- **Per-language Settings fixtures reseeded** for the new Server-line badge.
+
 ## v0.23.0 — 2026-06
 
 ### Added

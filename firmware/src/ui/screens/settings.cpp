@@ -16,6 +16,7 @@
 #include <WiFi.h>
 
 #include "../../net/bambuddy_client.h"
+#include "../../net/bambuddy_ws.h"   // live-push vs polling state for the Server line
 
 extern String  g_cfg_bambuddy_url;
 extern uint8_t g_cfg_brightness_level;
@@ -143,6 +144,8 @@ lv_obj_t* build_settings(lv_obj_t* parent) {
     s_set_rssi   = make_row(i18n::tr(i18n::Str::WIFI_RSSI), 33);
     s_set_uptime = make_row(i18n::tr(i18n::Str::UPTIME),    49);
     s_set_server = make_row(i18n::tr(i18n::Str::SERVER),    65);
+    // The Server row appends a recoloured WS live/poll badge (update_settings).
+    lv_label_set_recolor(s_set_server, true);
 
     // --- Brightness 1..5 selector ---------------------------------------
     // Identical visual language to the speed chip on Live so the user
@@ -267,16 +270,26 @@ void update_settings() {
              (unsigned)(up % 60), (unsigned)(ESP.getFreeHeap() / 1024));
     lv_label_set_text(s_set_uptime, u);
 
-    // Bambuddy server version + uptime (GET /system/info). Empty until the first
-    // fetch lands → show a dash. "\xC2\xB7" is a UTF-8 middot separator.
+    // Bambuddy server version + uptime (GET /system/info), then a language-
+    // neutral live-link badge: a green "WS <check>" when the WebSocket push is
+    // connected, a dim "WS <loop>" when we're on the slower REST poll. The loop
+    // glyph reads as "periodically refreshing". Recolour markup is enabled on
+    // this label in build_settings(). "\xC2\xB7" is a UTF-8 middot separator.
     bambuddy::SystemInfo si = bambuddy::g_client.snapshot_system_info();
+    bool ws_live = bambuddy::g_ws.is_connected();
+    char wscol[8];
+    snprintf(wscol, sizeof(wscol), "%06X",
+             (unsigned)(ws_live ? ::ui::C_OK : ::ui::C_TEXT_DIM));
+    String badge = String("#") + wscol + " WS " +
+                   (ws_live ? LV_SYMBOL_OK : LV_SYMBOL_LOOP) + "#";
+    String sv;
     if (si.version.length()) {
-        String sv = "v" + si.version;
+        sv = "v" + si.version;
         if (si.uptime.length()) sv += " \xC2\xB7 " + si.uptime;
-        lv_label_set_text(s_set_server, sv.c_str());
-    } else {
-        lv_label_set_text(s_set_server, "-");
+        sv += " \xC2\xB7 ";
     }
+    sv += badge;   // version absent (pre-first-fetch) → just the link badge
+    lv_label_set_text(s_set_server, sv.c_str());
 
     // Keep the segmented brightness control in sync with the live value
     // (the captive portal could rewrite it; we never do that today, but

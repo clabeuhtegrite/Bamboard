@@ -131,6 +131,13 @@ constexpr uint32_t POLL_SYSINFO_MS   = 60000;    // Bambuddy version / uptime
 // on every MQTT delta, so REST polling becomes a low-cadence safety net.
 constexpr uint32_t POLL_DASHBOARD_WS_MS = 30000;
 
+// WebSocket reconnect backoff. The WebSocketsClient auto-reconnects at this
+// base interval; on each consecutive failed/dropped connection we widen the
+// interval (×2 per miss) up to the cap, so a Bambuddy that's down or rebooting
+// isn't hammered every few seconds. A successful connect resets it to the base.
+constexpr uint32_t WS_RECONNECT_BASE_MS = 5000;
+constexpr uint32_t WS_RECONNECT_MAX_MS  = 60000;
+
 // Full-screen HMS-error flash: how long each pulse is shown, and how long
 // to stay quiet between pulses while the error persists.
 constexpr uint32_t HMS_FLASH_VISIBLE_MS  = 5000;
