@@ -65,6 +65,18 @@ static bool fetch_manifest(String& out_version, String& out_bin_url,
     // (unparseable / missing fields), not a network problem.
     server_replied = true;
 
+    // Bound the body before slurping it: the real manifest is a few hundred
+    // bytes, so a declared Content-Length above the cap is either a spoofed
+    // server or corruption. Reading it whole into a String would otherwise risk
+    // an OOM (and a boot-loop). A negative length means chunked/unknown — rare
+    // for a static release asset; getString() still self-limits on heap.
+    int clen = http.getSize();
+    if (clen > ::ota::MANIFEST_MAX_BYTES) {
+        log_w("OTA: manifest too large (%d B) — refusing", clen);
+        http.end();
+        return false;
+    }
+
     String body = http.getString();
     http.end();
 

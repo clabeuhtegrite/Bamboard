@@ -5,6 +5,29 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.27.0 — 2026-06
+
+### Security
+
+- **Per-device setup-AP password.** The Wi-Fi provisioning AP password is now
+  unique per unit (`bamboard` + the last 4 hex of the MAC, e.g. `bamboardA1B2`)
+  instead of a shared constant, so a bystander within range can no longer join
+  the setup portal during provisioning. The full password is shown on the
+  device's own screen.
+- **API key CR/LF sanitisation.** The Bambuddy API key is now stripped of
+  carriage-returns/newlines before it is emitted as the `X-API-Key` header,
+  closing an HTTP header-injection vector from a pasted trailing newline (mirrors
+  the existing Cloudflare-token handling).
+- **OTA manifest size cap.** The boot-time update check now rejects a manifest
+  whose declared body exceeds 8 KB before reading it, preventing a spoofed or
+  corrupt server from triggering an out-of-memory boot-loop.
+- **Captive-portal pre-fill escaping.** Stored API key / Cloudflare tokens are
+  HTML-attribute-escaped when pre-filled into the setup form, so a value
+  containing a quote can't break out of the field.
+- **CA-bundle generator pinned by hash.** `gen_ca_bundle.sh` now verifies the
+  SHA-256 of the fetched `gen_crt_bundle.py` (on top of the existing tag pin),
+  refusing to build if the upstream helper changes unexpectedly.
+
 ## v0.26.0 — 2026-06
 
 ### Added
