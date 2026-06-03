@@ -27,6 +27,7 @@ add_executable(bamboard_tests
   host_net_shim.cpp
   ${FW}/net/semver.cpp
   ${FW}/net/host_valid.cpp
+  ${FW}/net/ota_verify.cpp
   ${FW}/net/bambuddy_client.cpp
   ${FW}/ui/i18n.cpp
   ${FW}/ui/dry_default.cpp

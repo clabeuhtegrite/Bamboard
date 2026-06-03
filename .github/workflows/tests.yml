@@ -86,8 +86,11 @@ jobs:
             done
             exit $fail
           else
-            echo "::warning::no baselines in tests/fixtures_baseline — download the"
-            echo "fixture-renders artifact and commit them to seed the baseline."
+            echo "::error::no baselines in tests/fixtures_baseline/ — the visual"
+            echo "regression gate cannot run. Baselines are required and must be"
+            echo "committed (re-seed: SIM_FIXTURES_ONLY=1 ./sim/build/bamboard_sim,"
+            echo "then commit fx_out/*.png). Failing rather than passing silently."
+            exit 1
           fi
       # Render the same deterministic screens in each non-English language and
       # byte-diff them too — catches i18n layout overflow (a German/Spanish
@@ -107,9 +110,10 @@ jobs:
                 fi
               done
             else
-              echo "::warning::no i18n baselines for $lang — download the"
-              echo "fixture-renders-i18n artifact and commit them under"
-              echo "tests/fixtures_baseline/i18n/$lang/"
+              echo "::error::no i18n baselines for $lang in $base/ — required and"
+              echo "must be committed (re-seed: BAMBOARD_LANG=$lang"
+              echo "SIM_FIXTURES_ONLY=1 ./sim/build/bamboard_sim). Failing."
+              fail=1
             fi
           done
           exit $fail

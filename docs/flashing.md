@@ -85,10 +85,17 @@ On a fresh device with no saved settings:
 
 ## Re-configuring later
 
-You don't need to reflash to change the Bambuddy URL, the API key, or the
-Wi-Fi network. Hold the side **BOOT** button while the device boots — this
-wipes the saved settings and re-opens the captive portal. (The Settings
-screen also has a two-tap **Factory reset** button that does the same.)
+You don't need to reflash to change your settings.
+
+- **Moved to a new Wi-Fi network (or want to tweak the Bambuddy host / key /
+  timezone / language)?** Use the two-tap **Wi-Fi setup** button on the Settings
+  screen. It reboots straight into the captive portal **without wiping anything**
+  — your Bambuddy host, API key, Cloudflare token, timezone and language come up
+  already filled in, so you usually only re-pick the Wi-Fi network.
+- **Want to wipe everything and start clean?** Hold the side **BOOT** button
+  while the device boots — this clears all saved settings and re-opens the
+  captive portal. The Settings screen's two-tap **Factory reset** button does the
+  same.
 
 ## Updates (over-the-air, from GitHub)
 

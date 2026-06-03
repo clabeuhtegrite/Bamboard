@@ -28,6 +28,12 @@ jobs:
       - name: Build
         run: cmake --build sim/build -j
 
+      # Deterministic path first, hard-gated: it needs no secrets and exercises
+      # every fixture render, so a crash here is a real regression — NOT masked
+      # by the live render's `|| true` below.
+      - name: Render deterministic fixtures (no secrets — must not crash)
+        run: SIM_FIXTURES_ONLY=1 SIM_OUT=fx_out ./sim/build/bamboard_sim
+
       - name: Render screens (real Bambuddy data when secrets are set)
         env:
           BAMBUDDY_URL:            ${{ secrets.BAMBUDDY_URL }}
@@ -36,6 +42,8 @@ jobs:
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           BAMBOARD_LANG: en
           SIM_OUT: sim_out
+        # `|| true`: a live render may legitimately get no data (no secrets on a
+        # fork / Bambuddy down) and exit non-zero — that must not fail the job.
         run: ./sim/build/bamboard_sim || true
 
       - name: Upload screen renders

@@ -9,6 +9,7 @@
 
 #include "../config.h"
 #include "ca_bundle.h"    // embedded root-CA bundle (validate GitHub's TLS)
+#include "ota_verify.h"   // bin_url_is_safe / md5_is_valid (host-unit-tested)
 
 namespace ota {
 
@@ -136,7 +137,7 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t),
     // validated against GitHub's TLS certs (CA bundle above), the download is both
     // authenticated to GitHub and bound to our releases. Checked before on_start()
     // so we never pop the overlay for an image we won't flash.
-    if (!bin_url.startsWith(::ota::BIN_URL_PREFIX)) {
+    if (!bin_url_is_safe(bin_url, ::ota::BIN_URL_PREFIX)) {
         log_e("OTA: bin url '%s' not under %s — refusing to flash",
               bin_url.c_str(), ::ota::BIN_URL_PREFIX);
         return CheckResult::Failed;
@@ -149,13 +150,7 @@ CheckResult check_and_update(void (*on_start)(), void (*on_progress)(uint8_t),
     // that omitted it. No md5 ⇒ refuse. (release.yml always publishes one.)
     // Checked here, before on_start(), so we never pop the update overlay for
     // an image we won't flash.
-    bool md5_valid = (expected_md5.length() == 32);
-    for (size_t i = 0; md5_valid && i < 32; ++i) {
-        char c = expected_md5[i];
-        md5_valid = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
-                    (c >= 'A' && c <= 'F');
-    }
-    if (!md5_valid) {
+    if (!md5_is_valid(expected_md5)) {
         log_e("OTA: newer release %s but md5 missing/invalid — refusing to flash",
               latest.c_str());
         return CheckResult::Failed;
