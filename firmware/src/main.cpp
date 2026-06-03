@@ -116,17 +116,36 @@ static void save_prefs() {
     s_prefs.end();
 }
 
+// Deferred brightness persistence. save_brightness_level() runs inside the LVGL
+// touch-event dispatch on the UI task; a synchronous NVS write (~tens of ms,
+// occasionally more on a flash erase cycle) has no business stalling event
+// handling. We apply the backlight instantly and defer the commit to
+// brightness_flush() in the UI loop — same task (all NVS stays single-task, per
+// the invariant below), and a quick level sweep collapses into one write.
+static bool     s_bl_save_pending = false;
+static uint32_t s_bl_save_at_ms   = 0;
+
 void save_brightness_level(uint8_t level) {
     if (level < ::display::BL_LEVEL_MIN) level = ::display::BL_LEVEL_MIN;
     if (level > ::display::BL_LEVEL_MAX) level = ::display::BL_LEVEL_MAX;
-    // Always apply the backlight, but only touch NVS when the level actually
+    // Always apply the backlight, but only persist when the level actually
     // changed — re-tapping the current level (or the per-tick re-sync in the
     // Settings screen) shouldn't burn a flash write.
     hw::g_display.set_brightness_level(level);
     if (level == g_cfg_brightness_level) return;
     g_cfg_brightness_level = level;
+    s_bl_save_pending = true;
+    s_bl_save_at_ms   = millis();
+}
+
+// Drain a deferred brightness write once the level has settled. UI-task only
+// (keeps every NVS write on one task). Called from the UI loop.
+static void brightness_flush() {
+    if (!s_bl_save_pending) return;
+    if (millis() - s_bl_save_at_ms < 600) return;   // still settling — coalesce
+    s_bl_save_pending = false;
     s_prefs.begin("bamboard", false);
-    s_prefs.putUChar("bl_level", level);
+    s_prefs.putUChar("bl_level", g_cfg_brightness_level);
     s_prefs.end();
 }
 
@@ -751,6 +770,8 @@ static void ui_task(void*) {
         }
         // Show any toast the net task requested (control-action results).
         ui::screens::pump_toast_request();
+        // Commit a settled brightness change (deferred off the touch callback).
+        brightness_flush();
 
         // Anti-brick: once the UI has run steadily for a while, confirm the
         // running image so the boot-verify won't roll it back. Internal health
@@ -971,7 +992,12 @@ void setup() {
     // Create the control-action queue before net_task starts draining it.
     s_ctrl_q = xQueueCreate(8, sizeof(CtrlCmd));
     xTaskCreatePinnedToCore(net_task, "net", 16384, nullptr, 1, nullptr, 0);
-    xTaskCreatePinnedToCore(ui_task,  "ui",  6144,  nullptr, 2, nullptr, 1);
+    // 8 KB for the UI task: LVGL's lv_timer_handler() can run a deep call chain
+    // when several widgets invalidate at once, and each per-screen refresh copies
+    // a local Printer[MAX_PRINTERS] snapshot (~3 KB) onto this stack. 6 KB worked
+    // but left little headroom; a stack overflow here corrupts the heap silently
+    // (the task WDT only catches a hang). 8 KB buys margin as the UI grows.
+    xTaskCreatePinnedToCore(ui_task,  "ui",  8192,  nullptr, 2, nullptr, 1);
 }
 
 void loop() {

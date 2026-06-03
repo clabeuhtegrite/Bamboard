@@ -57,7 +57,11 @@ class WsClient {
     uint16_t port_      = 0;
     bool     secure_    = false;
     bool     configured_ = false;
-    bool     connected_  = false;
+    // volatile: written on the net task (handle_event), read on the UI task via
+    // is_connected() (the Settings live-link badge). Without it the compiler may
+    // cache a stale value in a register and never re-read RAM. Matches the
+    // cross-task `volatile` discipline used elsewhere (e.g. Manager::current_).
+    volatile bool connected_ = false;
     uint32_t last_ping_ms_ = 0;
     // Consecutive failed/dropped connections, driving the reconnect backoff
     // (reset to 0 on a successful connect). See handle_event().

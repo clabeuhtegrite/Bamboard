@@ -5,6 +5,34 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.28.0 — 2026-06
+
+A concurrency-hardening pass from the pre-V1 audit (no user-visible behaviour
+change; all internal robustness).
+
+### Changed
+
+- **Brightness writes are deferred off the touch handler.** Tapping a level in
+  Settings used to commit to NVS *synchronously inside the LVGL event dispatch*
+  on the watchdog-guarded UI task. The backlight still changes instantly, but
+  the flash write is now deferred to the UI loop and coalesced (a quick level
+  sweep is one write, not several) — keeping flash I/O out of event handling
+  while preserving the "all NVS on a single task" invariant.
+
+### Internal
+
+- Mark `WsClient::connected_` `volatile` — it's written on the net task and read
+  on the UI task (the Settings live-link badge); without it the compiler could
+  cache a stale value.
+- Add release/acquire fences around the cross-task toast and OTA-error buffers
+  (`request_toast`/`pump_toast_request`, `ota_set_error`/`ota_apply`) so the UI
+  task can't observe the dirty flag ahead of the buffer write on the Xtensa
+  LX7's weak cross-core memory order.
+- Grow the UI task stack 6 KB → 8 KB. LVGL's redraw call chain plus a
+  per-refresh `Printer[MAX_PRINTERS]` snapshot (~3 KB) left little headroom; a
+  stack overflow here corrupts the heap silently (the task WDT only catches a
+  hang).
+
 ## v0.27.0 — 2026-06
 
 ### Security
