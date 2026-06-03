@@ -15,6 +15,8 @@
 
 #include <time.h>   // mktime / localtime_r for the wall-clock ETA
 
+#include "../units.h"   // °C/°F + 12h/24h display preferences
+
 #include "../control.h"   // marshal control POSTs to the net task (never block UI)
 
 namespace ui::screens {
@@ -84,7 +86,9 @@ static lv_obj_t* make_temp_cell(lv_obj_t* parent, const char* title,
     lv_obj_align(t, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* v = lv_label_create(cell);
-    lv_label_set_text(v, "-- °C");
+    char ph[12];
+    snprintf(ph, sizeof(ph), "-- %s", ui::temp_unit());
+    lv_label_set_text(v, ph);
     lv_obj_set_style_text_color(v, lv_color_hex(::ui::C_TEXT), 0);
     lv_obj_set_style_text_font(v, &bb_font_16, 0);
     lv_obj_align(v, LV_ALIGN_RIGHT_MID, 0, 0);
@@ -536,8 +540,10 @@ void update_dashboard(int printer_id) {
         time_t done = mktime(&lt) + (time_t)sel->remaining_s;
         struct tm dt;
         localtime_r(&done, &dt);
-        snprintf(eta_buf, sizeof(eta_buf), "%s%s \xC2\xB7 %02d:%02d",
-                 i18n::tr(i18n::Str::ETA), eta_val, dt.tm_hour, dt.tm_min);
+        char hm[12];
+        ui::format_clock(hm, sizeof(hm), dt.tm_hour, dt.tm_min);
+        snprintf(eta_buf, sizeof(eta_buf), "%s%s \xC2\xB7 %s",
+                 i18n::tr(i18n::Str::ETA), eta_val, hm);
     } else {
         snprintf(eta_buf, sizeof(eta_buf), "%s%s",
                  i18n::tr(i18n::Str::ETA), eta_val);
@@ -588,11 +594,11 @@ void update_dashboard(int printer_id) {
         lv_color_hex(s_dash_light_on ? ::ui::C_TEXT_INV : ::ui::C_TEXT_DIM), 0);
 
     char buf[16];
-    snprintf(buf, sizeof(buf), "%.0f °C", sel->temps.nozzle);
+    snprintf(buf, sizeof(buf), "%.0f %s", ui::temp_value(sel->temps.nozzle), ui::temp_unit());
     lv_label_set_text(s_dash_t_noz, buf);
-    snprintf(buf, sizeof(buf), "%.0f °C", sel->temps.bed);
+    snprintf(buf, sizeof(buf), "%.0f %s", ui::temp_value(sel->temps.bed), ui::temp_unit());
     lv_label_set_text(s_dash_t_bed, buf);
-    snprintf(buf, sizeof(buf), "%.0f °C", sel->temps.chamber);
+    snprintf(buf, sizeof(buf), "%.0f %s", ui::temp_value(sel->temps.chamber), ui::temp_unit());
     lv_label_set_text(s_dash_t_cham, buf);
 
     // --- Contextual action row ---

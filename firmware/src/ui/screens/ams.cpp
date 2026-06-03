@@ -21,6 +21,7 @@
 
 #include "../control.h"     // marshal drying POSTs to the net task (never block UI)
 #include "../dry_default.h"  // per-filament drying fallback table (host-tested)
+#include "../units.h"        // °C/°F display preference (ambient AMS temp)
 
 namespace ui::screens {
 
@@ -457,7 +458,7 @@ void update_ams(int printer_id) {
 
     if (u.temp > 0.5f) {
         char tbuf[16];
-        snprintf(tbuf, sizeof(tbuf), "%.0f \xC2\xB0""C", u.temp);
+        snprintf(tbuf, sizeof(tbuf), "%.0f %s", ui::temp_value(u.temp), ui::temp_unit());
         lv_label_set_text(s_ams_temp_lbl, tbuf);
     } else {
         lv_label_set_text(s_ams_temp_lbl, "");

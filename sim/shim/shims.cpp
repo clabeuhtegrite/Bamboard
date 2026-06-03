@@ -49,6 +49,10 @@ namespace hw { Display g_display; }
 String  g_cfg_bambuddy_url;
 String  g_cfg_api_key;
 uint8_t g_cfg_brightness_level = 3;
+// Display-unit preferences (ui/units.h). Defaults mirror the firmware so the
+// fixtures render in °C / 24-hour; a per-render override could flip them.
+bool    g_cfg_temp_f    = false;
+bool    g_cfg_clock_24h = true;
 void save_brightness_level(uint8_t level) { g_cfg_brightness_level = level; }
 void factory_reset() {}
 void reconfigure_wifi() {}
