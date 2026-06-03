@@ -14,6 +14,7 @@
 
 #include "theme.h"
 
+#include <atomic>          // release/acquire fences for the cross-task buffers
 #include <time.h>          // ambient clock (getLocalTime + strftime)
 #include "../units.h"      // 12h/24h clock + °C/°F graph axis
 #include <TJpg_Decoder.h>
@@ -86,11 +87,19 @@ void request_toast(const char* msg, uint32_t bg_hex) {
     strncpy(s_toast_req_msg, msg, sizeof(s_toast_req_msg) - 1);
     s_toast_req_msg[sizeof(s_toast_req_msg) - 1] = '\0';
     s_toast_req_bg    = bg_hex;
+    // Publish the buffer + colour *before* the dirty flag. The net task writes
+    // here, the UI task reads in pump_toast_request(); the ESP32-S3 (Xtensa LX7)
+    // has a weak cross-core store order, so without a release fence the UI task
+    // could observe dirty=true ahead of the strncpy and show a torn message.
+    std::atomic_thread_fence(std::memory_order_release);
     s_toast_req_dirty = true;
 }
 
 void pump_toast_request() {
     if (!s_toast_req_dirty) return;
+    // Acquire pairs with the release in request_toast(): once we've seen the
+    // dirty flag, this guarantees the buffer writes are visible before we read.
+    std::atomic_thread_fence(std::memory_order_acquire);
     s_toast_req_dirty = false;
     show_toast(s_toast_req_msg, lv_color_hex(s_toast_req_bg));
 }
@@ -364,12 +373,17 @@ void ota_set_error(const char* msg) {
     strncpy(s_ota_err_msg, msg, sizeof(s_ota_err_msg) - 1);
     s_ota_err_msg[sizeof(s_ota_err_msg) - 1] = '\0';
     s_ota_error_flag = true;
+    // Same publish-before-flag discipline as request_toast() so ota_apply()
+    // (UI task) never reads a half-written error string. (Today this fires
+    // pre-task during the boot OTA, but the fence keeps it correct regardless.)
+    std::atomic_thread_fence(std::memory_order_release);
     s_ota_dirty      = true;
 }
 bool ota_is_active() { return s_ota_active; }
 
 void ota_apply() {
     if (!s_ota_dirty) return;
+    std::atomic_thread_fence(std::memory_order_acquire);  // pairs with ota_set_error
     s_ota_dirty = false;
     bool    active = s_ota_active;
     uint8_t pct    = s_ota_pct;
