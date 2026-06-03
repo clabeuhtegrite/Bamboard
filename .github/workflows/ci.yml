@@ -54,6 +54,30 @@ jobs:
         working-directory: firmware
         run: pio run -e esp32-s3-devkitc-1
 
+      # The app image lives in an OTA app slot (min_spiffs.csv → app0/app1). A
+      # build that overflows the slot can't be flashed or OTA'd, and that only
+      # ever surfaced at release time. Fail the PR here instead, and warn well
+      # before the cliff. The slot size is read from the partition CSV so it
+      # tracks any future partition change automatically.
+      - name: Check firmware fits the OTA app partition
+        working-directory: firmware
+        run: |
+          set -euo pipefail
+          BIN=.pio/build/esp32-s3-devkitc-1/firmware.bin
+          CSV="$HOME/.platformio/packages/framework-arduinoespressif32/tools/partitions/min_spiffs.csv"
+          app_hex=$(awk -F',' '$1 ~ /^app0[[:space:]]*$/ {gsub(/[[:space:]]/,"",$5); print $5}' "$CSV")
+          part=$(( app_hex ))
+          size=$(stat -c%s "$BIN")
+          pct=$(( size * 100 / part ))
+          echo "firmware.bin = ${size} B; OTA app partition = ${part} B (${pct}%)"
+          if [ "$size" -gt "$part" ]; then
+            echo "::error::firmware (${size} B) exceeds the OTA app partition (${part} B) — it cannot be flashed or OTA-updated"
+            exit 1
+          fi
+          if [ "$pct" -ge 90 ]; then
+            echo "::warning::firmware is at ${pct}% of the OTA app partition — running out of room"
+          fi
+
       - name: Merge factory image
         working-directory: firmware
         run: |
