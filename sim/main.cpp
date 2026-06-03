@@ -199,6 +199,17 @@ static void render_fixtures(const std::string& out) {
     lv_tick_inc(8); lv_timer_handler();
     dump_png(out, "printdone");
     ui::screens::print_done_hide();
+
+    // HMS full-screen flash — the most important safety signal, so it gets a
+    // committed baseline too (title + dismiss hint are localized). A healthy
+    // demo farm never raises it, so force it open with a sample code. The pulse
+    // animation is phase-deterministic given the fixed tick steps below.
+    ui::g_ui.go_to(ui::Screen::Dashboard); pump(10);
+    ui::screens::hms_flash_show("HMS_0300_0100");
+    lv_tick_inc(8); lv_timer_handler();
+    lv_tick_inc(8); lv_timer_handler();
+    dump_png(out, "hmsflash");
+    ui::screens::hms_flash_hide();
 }
 
 int main(int argc, char** argv) {

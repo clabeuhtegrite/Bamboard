@@ -12,6 +12,7 @@
 #include "config.h"               // bambuddy::MAX_PRINTERS / MAX_QUEUE_ITEMS / …
 #include "net/bambuddy_client.h"
 #include "net/host_valid.h"
+#include "net/ota_verify.h"
 #include "net/semver.h"
 #include "ui/dry_default.h"
 #include "ui/i18n.h"
@@ -34,6 +35,29 @@ static void test_semver() {
     CHECK(semver_cmp("", "0.0.0") == 0);             // empty -> 0.0.0
     // A pathological huge component must not flip the result via overflow.
     CHECK(semver_cmp("0.0.99999999999999999999", "0.0.1") > 0);
+}
+
+static void test_ota_verify() {
+    using ota::bin_url_is_safe;
+    using ota::md5_is_valid;
+
+    // Provenance pin: only URLs under our own release-download prefix may flash.
+    const String pfx = "https://github.com/clabeuhtegrite/Bamboard/releases/download/";
+    CHECK(bin_url_is_safe(pfx + "v1.2.3/firmware.bin", pfx));
+    CHECK(!bin_url_is_safe("https://evil.example.com/firmware.bin", pfx));
+    // A look-alike host must not slip past a substring/contains bug.
+    CHECK(!bin_url_is_safe("https://evil.com/?x=" + pfx, pfx));
+    CHECK(!bin_url_is_safe("http://github.com/clabeuhtegrite/Bamboard/releases/download/x", pfx)); // http downgrade
+    CHECK(!bin_url_is_safe("", pfx));
+    CHECK(!bin_url_is_safe(pfx, ""));   // empty prefix never matches
+
+    // MD5: exactly 32 hex chars, any case.
+    CHECK(md5_is_valid("0123456789abcdef0123456789ABCDEF"));
+    CHECK(!md5_is_valid(""));                                   // absent
+    CHECK(!md5_is_valid("0123456789abcdef0123456789abcde"));    // 31 chars
+    CHECK(!md5_is_valid("0123456789abcdef0123456789abcdef0"));  // 33 chars
+    CHECK(!md5_is_valid("0123456789abcdef0123456789abcdeg"));   // 32 chars, non-hex 'g'
+    CHECK(!md5_is_valid("0123456789abcdef 123456789abcdef"));   // 32 chars, embedded space
 }
 
 static void test_host_valid() {
@@ -363,6 +387,7 @@ static void test_units() {
 
 int main() {
     test_semver();
+    test_ota_verify();
     test_host_valid();
     test_i18n();
     test_dry_default();

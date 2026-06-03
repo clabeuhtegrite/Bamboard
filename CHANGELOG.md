@@ -5,6 +5,37 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.30.0 — 2026-06
+
+Test, CI and documentation hardening from the pre-V1 audit (no firmware
+behaviour change).
+
+### Internal
+
+- **HMS full-screen alert now has a visual baseline.** The most important
+  safety signal was rendered only in the live sim (never byte-compared); it's
+  now part of the deterministic fixture set (`hmsflash`, en + es/fr/pt/de) and
+  guarded against regressions like every other screen.
+- **OTA manifest verification is unit-tested.** The two post-TLS MITM barriers —
+  the release-download URL prefix pin and the 32-hex-char MD5 check — moved into
+  a pure, host-testable `net/ota_verify.{h,cpp}` (`bin_url_is_safe` /
+  `md5_is_valid`) with tests for look-alike hosts, http downgrade, and
+  wrong-length / non-hex hashes. `github_ota.cpp` now calls them.
+- **Visual gate fails instead of passing silently when baselines are missing.**
+  `tests.yml` previously emitted a warning and exited 0 if no baselines were
+  found (so a mass-deletion would slip through); it now errors and fails.
+- **sim.yml renders the deterministic fixtures in a hard-gated step** ahead of
+  the live render, so a crash in the fixture path is no longer masked by the
+  live render's `|| true`.
+- **Pinned `softprops/action-gh-release` to a commit SHA** (v2.6.2) in
+  `release.yml` — a mutable tag on a third-party action with release/token
+  access is a supply-chain risk.
+
+### Docs
+
+- `flashing.md` "Re-configuring later" now documents the **Wi-Fi setup** button
+  (reconfigure without wiping), the standard "moved to a new network" path.
+
 ## v0.29.0 — 2026-06
 
 UI / i18n polish from the pre-V1 audit.
