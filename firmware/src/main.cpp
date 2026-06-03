@@ -50,6 +50,12 @@ uint8_t g_cfg_lang             = (uint8_t)::i18n::Lang::EN;  // UI language inde
 String  g_cfg_cf_id;
 String  g_cfg_cf_secret;
 
+// Display preferences set in the captive portal (NVS keys `tempf` / `clock24`),
+// read by the UI through ui/units.h. Defaults match the EU-default timezone:
+// Celsius and a 24-hour clock.
+bool g_cfg_temp_f    = false;   // true → show temperatures in °F
+bool g_cfg_clock_24h = true;    // false → 12-hour AM/PM clock
+
 // Public hook used by the Settings screen's brightness selector. Applies
 // the new level immediately and persists it to NVS so the next boot picks
 // the same brightness without flashing the previous one first.
@@ -90,6 +96,8 @@ static void load_prefs() {
     }
     g_cfg_cf_id     = s_prefs.getString("cf_id", "");
     g_cfg_cf_secret = s_prefs.getString("cf_secret", "");
+    g_cfg_temp_f    = s_prefs.getBool("tempf", false);
+    g_cfg_clock_24h = s_prefs.getBool("clock24", true);
     s_prefs.end();
 }
 
@@ -103,6 +111,8 @@ static void save_prefs() {
     s_prefs.putUChar ("lang",     g_cfg_lang);
     s_prefs.putString("cf_id",     g_cfg_cf_id);
     s_prefs.putString("cf_secret", g_cfg_cf_secret);
+    s_prefs.putBool  ("tempf",     g_cfg_temp_f);
+    s_prefs.putBool  ("clock24",   g_cfg_clock_24h);
     s_prefs.end();
 }
 
@@ -327,6 +337,15 @@ static void start_provisioning() {
     WiFiManagerParameter p_lang("lang", "Language (en/es/fr/pt/de)",
         ::i18n::lang_code(g_cfg_lang), 4);
 
+    // Display units. Checkboxes default to the EU norm (Celsius, 24-hour);
+    // ticking flips each. p_clock12 is "12-hour" so an unchecked box = 24h.
+    WiFiManagerParameter p_tempf("tempf",
+        "Show temperatures in Fahrenheit (\xC2\xB0" "F)", "T", 2,
+        g_cfg_temp_f ? "type=\"checkbox\" checked" : "type=\"checkbox\"");
+    WiFiManagerParameter p_clock12("clock12",
+        "12-hour clock (AM/PM)", "T", 2,
+        g_cfg_clock_24h ? "type=\"checkbox\"" : "type=\"checkbox\" checked");
+
     // Show/hide the Cloudflare rows from the HTTPS checkbox. Added last so every
     // referenced input already exists when this inline script runs.
     WiFiManagerParameter p_js(
@@ -352,6 +371,8 @@ static void start_provisioning() {
     s_wm.addParameter(&p_rbh);
     s_wm.addParameter(&p_lang_hint);
     s_wm.addParameter(&p_lang);
+    s_wm.addParameter(&p_tempf);
+    s_wm.addParameter(&p_clock12);
     s_wm.addParameter(&p_js);
 
     s_wm.setConfigPortalTimeout(provision::PORTAL_TIMEOUT_S);
@@ -425,6 +446,10 @@ static void start_provisioning() {
     int li = ::i18n::lang_from_code(p_lang.getValue());
     if (li >= 0) g_cfg_lang = (uint8_t)li;   // unknown code → keep current
     ::i18n::set_language(g_cfg_lang);
+
+    // Display units: temperature scale + clock format (checkbox = non-empty value).
+    g_cfg_temp_f    = p_tempf.getValue()[0] != '\0';
+    g_cfg_clock_24h = !(p_clock12.getValue()[0] != '\0');
 
     save_prefs();
 

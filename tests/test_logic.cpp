@@ -15,6 +15,7 @@
 #include "net/semver.h"
 #include "ui/dry_default.h"
 #include "ui/i18n.h"
+#include "ui/units.h"
 
 static int g_total = 0, g_fail = 0;
 #define CHECK(cond) do { ++g_total; if (!(cond)) { ++g_fail; \
@@ -345,11 +346,27 @@ static void test_parse_resilience() {
     CHECK(ps[0].progress == 0 && ps[0].ams_count == 0 && ps[0].hms == "ok");
 }
 
+static void test_units() {
+    using ui::to_fahrenheit;
+    CHECK(std::fabs(to_fahrenheit(0.0f)   -  32.0f) < 0.01f);
+    CHECK(std::fabs(to_fahrenheit(100.0f) - 212.0f) < 0.01f);
+    CHECK(std::fabs(to_fahrenheit(37.0f)  -  98.6f) < 0.01f);
+    CHECK(std::fabs(to_fahrenheit(-40.0f) - (-40.0f)) < 0.01f);  // the °C/°F crossover
+    char b[16];
+    ui::format_clock_core(b, sizeof(b), 14, 32, true);  CHECK(strcmp(b, "14:32") == 0);
+    ui::format_clock_core(b, sizeof(b),  9,  5, true);  CHECK(strcmp(b, "09:05") == 0);
+    ui::format_clock_core(b, sizeof(b), 14, 32, false); CHECK(strcmp(b, "2:32 PM") == 0);
+    ui::format_clock_core(b, sizeof(b),  0,  7, false); CHECK(strcmp(b, "12:07 AM") == 0);  // midnight
+    ui::format_clock_core(b, sizeof(b), 12,  0, false); CHECK(strcmp(b, "12:00 PM") == 0);  // noon
+    ui::format_clock_core(b, sizeof(b), 23, 59, false); CHECK(strcmp(b, "11:59 PM") == 0);
+}
+
 int main() {
     test_semver();
     test_host_valid();
     test_i18n();
     test_dry_default();
+    test_units();
     test_status_parse();
     test_status_temp_alt_naming();
     test_status_hms();

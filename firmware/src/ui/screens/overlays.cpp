@@ -15,6 +15,7 @@
 #include "theme.h"
 
 #include <time.h>          // ambient clock (getLocalTime + strftime)
+#include "../units.h"      // 12h/24h clock + °C/°F graph axis
 #include <TJpg_Decoder.h>
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
@@ -585,7 +586,7 @@ void ambient_apply() {
     if (!s_amb_overlay) return;
     struct tm tmv;
     if (getLocalTime(&tmv, 0)) {
-        char hm[8];  strftime(hm, sizeof(hm), "%H:%M", &tmv);
+        char hm[12]; ui::format_clock(hm, sizeof(hm), tmv.tm_hour, tmv.tm_min);
         lv_label_set_text(s_amb_clock, hm);
         char dt[32]; strftime(dt, sizeof(dt), "%a %d %b", &tmv);
         lv_label_set_text(s_amb_date, dt);
@@ -684,7 +685,7 @@ lv_obj_t* build_temp_graph_overlay(lv_obj_t* parent) {
     lv_chart_set_type(s_tg_chart, LV_CHART_TYPE_LINE);
     lv_chart_set_point_count(s_tg_chart, TG_POINTS);
     lv_chart_set_update_mode(s_tg_chart, LV_CHART_UPDATE_MODE_SHIFT);
-    lv_chart_set_range(s_tg_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 300);
+    lv_chart_set_range(s_tg_chart, LV_CHART_AXIS_PRIMARY_Y, 0, ui::temp_axis_max());
     lv_chart_set_div_line_count(s_tg_chart, 4, 0);
     lv_obj_set_style_size(s_tg_chart, 0, LV_PART_INDICATOR);   // lines only, no point dots
     lv_obj_set_style_bg_color(s_tg_chart, lv_color_hex(::ui::C_PANEL), LV_PART_MAIN);
@@ -727,9 +728,10 @@ void temp_graph_push(int printer_id, float noz, float bed, float cham) {
         lv_chart_set_all_value(s_tg_chart, s_tg_bed,  LV_CHART_POINT_NONE);
         lv_chart_set_all_value(s_tg_chart, s_tg_cham, LV_CHART_POINT_NONE);
     }
-    lv_chart_set_next_value(s_tg_chart, s_tg_noz,  (lv_coord_t)(noz  + 0.5f));
-    lv_chart_set_next_value(s_tg_chart, s_tg_bed,  (lv_coord_t)(bed  + 0.5f));
-    lv_chart_set_next_value(s_tg_chart, s_tg_cham, (lv_coord_t)(cham + 0.5f));
+    // Plot in the active unit so the curves match the °C/°F readouts elsewhere.
+    lv_chart_set_next_value(s_tg_chart, s_tg_noz,  (lv_coord_t)(ui::temp_value(noz)  + 0.5f));
+    lv_chart_set_next_value(s_tg_chart, s_tg_bed,  (lv_coord_t)(ui::temp_value(bed)  + 0.5f));
+    lv_chart_set_next_value(s_tg_chart, s_tg_cham, (lv_coord_t)(ui::temp_value(cham) + 0.5f));
 }
 
 void temp_graph_open() {

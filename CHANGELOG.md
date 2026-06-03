@@ -5,6 +5,25 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.25.0 — 2026-06
+
+### Added
+
+- **Temperature unit (°C / °F).** A new captive-portal checkbox switches every
+  temperature readout — Live nozzle/bed/chamber, the Printers tiles, the AMS
+  ambient temperature and the temperature graph — between Celsius (default) and
+  Fahrenheit. Stored in NVS (`tempf`).
+- **12-hour clock option.** A captive-portal checkbox switches the ambient clock
+  and the Live ETA finish-time between 24-hour (default, e.g. `14:32`) and
+  12-hour AM/PM (`2:32 PM`). Stored in NVS (`clock24`). Both settings sit beside
+  timezone / language / daily-reboot in the portal; change them via **Wi-Fi
+  setup** (no wipe).
+
+### Internal
+
+- New `ui/units.h` centralises the unit/clock formatting; its pure cores
+  (`to_fahrenheit`, `format_clock_core`) are host-unit-tested.
+
 ## v0.24.0 — 2026-06
 
 ### Added

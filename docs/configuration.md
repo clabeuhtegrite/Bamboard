@@ -12,10 +12,12 @@ storage). All compile-time tunables live in `firmware/src/config.h`.
 | `tz` | POSIX timezone string for the clock / daily reboot (e.g. `CET-1CEST,M3.5.0,M10.5.0/3`) |
 | `reboot_h` | Daily reboot hour in local time (`0`–`23`); `255` = disabled |
 | `lang` | UI language index — `0` en, `1` es, `2` fr, `3` pt, `4` de |
+| `tempf` | Temperature unit — `false` = °C (default), `true` = °F |
+| `clock24` | Clock format — `true` = 24-hour (default), `false` = 12-hour AM/PM |
 | `bl_level` | Screen brightness 1–5 (set on the Settings screen, not the portal) |
 
-`url`, `key`, `tz`, `reboot_h` and `lang` are populated by the captive portal on
-first boot. To change them later, tap **Wi-Fi setup** on the Settings screen —
+`url`, `key`, `tz`, `reboot_h`, `lang`, `tempf` and `clock24` are populated by
+the captive portal on first boot. To change them later, tap **Wi-Fi setup** on the Settings screen —
 it re-opens the portal with everything pre-filled and saves a one-shot `reprov`
 flag in NVS, so it reboots straight into the portal **without wiping**. That
 lets you move the device to a new Wi-Fi network without re-entering your

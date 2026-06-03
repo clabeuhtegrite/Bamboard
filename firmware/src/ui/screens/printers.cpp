@@ -19,6 +19,8 @@
 #include <algorithm>   // std::sort — farm-grid ordering
 #include <cstdint>     // UINT32_MAX
 
+#include "../units.h"  // °C/°F display preference
+
 namespace ui::screens {
 
 static lv_obj_t* s_pr_root = nullptr;
@@ -230,7 +232,8 @@ void update_printers(int focused_id) {
                 snprintf(eta, sizeof(eta), "  \xC2\xB7  %s", e);
             }
             snprintf(sub, sizeof(sub), "%.0f\xC2\xB0/%.0f\xC2\xB0%s",
-                     ps[i].temps.nozzle, ps[i].temps.bed, eta);
+                     ui::temp_value(ps[i].temps.nozzle),
+                     ui::temp_value(ps[i].temps.bed), eta);
         } else {
             snprintf(sub, sizeof(sub), "%s  \xC2\xB7  %s",
                      ps[i].model.c_str(), state_name(ps[i].state));
