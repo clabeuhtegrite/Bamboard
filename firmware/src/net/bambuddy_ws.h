@@ -59,6 +59,9 @@ class WsClient {
     bool     configured_ = false;
     bool     connected_  = false;
     uint32_t last_ping_ms_ = 0;
+    // Consecutive failed/dropped connections, driving the reconnect backoff
+    // (reset to 0 on a successful connect). See handle_event().
+    uint8_t  reconnect_fails_ = 0;
     // Cloudflare Access service token, pre-formatted as a handshake header block
     // ("CF-Access-Client-Id: …\r\nCF-Access-Client-Secret: …"). Held as a member
     // because WebSocketsClient::setExtraHeaders() stores the pointer, not a copy.

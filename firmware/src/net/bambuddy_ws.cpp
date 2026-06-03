@@ -2,6 +2,7 @@
 
 #include <ArduinoJson.h>
 
+#include "../config.h"      // WS_RECONNECT_BASE_MS / WS_RECONNECT_MAX_MS
 #include "bambuddy_client.h"
 #include "ca_bundle.h"      // embedded root-CA bundle — validate the wss:// cert
 #include "psram_json.h"
@@ -76,7 +77,10 @@ void WsClient::apply_url(const String& base_url) {
 
     // Application-level pings handle keepalive (see Bambuddy's ws handler),
     // so the protocol-level heartbeat is left off to avoid double-pinging.
-    client_.setReconnectInterval(5000);
+    // Start at the base reconnect interval; handle_event() widens it on
+    // repeated failures and resets it on a successful connect.
+    reconnect_fails_ = 0;
+    client_.setReconnectInterval(::bambuddy::WS_RECONNECT_BASE_MS);
     configured_ = true;
 }
 
@@ -109,14 +113,29 @@ void WsClient::loop() {
 void WsClient::handle_event(WStype_t type, uint8_t* payload, size_t length) {
     switch (type) {
         case WStype_CONNECTED:
-            connected_    = true;
-            last_ping_ms_ = millis();
+            connected_       = true;
+            last_ping_ms_    = millis();
+            // Back on the wire — collapse the backoff so the next blip retries
+            // promptly again.
+            reconnect_fails_ = 0;
+            client_.setReconnectInterval(::bambuddy::WS_RECONNECT_BASE_MS);
             log_i("WS connected to %s:%u", host_.c_str(), (unsigned)port_);
             break;
-        case WStype_DISCONNECTED:
+        case WStype_DISCONNECTED: {
             connected_ = false;
-            log_i("WS disconnected");
+            // Exponential backoff: BASE, 2·BASE, 4·BASE … capped at MAX, so a
+            // Bambuddy that's down/rebooting isn't reconnected-at every few
+            // seconds. The library performs the next reconnect after this delay.
+            if (reconnect_fails_ < 32) reconnect_fails_++;
+            uint32_t shift = reconnect_fails_ > 0 ? (uint32_t)(reconnect_fails_ - 1) : 0;
+            if (shift > 4) shift = 4;   // cap the shift; MAX clamp below is the real ceiling
+            uint32_t iv = ::bambuddy::WS_RECONNECT_BASE_MS << shift;
+            if (iv > ::bambuddy::WS_RECONNECT_MAX_MS) iv = ::bambuddy::WS_RECONNECT_MAX_MS;
+            client_.setReconnectInterval(iv);
+            log_i("WS disconnected — reconnect in %ums (miss %u)",
+                  (unsigned)iv, (unsigned)reconnect_fails_);
             break;
+        }
         case WStype_TEXT:
             handle_text(payload, length);
             break;
