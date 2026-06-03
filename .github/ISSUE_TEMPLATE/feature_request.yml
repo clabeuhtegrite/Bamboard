@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest a screen, control, or behaviour for Bamboard
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the use case?
+      description: What are you trying to do at your desk that Bamboard doesn't help with yet?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposed behaviour
+      description: What would you see / tap? Which screen would it live on?
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This fits a touch desk monitor talking only to a self-hosted Bambuddy (no third-party cloud).
+          required: true
+        - label: It works within Bambuddy's existing REST/WebSocket API (or I've noted the API gap).

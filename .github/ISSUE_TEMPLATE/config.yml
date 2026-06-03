@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Bambuddy (server) issues
+    url: https://github.com/maziggy/bambuddy/issues
+    about: Problems with the Bambuddy server, its API, or printer connectivity belong upstream.
+  - name: Enclosure / case
+    url: https://www.printables.com/model/1716582-esp32-s3-klipper-dashboard-case-with-weather-crypt
+    about: The case is TomE1337's design (CC BY-NC-SA) — fit and print questions go to its Printables page.
