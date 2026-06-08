@@ -56,6 +56,8 @@ enum class Str : uint16_t {
     QUEUE_EMPTY, QUEUE_POS, QUEUE_REMOVED, QUEUE_REMOVE_FAILED, CONFIRM_REMOVE,
     // ambient idle clock
     AMBIENT_ALL_IDLE, AMBIENT_NEXT,
+    // boot splash status
+    BOOT_WIFI, BOOT_UPDATE, BOOT_CONNECT,
     _COUNT
 };
 

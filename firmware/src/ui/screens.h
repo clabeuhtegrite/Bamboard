@@ -77,6 +77,16 @@ void      ota_set_error   (const char* msg);
 void      ota_apply       ();
 bool      ota_is_active   ();
 
+// Full-screen boot / "loading" splash — the Bamboard wordmark, a spinner and a
+// status line. Built visible at startup and dismissed by the UI manager once
+// the device has printer data (or after BOOT_SPLASH_MAX_MS), so the user sees a
+// clear "starting up" screen instead of a frozen, dataless dashboard.
+// boot_overlay_set_status() is UI/setup-task only (called during boot phases).
+lv_obj_t* build_boot_overlay(lv_obj_t* parent);
+void      boot_overlay_set_status(const char* msg);
+void      boot_overlay_hide();
+bool      boot_overlay_is_visible();
+
 // Full-screen camera snapshot overlay. Opened by tapping the dashboard
 // progress ring; while it's open the net task fetches + decodes JPEG frames
 // (camera_decode_frame, called ON the net task), camera_apply() (UI task)

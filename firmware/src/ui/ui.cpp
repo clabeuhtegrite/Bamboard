@@ -83,6 +83,10 @@ void Manager::begin() {
     // Live temperature graph — likewise a hidden overlay floated on demand.
     screens::build_temp_graph_overlay(s_root);
 
+    // Boot / "loading" splash — built LAST so it covers every screen + overlay,
+    // and (uniquely) starts VISIBLE. refresh() dismisses it once data lands.
+    screens::build_boot_overlay(s_root);
+
     // Show the initial screen directly. We can't use go_to() here: current_
     // already starts at Dashboard, so go_to(Dashboard) would early-return on
     // its `s == current_` guard and leave the screen hidden (the loop above
@@ -135,6 +139,14 @@ void Manager::refresh() {
     ::bambuddy::g_client.snapshot_printers(ps, n);
     if (selected_printer_id_ < 0 && n > 0) {
         selected_printer_id_ = ps[0].id;
+    }
+
+    // Dismiss the boot/loading splash once we have printer data (or after a
+    // grace period, so an unreachable Bambuddy can't pin it) — revealing the
+    // dashboard underneath instead of a frozen, data-less screen.
+    if (screens::boot_overlay_is_visible() &&
+        (n > 0 || millis() > ::display::BOOT_SPLASH_MAX_MS)) {
+        screens::boot_overlay_hide();
     }
 
     // Fire a one-shot toast when any printer leaves a printing state for

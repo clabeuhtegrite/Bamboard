@@ -109,6 +109,10 @@ static const char* const T[][(int)Lang::COUNT] = {
     /*CONFIRM_REMOVE*/{"Tap again to remove (3 s)", "Toca otra vez para quitar (3 s)", "Touchez encore pour retirer (3 s)", "Toque novamente p/ remover (3 s)", "Nochmal zum Entfernen (3 s)"},
     /*AMBIENT_ALL_IDLE*/ {"All idle", "Todo inactivo", "Tout au repos", "Tudo parado", "Alles im Leerlauf"},
     /*AMBIENT_NEXT*/  {"Next", "Siguiente", "Suivant", "Próximo", "Nächste"},
+    // -- boot splash --
+    /*BOOT_WIFI*/     {"Connecting to Wi-Fi...", "Conectando al Wi-Fi...", "Connexion au Wi-Fi...", "A ligar ao Wi-Fi...", "Verbinde mit WLAN..."},
+    /*BOOT_UPDATE*/   {"Checking for updates...", "Buscando actualizaciones...", "Recherche de mises à jour...", "A procurar atualizações...", "Suche nach Updates..."},
+    /*BOOT_CONNECT*/  {"Connecting to Bambuddy...", "Conectando a Bambuddy...", "Connexion à Bambuddy...", "A ligar ao Bambuddy...", "Verbinde mit Bambuddy..."},
 };
 
 static_assert(sizeof(T) / sizeof(T[0]) == (size_t)Str::_COUNT,

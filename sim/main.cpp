@@ -89,6 +89,13 @@ static void render_fixtures(const std::string& out) {
     auto& C = bambuddy::g_client;
     JsonDocument d;
 
+    // Boot / "loading" splash — rendered before any data is injected, so the
+    // overlay (built visible in ui::Manager::begin) is still up. Draw it with
+    // lv_timer_handler() directly, NOT pump(): pump() calls ui.refresh(), whose
+    // hide logic would dismiss the splash the moment it sees no printers.
+    lv_timer_handler(); lv_timer_handler();
+    dump_png(out, "boot");
+
     // A small farm: #1 (focused) mid-print with a chained AMS — first unit
     // drying; #2 also printing; #3 idle.
     demo_status(1,
