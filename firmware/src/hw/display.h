@@ -47,6 +47,12 @@ class Display {
     // to wake the screen on any user interaction.
     bool consume_touch_activity();
 
+    // Draw plain text straight to the panel (Arduino_GFX, bypassing LVGL) and
+    // light the backlight. Bring-up diagnostics only — used to surface a Wi-Fi
+    // scan on a board whose serial console is unusable. The next LVGL refresh
+    // overwrites it.
+    void debug_text(const char* s);
+
    private:
     uint8_t backlight_ = ::display::BL_FULL;
     uint8_t level_     = ::display::BL_LEVEL_DEFAULT;

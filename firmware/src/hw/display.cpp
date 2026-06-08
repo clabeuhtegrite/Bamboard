@@ -159,4 +159,15 @@ bool Display::consume_touch_activity() {
     return was;
 }
 
+void Display::debug_text(const char* s) {
+    if (!s_gfx) return;
+    ledcWrite(BL_CHANNEL, 200);     // ensure it's lit so the text is readable
+    backlight_ = 200;
+    s_gfx->fillScreen(0x0000);
+    s_gfx->setTextColor(0xFFFF);    // white on black
+    s_gfx->setTextSize(2);          // 12×16 px → ~40 cols × 17 rows
+    s_gfx->setCursor(2, 2);
+    s_gfx->print(s);
+}
+
 }  // namespace hw

@@ -14,6 +14,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
+#include <esp_wifi.h>     // Wi-Fi country/region — allow 2.4 GHz channels 12/13 (EU)
 #include <esp_heap_caps.h> // free the PSRAM camera-JPEG buffer
 #include <esp_ota_ops.h>  // anti-brick: boot-partition rollback (set_boot_partition)
 #include <esp_system.h>   // esp_reset_reason() for boot diagnostics
@@ -881,6 +882,22 @@ static const char* reset_reason_str(esp_reset_reason_t r) {
     }
 }
 
+#if BAMBOARD_WIFI_DIAG
+// Short label for a scanned network's auth mode (on-screen Wi-Fi diagnostic).
+static const char* wifi_auth_str(wifi_auth_mode_t m) {
+    switch (m) {
+        case WIFI_AUTH_OPEN:          return "open";
+        case WIFI_AUTH_WEP:           return "WEP";
+        case WIFI_AUTH_WPA_PSK:       return "WPA";
+        case WIFI_AUTH_WPA2_PSK:      return "WPA2";
+        case WIFI_AUTH_WPA_WPA2_PSK:  return "WPA1/2";
+        case WIFI_AUTH_WPA2_WPA3_PSK: return "WPA2/3";
+        case WIFI_AUTH_WPA3_PSK:      return "WPA3";
+        default:                      return "?";
+    }
+}
+#endif
+
 void setup() {
     Serial.begin(115200);
     delay(50);
@@ -934,6 +951,35 @@ void setup() {
     // run the captive portal.
     WiFi.mode(WIFI_STA);
     WiFi.setHostname("bamboard");
+
+    // Allow 2.4 GHz channels 12/13. The default Wi-Fi region tops out at channel
+    // 11 (US), so an EU access point on auto-channel (12/13 — common in France)
+    // shows up in a scan but can't be joined. Base "FR" permits 1-13.
+    {
+        // { cc, start-channel, num-channels, max-tx-power(0.25 dBm), policy }
+        wifi_country_t ctry = { "FR", 1, 13, 84, WIFI_COUNTRY_POLICY_MANUAL };
+        esp_wifi_set_country(&ctry);
+    }
+
+#if BAMBOARD_WIFI_DIAG
+    // Serial is unusable on this board (opening the COM port resets it), so draw
+    // a Wi-Fi scan — each network's channel + auth — straight to the panel and
+    // hold it, then carry on booting. Lets a "visible but won't join" network be
+    // diagnosed by eye (channel 12/13? WPA3-only?).
+    {
+        int nfound = WiFi.scanNetworks();
+        String rep = "WiFi scan: " + String(nfound) + "\n";
+        for (int i = 0; i < nfound && i < 12; ++i) {
+            String ss = WiFi.SSID(i);
+            if (ss.length() > 14) ss = ss.substring(0, 14);
+            rep += ss + " c" + String(WiFi.channel(i)) + " " +
+                   String(WiFi.RSSI(i)) + " " +
+                   wifi_auth_str(WiFi.encryptionType(i)) + "\n";
+        }
+        hw::g_display.debug_text(rep.c_str());
+        delay(45000);   // hold ~45 s so the target row can be read / photographed
+    }
+#endif
 
     if (force_portal || g_cfg_bambuddy_url.length() == 0 ||
         g_cfg_api_key.length() == 0) {
