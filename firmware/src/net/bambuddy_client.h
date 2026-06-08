@@ -197,11 +197,9 @@ class Client {
     // Remove a pending job from the print queue (POST /queue/{id}/cancel).
     bool cancel_queue_item(int item_id);
 
-    // Apply a /status-shaped JSON payload to the cached Printer record.
-    // Shared between the REST poller and the WebSocket push handler — the
-    // ws layer hands us doc["data"] from a printer_status frame, which is
-    // produced by Bambuddy's printer_state_to_dict() and therefore matches
-    // the same schema this method already parses.
+    // Apply a /status-shaped JSON payload to the cached Printer record. Fed by
+    // the REST poller's /status response, which Bambuddy produces via
+    // printer_state_to_dict().
     bool apply_status_payload(int printer_id, JsonVariantConst doc);
 
     // Apply a parsed payload into the matching cache. Split out of the fetch_*

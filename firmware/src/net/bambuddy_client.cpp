@@ -273,9 +273,9 @@ static float pick_float(JsonVariantConst v, const char* a, const char* b) {
 bool Client::apply_status_payload(int printer_id, JsonVariantConst doc) {
     if (doc.isNull()) return false;
     xSemaphoreTake(mtx_, portMAX_DELAY);
-    // Find the printer; if a status arrives for one not yet listed (a WebSocket
-    // push before the first /printers fetch, or a host-test fixture), create it
-    // so the update isn't dropped.
+    // Find the printer; if a status arrives for one not yet listed (e.g. a
+    // host-test fixture, or a /status before the first /printers fetch), create
+    // it so the update isn't dropped.
     Printer* pp = nullptr;
     for (uint8_t i = 0; i < printer_count_; ++i)
         if (printers_[i].id == printer_id) { pp = &printers_[i]; break; }

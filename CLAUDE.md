@@ -7,16 +7,16 @@ Guidance for Claude Code (and humans) working in this repository.
 A budget (~20 €) open-source touch desk monitor for **Bambu Lab** 3D printers,
 built on a **Guition JC4827W543** all-in-one board (ESP32-S3-WROOM-1 + 4.3"
 480×272 IPS panel (NV3041A, QSPI) + GT911 capacitive touch). It talks **only** to a
-self-hosted **Bambuddy** instance (REST + WebSocket) — never a third-party
+self-hosted **Bambuddy** instance (REST API) — never a third-party
 cloud. UI is LVGL 8.3; firmware self-updates over the air from this repo's
 GitHub Releases.
 
 ## Repo layout
 
 ```
-firmware/        PlatformIO project (ESP32-S3 + LVGL + LovyanGFX) — the device
-  src/hw/        Display + GT911 touch HAL (LovyanGFX)
-  src/net/       Bambuddy REST + WebSocket clients, GitHub OTA, host validation, CA bundle
+firmware/        PlatformIO project (ESP32-S3 + LVGL + Arduino_GFX) — the device
+  src/hw/        Display + GT911 touch HAL (Arduino_GFX + TouchLib)
+  src/net/       Bambuddy REST client, GitHub OTA, host validation, CA bundle
   src/ui/        LVGL screen manager, per-screen builders, i18n (en/es/fr/pt/de), fonts
   src/config.h   ALL compile-time tunables (pins, palette, poll cadence, OTA, reboot)
   src/main.cpp   Boot, Wi-Fi provisioning (captive portal), FreeRTOS tasks, boot-time OTA
@@ -72,7 +72,7 @@ with a `test(visual): reseed …` commit.
 - **`config.h` is the source of truth** for tunables — colours, radii, poll
   cadence, timings. Reuse the `ui::C_*` / `R_*` / `H_*` tokens; don't hardcode.
 - **Threading:** UI task (core 1, watchdog-guarded, must never block) vs. net
-  task (core 0, owns the REST client + WS + blocking HTTP). Touch handlers
+  task (core 0, owns the REST client + blocking HTTP). Touch handlers
   enqueue control actions onto a FreeRTOS queue (`ui::ctrl::enqueue`); the net
   task drains them (`control_process`). Never do network I/O on the UI task.
 - **Secrets** (Bambuddy URL/key, Wi-Fi, CF Access token) live in NVS via the

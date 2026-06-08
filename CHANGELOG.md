@@ -5,6 +5,26 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.29.7 — 2026-06
+
+Bamboard now talks to Bambuddy over its **REST API only**. The real-time
+WebSocket push is removed: Bambuddy authenticates `/ws` with a login session
+(cookie), not the API key, and Bamboard is deliberately API-key-only — there's
+nothing to log into. REST polling (every 2 s per printer) already drove the
+dashboard, so there's no functional loss — just one fewer moving part, a smaller
+build, and no second auth model to carry.
+
+### Removed
+
+- **The WebSocket client is gone** — `net/bambuddy_ws.*`, the
+  `links2004/WebSockets` dependency, the `WS_RECONNECT_*` and
+  `POLL_DASHBOARD_WS_MS` tunables, and the host sim's WebSocket shim. The net
+  task no longer pumps a WS event loop; it polls every printer's `/status` at
+  the snappy `POLL_DASHBOARD_MS` cadence unconditionally (previously the slow
+  cadence kicked in only while a WS was connected). The Settings "Server" line
+  drops its live-push badge and shows just the Bambuddy version + uptime — live
+  REST reachability is already on the header's online dot.
+
 ## v0.29.6 — 2026-06
 
 First-hardware bring-up, continued. With the display and captive portal working

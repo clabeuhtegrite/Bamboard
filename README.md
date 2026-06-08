@@ -8,7 +8,7 @@
 Bamboard is a small ESP32-S3 device with a 4.3" capacitive touch screen
 that lives on your desk and shows you, in real time, what your Bambu Lab
 printers are doing. It talks **only** to your self-hosted Bambuddy
-instance over its REST + WebSocket API — your printers never see a
+instance over its REST API — your printers never see a
 third-party cloud.
 
 Total BOM is around **20 €** (single all-in-one board, USB-C cable, a few
@@ -58,7 +58,7 @@ other) printer with a 0.4 mm nozzle.
 
 ### Connectivity
 
-- **WebSocket push** — subscribes to Bambuddy's `/ws` for real-time `printer_status` frames. REST polling stays as a 30 s safety net (vs. 2 s when WS is down). Cuts HMS-alert latency from a poll cycle to one network hop.
+- **Live REST polling** — polls Bambuddy every 2 s for each printer's `printer_status`, so temperatures, progress and HMS alerts track within a poll cycle. API-key auth only — no WebSocket, nothing to log into.
 - **Wi-Fi captive portal** — first-boot Wi-Fi + Bambuddy host + API key + timezone / daily-reboot-hour + **interface language** (EN / ES / FR / PT / DE) setup; no re-flash needed to change them. Tap **Wi-Fi setup** on the Settings screen to re-open the portal **without** wiping your Bambuddy host / API key / token — handy for moving the device to a new network. (Holding the side **BOOT** button at boot also re-runs the portal, but wipes everything first, like a factory reset.)
 - **HTTP (LAN) or HTTPS (remote)** — by default the device talks to Bambuddy over plain HTTP on your LAN (a private IP or an `*.local` name). Tick **Use HTTPS** in the portal to reach it by **domain** over TLS instead — the server certificate is validated against a built-in, CI-refreshed root-CA bundle — with optional **Cloudflare Access** service-token fields for a Bambuddy published behind Cloudflare. One firmware build covers both.
 - **Auto-dim** — backlight drops after 60 s without a touch, wakes on the next tap.
@@ -93,7 +93,7 @@ other) printer with a 0.4 mm nozzle.
 ├── firmware/        PlatformIO project (ESP32-S3 + LVGL + LovyanGFX)
 │   ├── src/         C++ sources
 │   │   ├── hw/      Display + GT911 touch HAL (LovyanGFX-based)
-│   │   ├── net/     Bambuddy REST + WebSocket clients + GitHub OTA updater
+│   │   ├── net/     Bambuddy REST client + GitHub OTA updater
 │   │   ├── ui/      LVGL screen manager + per-screen builders
 │   │   ├── config.h All compile-time tunables
 │   │   └── main.cpp Boot, Wi-Fi provisioning, FreeRTOS tasks, boot-time OTA

@@ -22,7 +22,6 @@
 #include "ui/screens.h"
 #include "ui/i18n.h"
 #include "net/bambuddy_client.h"
-#include "net/bambuddy_ws.h"
 #include "png.h"
 
 #include <ArduinoJson.h>   // build synthetic /status payloads for the fixtures
@@ -72,7 +71,7 @@ static void pump(int frames) {
 extern String g_cfg_bambuddy_url;
 
 // Push a synthetic /status payload through the REAL handler (the same one the
-// REST + WebSocket paths use). apply_status_payload creates the printer on first
+// REST path uses). apply_status_payload creates the printer on first
 // sight, so no network / fetch is needed.
 static void demo_status(int id, const char* json) {
     JsonDocument d;
@@ -248,12 +247,11 @@ int main(int argc, char** argv) {
     if (url && *url) {
         String surl(url), skey(key ? key : "");
         String scf_id(cf_id ? cf_id : ""), scf_sec(cf_sec ? cf_sec : "");
-        // Pass the CF token through the firmware client/ws so begin_request()
-        // and apply_url() emit the CF-Access headers themselves — this exercises
-        // the real firmware path instead of relying on the libcurl shim's env
-        // injection (which now only backstops the raw diagnostic probes below).
+        // Pass the CF token through the firmware client so begin_request() emits
+        // the CF-Access headers itself — this exercises the real firmware path
+        // instead of relying on the libcurl shim's env injection (which now only
+        // backstops the raw diagnostic probes below).
         bambuddy::g_client.begin(surl, skey, scf_id, scf_sec);
-        bambuddy::g_ws.begin(surl, scf_id, scf_sec);
         fprintf(stderr, "[sim] fetching from %s\n", url);
         // Raw diagnostic: who sends the 403 — Cloudflare Access or the origin?
         // Print the response body so the page identifies itself.

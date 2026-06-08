@@ -4,7 +4,7 @@
 // optionally self-updates from GitHub Releases, then launches two tasks:
 //
 //   - UI task   (core 1): drives LVGL, touch input, auto-dim backlight
-//   - Net task  (core 0): polls Bambuddy + pumps the WebSocket
+//   - Net task  (core 0): polls Bambuddy over REST + runs queued control actions
 //
 // Persistent settings (Wi-Fi creds, Bambuddy URL, API key, brightness) live
 // in NVS via the Preferences API. Holding the side BOOT button at power-up
@@ -26,7 +26,6 @@
 #include "config.h"
 #include "hw/display.h"
 #include "net/bambuddy_client.h"
-#include "net/bambuddy_ws.h"
 #include "net/github_ota.h"
 #include "net/host_valid.h"
 #include "ui/fonts.h"
@@ -484,9 +483,9 @@ static void start_provisioning() {
         g_cfg_cf_secret = p_cf_secret.getValue();
         g_cfg_cf_id.trim();
         g_cfg_cf_secret.trim();
-        // Strip CR/LF: the token rides the WebSocket handshake header block
-        // (joined with \r\n in bambuddy_ws.cpp), so a pasted newline must not be
-        // able to inject extra headers.
+        // Strip CR/LF: the token is emitted verbatim as a request header
+        // (CF-Access-Client-Id / -Secret), so a pasted newline must not be able
+        // to inject extra headers.
         g_cfg_cf_id.replace("\r", "");     g_cfg_cf_id.replace("\n", "");
         g_cfg_cf_secret.replace("\r", ""); g_cfg_cf_secret.replace("\n", "");
     } else {
@@ -523,8 +522,6 @@ static void start_provisioning() {
     save_prefs();
 
     bambuddy::g_client.set_credentials(g_cfg_bambuddy_url, g_cfg_api_key,
-                                       g_cfg_cf_id, g_cfg_cf_secret);
-    bambuddy::g_ws.set_credentials    (g_cfg_bambuddy_url,
                                        g_cfg_cf_id, g_cfg_cf_secret);
     delay(300);
     ESP.restart();   // clean restart with the new config
@@ -627,10 +624,6 @@ static void net_task(void*) {
             continue;
         }
 
-        // Drive the WS event loop on every iteration so push frames land
-        // without waiting for the next poll tick.
-        bambuddy::g_ws.loop();
-
         // Run any control actions the UI queued (pause/stop/clear/speed/light/
         // dry) here — the blocking POST stays off the watchdog-guarded UI task.
         control_process();
@@ -657,13 +650,11 @@ static void net_task(void*) {
             bool ok = bambuddy::g_client.ping_health(&lat);
             ui::screens::header_set_online(ok, lat);
             // Health-cadence device diagnostics over serial (heap is the one to
-            // watch for leaks/fragmentation; ws=0 means we're on the REST
-            // safety net rather than live push).
-            log_i("diag: heap=%uK psram=%uK ws=%d rssi=%d online=%d lat=%ums",
+            // watch for leaks/fragmentation).
+            log_i("diag: heap=%uK psram=%uK rssi=%d online=%d lat=%ums",
                   (unsigned)(ESP.getFreeHeap()  / 1024),
                   (unsigned)(ESP.getFreePsram() / 1024),
-                  (int)bambuddy::g_ws.is_connected(), (int)WiFi.RSSI(),
-                  (int)ok, (unsigned)lat);
+                  (int)WiFi.RSSI(), (int)ok, (unsigned)lat);
             next_health_ms = now + bambuddy::POLL_HEALTH_MS;
         }
 
@@ -673,27 +664,17 @@ static void net_task(void*) {
         }
 
         if (now >= next_status_ms) {
+            // REST-only: poll every printer ourselves at the snappy cadence so
+            // the Printers screen stays responsive (the focused one first).
             int id = ui::g_ui.selected_printer_id();
-            bool ws = bambuddy::g_ws.is_connected();
-            if (ws) {
-                // WS is feeding `printer_status` for every printer in real
-                // time, so REST polling is purely a safety net — refresh
-                // only the focused printer at a slow cadence so a silently
-                // broken WS still surfaces stale data eventually.
-                if (id >= 0) bambuddy::g_client.fetch_printer_status(id);
-                next_status_ms = now + bambuddy::POLL_DASHBOARD_WS_MS;
-            } else {
-                // No WS push → poll every printer ourselves at the snappy
-                // cadence so the Printers screen stays responsive.
-                if (id >= 0) bambuddy::g_client.fetch_printer_status(id);
-                bambuddy::Printer ps[8]; uint8_t n = 0;
-                bambuddy::g_client.snapshot_printers(ps, n);
-                for (uint8_t i = 0; i < n; ++i) {
-                    if (ps[i].id != id)
-                        bambuddy::g_client.fetch_printer_status(ps[i].id);
-                }
-                next_status_ms = now + bambuddy::POLL_DASHBOARD_MS;
+            if (id >= 0) bambuddy::g_client.fetch_printer_status(id);
+            bambuddy::Printer ps[8]; uint8_t n = 0;
+            bambuddy::g_client.snapshot_printers(ps, n);
+            for (uint8_t i = 0; i < n; ++i) {
+                if (ps[i].id != id)
+                    bambuddy::g_client.fetch_printer_status(ps[i].id);
             }
+            next_status_ms = now + bambuddy::POLL_DASHBOARD_MS;
         }
 
         if (now >= next_stats_ms) {
@@ -996,7 +977,6 @@ void setup() {
 
     bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key,
                              g_cfg_cf_id, g_cfg_cf_secret);
-    bambuddy::g_ws.begin    (g_cfg_bambuddy_url, g_cfg_cf_id, g_cfg_cf_secret);
 
     // Arm the task watchdog (10 s, panic+reboot on timeout) before the UI task
     // subscribes itself. Best-effort: if the Arduino runtime already initialised
