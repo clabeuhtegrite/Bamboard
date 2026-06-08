@@ -967,6 +967,8 @@ void setup() {
     // current / GitHub down all fall through quickly so the device still
     // boots. Dev-sentinel builds skip it so a USB-flashed work-in-progress
     // isn't immediately pulled back to the published release.
+    ui::screens::boot_overlay_set_status(::i18n::tr(::i18n::Str::BOOT_UPDATE));
+    lv_timer_handler();
 #if BAMBOARD_OTA_AUTOCHECK
     if (!BAMBOARD_VERSION_IS_DEV) {
         run_boot_update();
@@ -977,6 +979,11 @@ void setup() {
 
     bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key,
                              g_cfg_cf_id, g_cfg_cf_secret);
+
+    // Final boot phase: the net task (started just below) reaches Bambuddy. Show
+    // it on the splash; the UI manager dismisses the splash once data lands.
+    ui::screens::boot_overlay_set_status(::i18n::tr(::i18n::Str::BOOT_CONNECT));
+    lv_timer_handler();
 
     // Arm the task watchdog (10 s, panic+reboot on timeout) before the UI task
     // subscribes itself. Best-effort: if the Arduino runtime already initialised

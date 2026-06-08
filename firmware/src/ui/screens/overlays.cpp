@@ -850,4 +850,70 @@ void temp_graph_close() {
 }
 bool temp_graph_is_open() { return s_tg_open; }
 
+// ---------------------------------------------------------------------------
+// Boot / "loading" splash
+// ---------------------------------------------------------------------------
+//
+// Full-screen overlay shown from power-on while Wi-Fi connects, the boot-time
+// OTA check runs and the first Bambuddy data arrives — so the user sees an
+// obvious "starting up" screen (brand wordmark + spinner + a per-phase status
+// line) instead of a frozen, data-less dashboard. Built LAST in
+// ui::Manager::begin() so it z-orders above everything and — unlike the other
+// overlays — starts VISIBLE. ui::Manager::refresh() calls boot_overlay_hide()
+// once a printer snapshot lands (or BOOT_SPLASH_MAX_MS elapses).
+
+static lv_obj_t* s_boot_overlay = nullptr;
+static lv_obj_t* s_boot_status  = nullptr;
+
+lv_obj_t* build_boot_overlay(lv_obj_t* parent) {
+    ensure_styles();
+    s_boot_overlay = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_boot_overlay);
+    lv_obj_set_size(s_boot_overlay, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(s_boot_overlay, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_bg_color(s_boot_overlay, lv_color_hex(::ui::C_BG), 0);
+    lv_obj_set_style_bg_opa(s_boot_overlay, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(s_boot_overlay, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Brand wordmark — "board" recoloured in accent, same as the header.
+    lv_obj_t* mark = lv_label_create(s_boot_overlay);
+    lv_label_set_recolor(mark, true);
+    lv_label_set_text(mark, "Bam#00B7C3 board#");
+    lv_obj_set_style_text_font(mark, &bb_font_36, 0);
+    lv_obj_set_style_text_color(mark, lv_color_hex(::ui::C_TEXT), 0);
+    lv_obj_align(mark, LV_ALIGN_CENTER, 0, -44);
+
+    // Spinner — advances whenever lv_timer_handler() runs (the Wi-Fi-connect
+    // wait and once the UI task is up; it pauses during the single blocking
+    // OTA-check call, which the status line covers).
+    lv_obj_t* spin = lv_spinner_create(s_boot_overlay, 1000, 60);
+    lv_obj_set_size(spin, 46, 46);
+    lv_obj_align(spin, LV_ALIGN_CENTER, 0, 16);
+    lv_obj_set_style_arc_color(spin, lv_color_hex(::ui::C_PANEL_HI), LV_PART_MAIN);
+    lv_obj_set_style_arc_width(spin, 5, LV_PART_MAIN);
+    lv_obj_set_style_arc_color(spin, lv_color_hex(::ui::C_ACCENT), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(spin, 5, LV_PART_INDICATOR);
+
+    s_boot_status = lv_label_create(s_boot_overlay);
+    lv_label_set_text(s_boot_status, i18n::tr(i18n::Str::BOOT_WIFI));
+    lv_obj_set_style_text_font(s_boot_status, &bb_font_14, 0);
+    lv_obj_set_style_text_color(s_boot_status, lv_color_hex(::ui::C_TEXT_DIM), 0);
+    lv_obj_align(s_boot_status, LV_ALIGN_CENTER, 0, 70);
+
+    // Starts visible (no HIDDEN flag) — it's the power-on state.
+    return s_boot_overlay;
+}
+
+void boot_overlay_set_status(const char* msg) {
+    if (s_boot_status && msg) lv_label_set_text(s_boot_status, msg);
+}
+
+void boot_overlay_hide() {
+    if (s_boot_overlay) lv_obj_add_flag(s_boot_overlay, LV_OBJ_FLAG_HIDDEN);
+}
+
+bool boot_overlay_is_visible() {
+    return s_boot_overlay && !lv_obj_has_flag(s_boot_overlay, LV_OBJ_FLAG_HIDDEN);
+}
+
 }  // namespace ui::screens

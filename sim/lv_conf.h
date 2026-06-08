@@ -66,7 +66,9 @@
 #define LV_USE_MSGBOX     0
 #define LV_USE_SPAN       0
 #define LV_USE_SPINBOX    0
-#define LV_USE_SPINNER    0
+/* SPINNER on: the boot/loading splash (overlays.cpp build_boot_overlay) uses
+   lv_spinner; the firmware lv_conf enables it too. Depends on LV_USE_ARC (above). */
+#define LV_USE_SPINNER    1
 #define LV_USE_TABVIEW    0
 #define LV_USE_TILEVIEW   0
 #define LV_USE_WIN        0

@@ -5,6 +5,18 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.29.9 — 2026-06
+
+### Added
+
+- **Boot / "loading" splash.** On power-up the device now shows a "Bamboard"
+  splash — a spinner over a status line that walks the boot phases (Connecting
+  to Wi-Fi… → Checking for updates… → Connecting to Bambuddy…) — instead of a
+  frozen, data-less dashboard during the ~20-30 s it takes to join Wi-Fi, run
+  the boot-time OTA check and pull the first data. It dismisses itself the
+  moment printer data arrives, or after a 25 s grace period so an unreachable
+  Bambuddy can't pin it. All five UI languages.
+
 ## v0.29.8 — 2026-06
 
 ### Fixed
