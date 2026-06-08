@@ -5,6 +5,35 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.29.0 — 2026-06
+
+First-hardware bring-up: the display driver targeted the wrong panel, so the
+firmware booted to a black screen on real JC4827W543 hardware.
+
+### Fixed
+
+- **Display now lights up on the real board.** The HAL was built against an
+  RGB-parallel ST7262 panel (the 800×480 JC8048W550 sibling's interface), but
+  the JC4827W543's 4.3" 480×272 IPS panel is an **NV3041A driven over QSPI**. On
+  the actual hardware the RGB-bus init crashed during boot, leaving the device
+  in a reset loop with a black screen (USB enumerated then dropped, ~3 s on /
+  ~12 s off, repeating — confirmed by USB-presence tracing on the device). The
+  HAL is rewritten on Arduino_GFX (`Arduino_NV3041A` over `Arduino_ESP32QSPI`)
+  with the correct QSPI pin map (CS 45, SCK 47, D0–D3 21/48/40/39), and the
+  backlight moves to its real pin (GPIO 1, was 2).
+- **Touch wiring corrected.** The GT911 I²C pins were the RGB sibling's
+  (SDA 19 / SCL 20 — which are in fact the ESP32-S3's native USB lines); they're
+  now SDA 8 / SCL 4 / INT 3 / RST 38, read via TouchLib.
+
+### Changed
+
+- **Display stack swapped LovyanGFX → Arduino_GFX + TouchLib.** LovyanGFX's
+  NV3041A/QSPI path needs a newer Arduino-ESP32 core than this project pins;
+  Arduino_GFX drives the panel on the current core and is the community-proven
+  path for this board. The LVGL draw buffer also moves from PSRAM to internal
+  DRAM (Arduino_GFX copies it out over QSPI, so no DMA/PSRAM region is needed),
+  dropping a boot-path dependency.
+
 ## v0.28.0 — 2026-06
 
 UI / i18n polish plus a concurrency, test and CI hardening pass from the

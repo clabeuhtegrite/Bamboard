@@ -1,12 +1,12 @@
 // Display + touch HAL for the Guition JC4827W543.
 //
-// Wraps LovyanGFX (which drives the 480×272 RGB-parallel IPS panel via the
-// ESP32-S3's LCD_CAM peripheral and reads the GT911 capacitive touch
-// controller over I²C), and hooks both into LVGL: a display flush callback
-// pushes draw buffers to the panel, and a pointer input device feeds touch
-// coordinates into LVGL's event system.
+// Drives the 480×272 IPS panel (an NV3041A over a QSPI bus) with Arduino_GFX
+// and reads the GT911 capacitive-touch controller over I²C with TouchLib, then
+// hooks both into LVGL: a display flush callback pushes draw buffers to the
+// panel, and a pointer input device feeds touch coordinates into LVGL's event
+// system.
 //
-// Higher layers (ui/) talk to LVGL directly; they don't see LovyanGFX at
+// Higher layers (ui/) talk to LVGL directly; they don't see Arduino_GFX at
 // all. The only thing they call here is set_backlight() to drive the
 // auto-dim behaviour.
 

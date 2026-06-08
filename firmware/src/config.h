@@ -5,9 +5,9 @@
 // runtime via the WiFiManager captive portal and saved in NVS (Preferences).
 //
 // v0.3+ targets the Guition JC4827W543 all-in-one board (ESP32-S3-WROOM-1
-// with a 4.3" RGB-parallel IPS panel + GT911 capacitive touch on the same
-// PCB). The display + touch pinout lives in `hw/display.cpp` because it's
-// wide enough to deserve its own file.
+// with a 4.3" 480×272 IPS panel — an NV3041A driven over QSPI (quad-SPI), NOT
+// RGB-parallel — plus a GT911 capacitive-touch controller on the same PCB).
+// Display + touch are brought up in `hw/display.cpp` (Arduino_GFX + TouchLib).
 
 #pragma once
 
@@ -42,19 +42,28 @@ namespace pins {
 // factory-reset gesture; LVGL touch handles every other interaction.
 constexpr uint8_t BOOT_BUTTON = 0;
 
-// Display backlight PWM. LovyanGFX configures the channel itself; these
-// constants are the source of truth that hw/display.cpp pulls from when
-// building its Light_PWM config.
-constexpr uint8_t  BL_PIN     = 2;
+// Display backlight: PWM via the ESP32 LEDC peripheral. The JC4827W543
+// wires the panel's backlight enable to GPIO 1 (hw/display.cpp drives it).
+constexpr uint8_t  BL_PIN     = 1;
 constexpr uint32_t BL_FREQ    = 5000;
 
-// GT911 capacitive touch controller on the Guition JC4827W543. The board
-// routes the touch IC onto a dedicated I²C bus that doesn't clash with the
-// native USB lines (S3 USB lives on the same physical USB-C connector as
-// power). INT is not wired on this revision; RST is on GPIO 38.
-constexpr int      GT911_SDA  = 19;
-constexpr int      GT911_SCL  = 20;
-constexpr int      GT911_INT  = -1;    // GPIO_NUM_NC equivalent
+// NV3041A display panel — QSPI (quad-SPI) bus. The JC4827W543 drives its
+// 4.3" 480×272 IPS panel over a 4-data-line QSPI link (NOT RGB-parallel).
+// Pin map matches the validated Arduino_GFX reference for the JC4827W543C.
+constexpr int      LCD_CS     = 45;
+constexpr int      LCD_SCK    = 47;
+constexpr int      LCD_D0     = 21;    // IO0 (MOSI)
+constexpr int      LCD_D1     = 48;    // IO1
+constexpr int      LCD_D2     = 40;    // IO2
+constexpr int      LCD_D3     = 39;    // IO3
+constexpr int      LCD_RST    = -1;    // reset not broken out (GFX_NOT_DEFINED)
+
+// GT911 capacitive touch controller (I²C) on the JC4827W543C: a dedicated
+// bus on GPIO 8 (SDA) / 4 (SCL), with INT on GPIO 3 and RST on GPIO 38.
+// (The earlier 19/20 mapping belonged to the RGB-parallel sibling board.)
+constexpr int      GT911_SDA  = 8;
+constexpr int      GT911_SCL  = 4;
+constexpr int      GT911_INT  = 3;
 constexpr int      GT911_RST  = 38;
 constexpr uint32_t GT911_FREQ = 400000;
 constexpr uint8_t  GT911_ADDR = 0x5D;  // primary; 0x14 fallback

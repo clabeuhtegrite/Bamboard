@@ -20,9 +20,9 @@ and mirrored in various community repos. The short version:
 
 | Signal group        | How it's connected on the board                            |
 |---------------------|-------------------------------------------------------------|
-| Display (RGB565)    | 16-bit RGB parallel to the ESP32-S3's LCD_CAM peripheral.   |
-| Display backlight   | PWM on GPIO 2, controlled by firmware (auto-dim still works).|
-| Capacitive touch    | GT911 over I²C — SDA on GPIO 19, SCL on GPIO 20, INT/RST on 18 / 38. |
+| Display (RGB565)    | NV3041A panel over a QSPI (quad-SPI) bus: CS 45, SCK 47, D0–D3 on 21 / 48 / 40 / 39. |
+| Display backlight   | PWM on GPIO 1, controlled by firmware (auto-dim still works).|
+| Capacitive touch    | GT911 over I²C — SDA on GPIO 8, SCL on GPIO 4, INT on 3, RST on 38. |
 | USB                 | Native USB on GPIO 19 / 20 (same physical USB-C connector that powers it). |
 | BOOT / RST buttons  | Side-mounted tactile switches on the PCB. BOOT is GPIO 0, used by the firmware as the factory-reset trigger when held during power-up. |
 

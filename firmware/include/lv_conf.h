@@ -3,9 +3,9 @@
  *
  * Trimmed-down version of the LVGL v8.3 default conf. Only what Bamboard
  * actually needs is enabled, to keep flash use sensible on the 4 MB
- * partitions and leave headroom in internal SRAM (the panel draw buffers
- * live in PSRAM — see hw/display.cpp — but LVGL's object tree, the
- * LV_MEM_SIZE pool below, stays in DRAM).
+ * partitions and leave headroom in internal SRAM (the panel draw buffer
+ * lives in internal DRAM — see hw/display.cpp — as does LVGL's object tree
+ * and the LV_MEM_SIZE pool below).
  */
 
 #ifndef LV_CONF_H
@@ -14,8 +14,8 @@
 #include <stdint.h>
 
 /* -------- Colour depth -------- */
-#define LV_COLOR_DEPTH 16        /* RGB565 — LovyanGFX drives the JC4827W543 panel in 16-bit */
-#define LV_COLOR_16_SWAP 0       /* RGB parallel bus, no byte swap needed */
+#define LV_COLOR_DEPTH 16        /* RGB565 — the NV3041A panel is driven in 16-bit */
+#define LV_COLOR_16_SWAP 0       /* matches Arduino_GFX draw16bitRGBBitmap (native order) */
 
 /* -------- Memory -------- */
 #define LV_MEM_CUSTOM 0

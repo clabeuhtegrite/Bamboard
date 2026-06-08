@@ -6,7 +6,7 @@ Guidance for Claude Code (and humans) working in this repository.
 
 A budget (~20 €) open-source touch desk monitor for **Bambu Lab** 3D printers,
 built on a **Guition JC4827W543** all-in-one board (ESP32-S3-WROOM-1 + 4.3"
-480×272 RGB-parallel IPS + GT911 capacitive touch). It talks **only** to a
+480×272 IPS panel (NV3041A, QSPI) + GT911 capacitive touch). It talks **only** to a
 self-hosted **Bambuddy** instance (REST + WebSocket) — never a third-party
 cloud. UI is LVGL 8.3; firmware self-updates over the air from this repo's
 GitHub Releases.

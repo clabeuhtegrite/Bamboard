@@ -32,8 +32,8 @@ it's the source of truth for this case.
 ## Step 2 — Assemble the enclosure
 
 The Guition JC4827W543 is one rigid PCB carrying the ESP32-S3-WROOM-1, the
-4.3" RGB-parallel IPS panel and the GT911 capacitive touch controller, so
-there's no wiring to do.
+4.3" 480×272 IPS panel (an NV3041A driven over QSPI) and the GT911 capacitive
+touch controller, so there's no wiring to do.
 
 1. Seat the board in `case.stl`, **panel facing the screen opening**, until
    it sits flush against the internal ribs.
