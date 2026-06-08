@@ -5,6 +5,12 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.29.10 — 2026-06
+
+### Changed
+
+- **Ambient idle clock now floats in after 120 s** without a touch (was 45 s).
+
 ## v0.29.9 — 2026-06
 
 ### Added

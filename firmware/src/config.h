@@ -86,7 +86,7 @@ constexpr uint16_t DRAW_BUF_LINES = 40;
 constexpr uint32_t DIM_AFTER_MS = 60UL * 1000UL;
 // Ambient idle clock: floats over the current screen once the panel has been
 // untouched this long AND the whole farm is quiet (nothing printing/faulted).
-constexpr uint32_t AMBIENT_AFTER_MS = 45UL * 1000UL;
+constexpr uint32_t AMBIENT_AFTER_MS = 120UL * 1000UL;
 
 // Boot "loading" splash: the longest it stays up before giving way to the
 // (possibly offline) dashboard, so an unreachable Bambuddy can't pin it forever.
