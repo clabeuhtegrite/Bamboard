@@ -34,27 +34,11 @@
 #include "ui/screens.h"
 #include "ui/ui.h"
 
-// Larger loop-task stack for setup(): building the LVGL UI tree (ui::g_ui.begin)
-// runs here on the Arduino loop task, whose default 8 KB stack is tight. 16 KB
-// buys margin against a stack overflow during first-screen construction (this
-// only ran on real hardware once the display HAL stopped crashing at boot).
+// Larger loop-task stack for setup(): building the whole LVGL UI tree
+// (ui::g_ui.begin) runs here on the Arduino loop task, whose default 8 KB stack
+// is tight for that deep a call chain. 16 KB buys headroom (the LVGL object heap
+// itself lives in PSRAM — see include/lv_conf.h).
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);
-
-#if BAMBOARD_BOOT_DIAG
-// Boot milestone marker (config.h BAMBOARD_BOOT_DIAG): blink the backlight n
-// times. Used in setup() AFTER hw::Display::begin() (M1..M4 live in the HAL) so
-// a boot-loop's failing step is visible with no serial console.
-static void boot_blink(int n) {
-    for (int i = 0; i < n; i++) {
-        hw::g_display.set_backlight(220); delay(160);
-        hw::g_display.set_backlight(0);   delay(220);
-    }
-    delay(500);
-}
-#define BOOT_DIAG(n) boot_blink(n)
-#else
-#define BOOT_DIAG(n) do {} while (0)
-#endif
 
 // Runtime config (read once from NVS at boot, written back when the captive
 // portal saves a new value).
@@ -939,9 +923,7 @@ void setup() {
     s_prefs.end();
 
     ui::g_ui.begin();
-    BOOT_DIAG(5);            // M5: LVGL UI tree built
     lv_timer_handler();
-    BOOT_DIAG(6);            // M6: first LVGL render + panel flush OK
 
     // Apply the user's saved brightness now that we have the value. The
     // display starts off dimmed inside hw::Display::begin() to avoid a
@@ -952,7 +934,6 @@ void setup() {
     // run the captive portal.
     WiFi.mode(WIFI_STA);
     WiFi.setHostname("bamboard");
-    BOOT_DIAG(7);            // M7: Wi-Fi stack configured, about to provision
 
     if (force_portal || g_cfg_bambuddy_url.length() == 0 ||
         g_cfg_api_key.length() == 0) {

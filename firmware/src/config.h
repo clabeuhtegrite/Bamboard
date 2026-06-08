@@ -33,16 +33,6 @@
 #  define BAMBOARD_VERSION_IS_DEV 1
 #endif
 
-// ---------- Boot diagnostics (TEMPORARY — first-hardware bring-up) -------
-//
-// 1 = blink the backlight at each boot milestone (display.cpp M1..M4, main.cpp
-// M5..M7) so a boot-loop's failing step is visible with NO serial console — the
-// JC4827W543's USB-CDC resets the chip the instant a host opens the COM port,
-// so serial logging is unusable here. Set to 0 (or strip) once boot is clean.
-#ifndef BAMBOARD_BOOT_DIAG
-#define BAMBOARD_BOOT_DIAG 1
-#endif
-
 // ---------- Hardware ----------------------------------------------------
 
 namespace pins {

@@ -6,10 +6,10 @@
 // GT911 capacitive touch, then hook both into LVGL: a flush callback pushes
 // draw buffers to the panel and a pointer input device feeds touch coordinates.
 //
-// NOTE: while BAMBOARD_BOOT_DIAG is set (config.h), display.begin() blinks the
-// backlight at each milestone (M1..M4) so a boot-loop's failing step is visible
-// without a serial console — the JC4827W543's USB-CDC resets the chip the moment
-// a host opens the port, so serial logging is useless during bring-up.
+// The pin map (config.h pins::) targets the JC4827W543**C** revision and matches
+// the validated Arduino_GFX reference for this board. If the screen is black or
+// garbled, re-check the silkscreen next to the FPC connector — other revisions
+// and the 800×480 sibling use a different controller/mapping.
 
 #include "display.h"
 
@@ -66,27 +66,15 @@ static void touch_read_cb(lv_indev_drv_t*, lv_indev_data_t* data) {
     }
 }
 
-#if BAMBOARD_BOOT_DIAG
-// Blink the backlight n times — a boot milestone marker, visible with no serial.
-static void diag_blink(int n) {
-    for (int i = 0; i < n; i++) {
-        ledcWrite(BL_CHANNEL, 220); delay(160);
-        ledcWrite(BL_CHANNEL, 0);   delay(220);
-    }
-    delay(500);
-}
-#else
-static inline void diag_blink(int) {}
-#endif
-
 // ---------- Public API -----------------------------------------------------
 
 bool Display::begin() {
-    // Backlight PWM up first, held dark (no pre-render flash in normal boot).
+    // Backlight PWM up first, held dark. main.cpp lights it to the user's saved
+    // level only after ui::begin() + the first lv_timer_handler() frame, so the
+    // panel never flashes a pre-render frame.
     ledcSetup(BL_CHANNEL, pins::BL_FREQ, 8);
     ledcAttachPin(pins::BL_PIN, BL_CHANNEL);
     ledcWrite(BL_CHANNEL, 0);
-    diag_blink(1);   // M1: reached here AND GPIO1 really is the backlight
 
     // --- Panel: NV3041A over QSPI ---
     s_bus = new Arduino_ESP32QSPI(pins::LCD_CS, pins::LCD_SCK,
@@ -98,7 +86,6 @@ bool Display::begin() {
         return false;
     }
     s_gfx->fillScreen(0x0000);   // black
-    diag_blink(2);   // M2: survived gfx->begin()
 
     // --- Touch: GT911 over I²C (TouchLib) ---
     // Probe the controller on the bus FIRST: a wrong pin map / missing GT911
@@ -119,13 +106,13 @@ bool Display::begin() {
         log_w("GT911 not found @0x%02X — touch disabled (display still works)",
               (int)pins::GT911_ADDR);
     }
-    diag_blink(3);   // M3: survived touch bring-up
 
     // --- LVGL ---
     lv_init();
 
     // Single draw buffer in INTERNAL RAM (~38 KB at 480×40). Arduino_GFX copies
-    // the buffer out over QSPI, so it needs no DMA/PSRAM region.
+    // the buffer out over QSPI, so it needs no DMA/PSRAM region; keeping it in
+    // internal RAM leaves PSRAM for the LVGL object heap (see include/lv_conf.h).
     size_t pixels = ::display::WIDTH * ::display::DRAW_BUF_LINES;
     size_t bytes  = pixels * sizeof(lv_color_t);
     lv_color_t* buf1 =
@@ -147,8 +134,6 @@ bool Display::begin() {
     s_indev_drv.type    = LV_INDEV_TYPE_POINTER;
     s_indev_drv.read_cb = touch_read_cb;
     lv_indev_drv_register(&s_indev_drv);
-
-    diag_blink(4);   // M4: display.begin() done — boot continues in main.cpp
     return true;
 }
 

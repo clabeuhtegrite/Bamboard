@@ -5,10 +5,10 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
-## v0.29.0 — 2026-06
+## v0.29.4 — 2026-06
 
-First-hardware bring-up: the display driver targeted the wrong panel, so the
-firmware booted to a black screen on real JC4827W543 hardware.
+First-hardware bring-up. Three separate faults kept the real JC4827W543 dark;
+all are fixed here and the device now boots through to the Wi-Fi setup screen.
 
 ### Fixed
 
@@ -24,15 +24,24 @@ firmware booted to a black screen on real JC4827W543 hardware.
 - **Touch wiring corrected.** The GT911 I²C pins were the RGB sibling's
   (SDA 19 / SCL 20 — which are in fact the ESP32-S3's native USB lines); they're
   now SDA 8 / SCL 4 / INT 3 / RST 38, read via TouchLib.
+- **The UI no longer crash-loops the board right after display init.** With the
+  panel finally up, the next fault surfaced: `ui::Manager::begin()` builds every
+  screen up front, which overflowed the 64 KB internal-DRAM LVGL heap (the host
+  sim uses a 256 KB pool, so it never showed there) — `lv_malloc` returned NULL
+  mid-build and the firmware reset-looped. The LVGL object heap now lives in
+  PSRAM (`LV_MEM_CUSTOM` → `ps_malloc`/`ps_realloc`); the loop-task stack is also
+  raised to 16 KB for the deep first-screen build.
 
 ### Changed
 
 - **Display stack swapped LovyanGFX → Arduino_GFX + TouchLib.** LovyanGFX's
   NV3041A/QSPI path needs a newer Arduino-ESP32 core than this project pins;
   Arduino_GFX drives the panel on the current core and is the community-proven
-  path for this board. The LVGL draw buffer also moves from PSRAM to internal
-  DRAM (Arduino_GFX copies it out over QSPI, so no DMA/PSRAM region is needed),
-  dropping a boot-path dependency.
+  path for this board. It's pinned to **v1.4.9** — the last release that still
+  supports Arduino-ESP32 core 2.x (v1.5+ unconditionally include core-3.x-only
+  headers). The LVGL draw buffer moves to internal DRAM (Arduino_GFX copies it
+  out over QSPI, so it needs no DMA/PSRAM region) — distinct from the LVGL object
+  heap above, which moves the other way, into PSRAM.
 
 ## v0.28.0 — 2026-06
 
