@@ -5,6 +5,24 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.29.8 — 2026-06
+
+### Fixed
+
+- **HTTPS to a Cloudflare-fronted Bambuddy now validates.** Reaching Bambuddy
+  over HTTPS through Cloudflare (e.g. with a Cloudflare Access service token)
+  left the device stuck offline — it couldn't verify the TLS certificate
+  (`esp_crt_bundle: Failed to verify certificate` / "chain is too long"), while
+  the same request from a laptop succeeded. Cloudflare's Google-issued edge certs
+  chain up to **GTS Root R4 cross-signed by the original GlobalSign Root CA (R1)**,
+  which Mozilla has since removed from its trust store — so the CI-generated CA
+  bundle no longer carried R1, and `esp_crt_bundle` (which trusts a root by the
+  **served chain's top issuer**, here R1, not the self-signed GTS Root R4 that
+  *is* in the Mozilla set) had nothing to match. `scripts/gen_ca_bundle.sh` now
+  re-appends GlobalSign Root CA R1 (self-signed, valid to 2028-01-28, its exact
+  bytes SHA-256-checked at build time). HTTP-on-LAN was unaffected; REST +
+  Cloudflare Access over HTTPS now connects.
+
 ## v0.29.7 — 2026-06
 
 Bamboard now talks to Bambuddy over its **REST API only**. The real-time
