@@ -5,6 +5,34 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.29.6 — 2026-06
+
+First-hardware bring-up, continued. With the display and captive portal working
+(v0.29.4), Wi-Fi provisioning now succeeds — but the board rebooted a second or
+two after the dashboard first drew. Captured over USB-CDC serial: a stack
+overflow in the UI task.
+
+### Fixed
+
+- **The dashboard no longer reboots the board on first render.** The UI task ran
+  on an 8 KB stack, which held up in the host sim (effectively unbounded stack)
+  but overflowed on the real board: the on-device LVGL + NV3041A QSPI flush path
+  is deeper than the host's, and each screen refresh also copies a ~3 KB
+  `Printer[MAX_PRINTERS]` snapshot onto that stack. FreeRTOS'
+  `configCHECK_FOR_STACK_OVERFLOW` panicked the task and the device reset-looped
+  right after the first frame. The UI task stack is raised to **16 KB** (matching
+  the net task); a one-shot serial log now reports the task's worst-case stack
+  headroom so it can be right-sized later.
+
+### Removed
+
+- **The temporary on-screen Wi-Fi scan diagnostic is gone** (`BAMBOARD_WIFI_DIAG`,
+  added v0.29.5). It held a 45 s network scan on the panel at boot to diagnose a
+  "visible but won't join" network. Wi-Fi provisioning is confirmed working on the
+  real board, and USB-CDC serial turns out to be usable for diagnosis after all —
+  opening the port resets the board, but the full boot log then streams — so the
+  scan hold and its flag are removed.
+
 ## v0.29.4 — 2026-06
 
 First-hardware bring-up. Three separate faults kept the real JC4827W543 dark;

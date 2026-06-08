@@ -788,6 +788,11 @@ static void ui_task(void*) {
         if (!ota_confirmed && millis() > ::ota::VERIFY_HEALTHY_MS) {
             ota_confirmed = true;
             ota_mark_confirmed();
+            // First-hardware bring-up: 8 KB overflowed this task on-device, so we
+            // run 16 KB now. The high-water mark is monotonic, so this one-shot log
+            // reports the worst-case headroom seen since boot (incl. first render).
+            log_i("UI task min free stack: %u bytes",
+                  (unsigned)uxTaskGetStackHighWaterMark(nullptr));
         }
 
         // Auto-dim — no more buttons, so the touch driver is the only thing
@@ -882,22 +887,6 @@ static const char* reset_reason_str(esp_reset_reason_t r) {
     }
 }
 
-#if BAMBOARD_WIFI_DIAG
-// Short label for a scanned network's auth mode (on-screen Wi-Fi diagnostic).
-static const char* wifi_auth_str(wifi_auth_mode_t m) {
-    switch (m) {
-        case WIFI_AUTH_OPEN:          return "open";
-        case WIFI_AUTH_WEP:           return "WEP";
-        case WIFI_AUTH_WPA_PSK:       return "WPA";
-        case WIFI_AUTH_WPA2_PSK:      return "WPA2";
-        case WIFI_AUTH_WPA_WPA2_PSK:  return "WPA1/2";
-        case WIFI_AUTH_WPA2_WPA3_PSK: return "WPA2/3";
-        case WIFI_AUTH_WPA3_PSK:      return "WPA3";
-        default:                      return "?";
-    }
-}
-#endif
-
 void setup() {
     Serial.begin(115200);
     delay(50);
@@ -960,26 +949,6 @@ void setup() {
         wifi_country_t ctry = { "FR", 1, 13, 84, WIFI_COUNTRY_POLICY_MANUAL };
         esp_wifi_set_country(&ctry);
     }
-
-#if BAMBOARD_WIFI_DIAG
-    // Serial is unusable on this board (opening the COM port resets it), so draw
-    // a Wi-Fi scan — each network's channel + auth — straight to the panel and
-    // hold it, then carry on booting. Lets a "visible but won't join" network be
-    // diagnosed by eye (channel 12/13? WPA3-only?).
-    {
-        int nfound = WiFi.scanNetworks();
-        String rep = "WiFi scan: " + String(nfound) + "\n";
-        for (int i = 0; i < nfound && i < 12; ++i) {
-            String ss = WiFi.SSID(i);
-            if (ss.length() > 14) ss = ss.substring(0, 14);
-            rep += ss + " c" + String(WiFi.channel(i)) + " " +
-                   String(WiFi.RSSI(i)) + " " +
-                   wifi_auth_str(WiFi.encryptionType(i)) + "\n";
-        }
-        hw::g_display.debug_text(rep.c_str());
-        delay(45000);   // hold ~45 s so the target row can be read / photographed
-    }
-#endif
 
     if (force_portal || g_cfg_bambuddy_url.length() == 0 ||
         g_cfg_api_key.length() == 0) {
@@ -1045,12 +1014,14 @@ void setup() {
     // Create the control-action queue before net_task starts draining it.
     s_ctrl_q = xQueueCreate(8, sizeof(CtrlCmd));
     xTaskCreatePinnedToCore(net_task, "net", 16384, nullptr, 1, nullptr, 0);
-    // 8 KB for the UI task: LVGL's lv_timer_handler() can run a deep call chain
-    // when several widgets invalidate at once, and each per-screen refresh copies
-    // a local Printer[MAX_PRINTERS] snapshot (~3 KB) onto this stack. 6 KB worked
-    // but left little headroom; a stack overflow here corrupts the heap silently
-    // (the task WDT only catches a hang). 8 KB buys margin as the UI grows.
-    xTaskCreatePinnedToCore(ui_task,  "ui",  8192,  nullptr, 2, nullptr, 1);
+    // 16 KB for the UI task: lv_timer_handler() runs a deep call chain when
+    // several widgets invalidate at once, and each per-screen refresh copies a
+    // local Printer[MAX_PRINTERS] snapshot (~3 KB) onto this stack. 8 KB looked
+    // fine in the host sim (effectively unbounded stack) but overflowed on real
+    // hardware during the first dashboard render — the LVGL + NV3041A flush path
+    // is deeper on-device. 16 KB matches the net task and clears it with margin
+    // (configCHECK_FOR_STACK_OVERFLOW panics the task if it's ever breached).
+    xTaskCreatePinnedToCore(ui_task,  "ui",  16384, nullptr, 2, nullptr, 1);
 }
 
 void loop() {

@@ -33,16 +33,6 @@
 #  define BAMBOARD_VERSION_IS_DEV 1
 #endif
 
-// ---------- Wi-Fi scan diagnostic (TEMPORARY) ---------------------------
-//
-// 1 = at boot, draw a Wi-Fi scan (each network's channel + auth) straight to the
-// panel and hold it, so a "visible but won't connect" network can be diagnosed
-// by eye — the JC4827W543 resets the moment its USB-CDC COM port is opened, so a
-// serial console is unusable here. Set to 0 (or strip) once Wi-Fi is sorted.
-#ifndef BAMBOARD_WIFI_DIAG
-#define BAMBOARD_WIFI_DIAG 1
-#endif
-
 // ---------- Hardware ----------------------------------------------------
 
 namespace pins {
