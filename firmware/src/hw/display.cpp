@@ -1,29 +1,28 @@
 // Display + touch HAL for the Guition JC4827W543.
 //
-// The pin map below targets the JC4827W543**C** (capacitive) revision and
-// is taken from Guition's reference Arduino sketch + the well-known
-// rzeldent/esp32-smartdisplay board configs. If your specific board boots
-// to a black screen or shows colour banding, double-check the silkscreen
-// next to the FPC connector — earlier (`R` / resistive) revisions and the
-// 800×480 sibling (JC8048W550) use a different mapping.
+// The 4.3" 480×272 IPS panel is an NV3041A driven over a QSPI (quad-SPI) bus —
+// NOT an RGB-parallel panel (that's the 800×480 JC8048W550 sibling). We use
+// Arduino_GFX (moononournation) for the panel and TouchLib (mmMicky) for the
+// GT911 capacitive touch, then hook both into LVGL: a flush callback pushes
+// draw buffers to the panel and a pointer input device feeds touch coordinates.
+//
+// The pin map (config.h pins::) targets the JC4827W543**C** revision and matches
+// the validated Arduino_GFX reference for this board. If the screen is black or
+// garbled, re-check the silkscreen next to the FPC connector — other revisions
+// and the 800×480 sibling use a different controller/mapping.
 
 #include "display.h"
 
-// LGFX_USE_V1 is also set in platformio.ini build_flags; guard the define so
-// this translation unit doesn't trigger a "macro redefined" warning.
-#ifndef LGFX_USE_V1
-#define LGFX_USE_V1
+// TouchLib picks its controller backend by macro. It's also defined globally
+// via -D TOUCH_MODULES_GT911 (platformio.ini) so the library's own translation
+// units compile the GT911 path; define it here too as a guard.
+#ifndef TOUCH_MODULES_GT911
+#define TOUCH_MODULES_GT911
 #endif
-#include <LovyanGFX.hpp>
 
-// The ESP32-S3 RGB-parallel bus and its framebuffer panel are NOT pulled in by
-// <LovyanGFX.hpp>: device.hpp only wires the SPI / I2C / Parallel8 / Parallel16
-// buses for the S3, so lgfx::Bus_RGB / lgfx::Panel_RGB are otherwise undefined.
-// Including them explicitly is the canonical LovyanGFX pattern for custom RGB
-// panels (the JC4827W543 drives the ST7262 over a 16-bit RGB bus).
-#include <lgfx/v1/platforms/esp32s3/Panel_RGB.hpp>
-#include <lgfx/v1/platforms/esp32s3/Bus_RGB.hpp>
-
+#include <Arduino_GFX_Library.h>
+#include <TouchLib.h>
+#include <Wire.h>
 #include <esp_heap_caps.h>
 #include <lvgl.h>
 
@@ -33,110 +32,13 @@ namespace hw {
 
 Display g_display;
 
-// ---------- LovyanGFX board class ------------------------------------------
+static Arduino_DataBus* s_bus   = nullptr;
+static Arduino_GFX*     s_gfx   = nullptr;
+static TouchLib*        s_touch = nullptr;
 
-class LGFX_JC4827W543 : public lgfx::LGFX_Device {
-   public:
-    lgfx::Bus_RGB     bus_;
-    lgfx::Panel_RGB   panel_;
-    lgfx::Light_PWM   light_;
-    lgfx::Touch_GT911 touch_;
-
-    LGFX_JC4827W543() {
-        {  // ---- RGB bus pin map ----
-            auto cfg = bus_.config();
-            cfg.panel = &panel_;
-
-            // Sync / data-enable / pixel clock
-            cfg.pin_d0  = GPIO_NUM_8;   // B0
-            cfg.pin_d1  = GPIO_NUM_3;   // B1
-            cfg.pin_d2  = GPIO_NUM_46;  // B2
-            cfg.pin_d3  = GPIO_NUM_9;   // B3
-            cfg.pin_d4  = GPIO_NUM_1;   // B4
-
-            cfg.pin_d5  = GPIO_NUM_5;   // G0
-            cfg.pin_d6  = GPIO_NUM_6;   // G1
-            cfg.pin_d7  = GPIO_NUM_7;   // G2
-            cfg.pin_d8  = GPIO_NUM_15;  // G3
-            cfg.pin_d9  = GPIO_NUM_16;  // G4
-            cfg.pin_d10 = GPIO_NUM_4;   // G5
-
-            cfg.pin_d11 = GPIO_NUM_45;  // R0
-            cfg.pin_d12 = GPIO_NUM_48;  // R1
-            cfg.pin_d13 = GPIO_NUM_47;  // R2
-            cfg.pin_d14 = GPIO_NUM_21;  // R3
-            cfg.pin_d15 = GPIO_NUM_14;  // R4
-
-            cfg.pin_henable = GPIO_NUM_40;
-            cfg.pin_vsync   = GPIO_NUM_41;
-            cfg.pin_hsync   = GPIO_NUM_39;
-            cfg.pin_pclk    = GPIO_NUM_42;
-
-            // Timing — values from the ST7262 datasheet, validated by the
-            // Guition example sketch.
-            cfg.freq_write  = 14000000;
-            cfg.hsync_polarity = 0;
-            cfg.hsync_front_porch = 8;
-            cfg.hsync_pulse_width = 4;
-            cfg.hsync_back_porch  = 43;
-            cfg.vsync_polarity = 0;
-            cfg.vsync_front_porch = 8;
-            cfg.vsync_pulse_width = 4;
-            cfg.vsync_back_porch  = 12;
-            cfg.pclk_active_neg = 1;
-            cfg.de_idle_high    = 0;
-            cfg.pclk_idle_high  = 0;
-            bus_.config(cfg);
-        }
-
-        {  // ---- Panel geometry ----
-            auto cfg = panel_.config();
-            cfg.memory_width  = ::display::WIDTH;
-            cfg.memory_height = ::display::HEIGHT;
-            cfg.panel_width   = ::display::WIDTH;
-            cfg.panel_height  = ::display::HEIGHT;
-            cfg.offset_x      = 0;
-            cfg.offset_y      = 0;
-            panel_.config(cfg);
-        }
-
-        {  // ---- Backlight (PWM on GPIO 2) ----
-            auto cfg = light_.config();
-            cfg.pin_bl   = pins::BL_PIN;
-            cfg.invert   = false;
-            cfg.freq     = pins::BL_FREQ;
-            cfg.pwm_channel = 7;
-            light_.config(cfg);
-            panel_.setLight(&light_);
-        }
-
-        {  // ---- GT911 capacitive touch (I²C) ----
-            // The JC4827W543C routes the GT911 onto a dedicated I²C bus that
-            // doesn't conflict with native USB. Pin map lives in config.h's
-            // `pins::` namespace so a fork targeting a different board only
-            // edits one file.
-            auto cfg = touch_.config();
-            cfg.x_min = 0;
-            cfg.x_max = ::display::WIDTH  - 1;
-            cfg.y_min = 0;
-            cfg.y_max = ::display::HEIGHT - 1;
-            cfg.pin_sda  = (gpio_num_t)pins::GT911_SDA;
-            cfg.pin_scl  = (gpio_num_t)pins::GT911_SCL;
-            cfg.pin_int  = (gpio_num_t)(pins::GT911_INT < 0 ? GPIO_NUM_NC
-                                                            : pins::GT911_INT);
-            cfg.pin_rst  = (gpio_num_t)pins::GT911_RST;
-            cfg.freq     = pins::GT911_FREQ;
-            cfg.i2c_addr = pins::GT911_ADDR;
-            cfg.i2c_port = pins::GT911_PORT;
-            touch_.config(cfg);
-            panel_.setTouch(&touch_);
-        }
-
-        setPanel(&panel_);
-    }
-};
-
-static LGFX_JC4827W543 s_tft;
+// Backlight PWM uses one LEDC channel; 8-bit duty maps straight onto the
+// 0..255 values set_backlight() takes.
+static constexpr uint8_t BL_CHANNEL = 7;
 
 // ---------- LVGL plumbing --------------------------------------------------
 
@@ -148,16 +50,16 @@ static volatile bool      s_touch_activity = false;
 static void flush_cb(lv_disp_drv_t* drv, const lv_area_t* area, lv_color_t* buf) {
     uint32_t w = area->x2 - area->x1 + 1;
     uint32_t h = area->y2 - area->y1 + 1;
-    s_tft.pushImageDMA(area->x1, area->y1, w, h, (uint16_t*)buf);
+    s_gfx->draw16bitRGBBitmap(area->x1, area->y1, (uint16_t*)buf, w, h);
     lv_disp_flush_ready(drv);
 }
 
 static void touch_read_cb(lv_indev_drv_t*, lv_indev_data_t* data) {
-    uint16_t x, y;
-    if (s_tft.getTouch(&x, &y)) {
+    if (s_touch && s_touch->read()) {
+        TP_Point t = s_touch->getPoint(0);
         data->state   = LV_INDEV_STATE_PRESSED;
-        data->point.x = x;
-        data->point.y = y;
+        data->point.x = t.x;
+        data->point.y = t.y;
         s_touch_activity = true;
     } else {
         data->state = LV_INDEV_STATE_RELEASED;
@@ -167,30 +69,59 @@ static void touch_read_cb(lv_indev_drv_t*, lv_indev_data_t* data) {
 // ---------- Public API -----------------------------------------------------
 
 bool Display::begin() {
-    if (!s_tft.init()) {
-        log_e("LovyanGFX init failed");
+    // Backlight PWM up first, held dark. main.cpp lights it to the user's saved
+    // level only after ui::begin() + the first lv_timer_handler() frame, so the
+    // panel never flashes a pre-render frame.
+    ledcSetup(BL_CHANNEL, pins::BL_FREQ, 8);
+    ledcAttachPin(pins::BL_PIN, BL_CHANNEL);
+    ledcWrite(BL_CHANNEL, 0);
+
+    // --- Panel: NV3041A over QSPI ---
+    s_bus = new Arduino_ESP32QSPI(pins::LCD_CS, pins::LCD_SCK,
+                                  pins::LCD_D0, pins::LCD_D1,
+                                  pins::LCD_D2, pins::LCD_D3);
+    s_gfx = new Arduino_NV3041A(s_bus, pins::LCD_RST, 0 /* rotation */, true /* IPS */);
+    if (!s_gfx->begin()) {
+        log_e("Arduino_GFX init failed (NV3041A/QSPI)");
         return false;
     }
-    s_tft.setRotation(0);
-    s_tft.fillScreen(0x0000);   // black
-    // Stay dark. main.cpp lights the backlight to the user's saved level only
-    // after ui::begin() + the first lv_timer_handler() frame, so the panel never
-    // flashes the pre-render black fill (nor a full-brightness frame before the
-    // user's dimmer level is applied).
-    set_backlight(0);
+    s_gfx->fillScreen(0x0000);   // black
 
+    // --- Touch: GT911 over I²C (TouchLib) ---
+    // Probe the controller on the bus FIRST: a wrong pin map / missing GT911
+    // must not be able to hang boot inside a blocking TouchLib::init().
+    Wire.begin(pins::GT911_SDA, pins::GT911_SCL);
+    Wire.setClock(pins::GT911_FREQ);
+    pinMode(pins::GT911_RST, OUTPUT);
+    digitalWrite(pins::GT911_RST, 0);
+    delay(20);
+    digitalWrite(pins::GT911_RST, 1);
+    delay(50);
+    Wire.beginTransmission(pins::GT911_ADDR);
+    bool touch_present = (Wire.endTransmission() == 0);
+    if (touch_present) {
+        s_touch = new TouchLib(Wire, pins::GT911_SDA, pins::GT911_SCL, pins::GT911_ADDR);
+        s_touch->init();
+    } else {
+        log_w("GT911 not found @0x%02X — touch disabled (display still works)",
+              (int)pins::GT911_ADDR);
+    }
+
+    // --- LVGL ---
     lv_init();
 
-    // Two DMA-capable draw buffers in PSRAM — about 38 KB each at 480 × 40.
+    // Single draw buffer in INTERNAL RAM (~38 KB at 480×40). Arduino_GFX copies
+    // the buffer out over QSPI, so it needs no DMA/PSRAM region; keeping it in
+    // internal RAM leaves PSRAM for the LVGL object heap (see include/lv_conf.h).
     size_t pixels = ::display::WIDTH * ::display::DRAW_BUF_LINES;
     size_t bytes  = pixels * sizeof(lv_color_t);
-    lv_color_t* buf1 = (lv_color_t*)heap_caps_malloc(bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
-    lv_color_t* buf2 = (lv_color_t*)heap_caps_malloc(bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
-    if (!buf1 || !buf2) {
-        log_e("Failed to allocate LVGL draw buffers (have PSRAM?)");
+    lv_color_t* buf1 =
+        (lv_color_t*)heap_caps_malloc(bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (!buf1) {
+        log_e("Failed to allocate LVGL draw buffer");
         return false;
     }
-    lv_disp_draw_buf_init(&s_draw_buf, buf1, buf2, pixels);
+    lv_disp_draw_buf_init(&s_draw_buf, buf1, nullptr, pixels);
 
     lv_disp_drv_init(&s_disp_drv);
     s_disp_drv.hor_res  = ::display::WIDTH;
@@ -212,7 +143,7 @@ void Display::tick() {
 
 void Display::set_backlight(uint8_t v) {
     backlight_ = v;
-    s_tft.setBrightness(v);
+    ledcWrite(BL_CHANNEL, v);
 }
 
 void Display::set_brightness_level(uint8_t level) {
@@ -226,6 +157,17 @@ bool Display::consume_touch_activity() {
     bool was = s_touch_activity;
     s_touch_activity = false;
     return was;
+}
+
+void Display::debug_text(const char* s) {
+    if (!s_gfx) return;
+    ledcWrite(BL_CHANNEL, 200);     // ensure it's lit so the text is readable
+    backlight_ = 200;
+    s_gfx->fillScreen(0x0000);
+    s_gfx->setTextColor(0xFFFF);    // white on black
+    s_gfx->setTextSize(2);          // 12×16 px → ~40 cols × 17 rows
+    s_gfx->setCursor(2, 2);
+    s_gfx->print(s);
 }
 
 }  // namespace hw

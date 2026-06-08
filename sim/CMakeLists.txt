@@ -64,7 +64,6 @@ set(FW_SRC
   ${FW}/ui/screens/overlays.cpp
   ${FW}/ui/screens/theme.cpp
   ${FW}/net/bambuddy_client.cpp
-  ${FW}/net/bambuddy_ws.cpp
 )
 
 add_executable(bamboard_sim

@@ -57,8 +57,8 @@ pio device monitor # 115200 baud
 ```
 
 You need [PlatformIO Core](https://platformio.org/install/cli) or the VS Code
-PlatformIO extension. The build pulls in LovyanGFX, LVGL, ArduinoJson,
-WiFiManager and the WebSockets client.
+PlatformIO extension. The build pulls in Arduino_GFX, LVGL, ArduinoJson and
+WiFiManager.
 
 ## First boot
 

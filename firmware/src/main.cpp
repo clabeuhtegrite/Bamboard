@@ -4,7 +4,7 @@
 // optionally self-updates from GitHub Releases, then launches two tasks:
 //
 //   - UI task   (core 1): drives LVGL, touch input, auto-dim backlight
-//   - Net task  (core 0): polls Bambuddy + pumps the WebSocket
+//   - Net task  (core 0): polls Bambuddy over REST + runs queued control actions
 //
 // Persistent settings (Wi-Fi creds, Bambuddy URL, API key, brightness) live
 // in NVS via the Preferences API. Holding the side BOOT button at power-up
@@ -14,6 +14,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
+#include <esp_wifi.h>     // Wi-Fi country/region — allow 2.4 GHz channels 12/13 (EU)
 #include <esp_heap_caps.h> // free the PSRAM camera-JPEG buffer
 #include <esp_ota_ops.h>  // anti-brick: boot-partition rollback (set_boot_partition)
 #include <esp_system.h>   // esp_reset_reason() for boot diagnostics
@@ -25,7 +26,6 @@
 #include "config.h"
 #include "hw/display.h"
 #include "net/bambuddy_client.h"
-#include "net/bambuddy_ws.h"
 #include "net/github_ota.h"
 #include "net/host_valid.h"
 #include "ui/fonts.h"
@@ -33,6 +33,12 @@
 #include "ui/control.h"
 #include "ui/screens.h"
 #include "ui/ui.h"
+
+// Larger loop-task stack for setup(): building the whole LVGL UI tree
+// (ui::g_ui.begin) runs here on the Arduino loop task, whose default 8 KB stack
+// is tight for that deep a call chain. 16 KB buys headroom (the LVGL object heap
+// itself lives in PSRAM — see include/lv_conf.h).
+SET_LOOP_TASK_STACK_SIZE(16 * 1024);
 
 // Runtime config (read once from NVS at boot, written back when the captive
 // portal saves a new value).
@@ -477,9 +483,9 @@ static void start_provisioning() {
         g_cfg_cf_secret = p_cf_secret.getValue();
         g_cfg_cf_id.trim();
         g_cfg_cf_secret.trim();
-        // Strip CR/LF: the token rides the WebSocket handshake header block
-        // (joined with \r\n in bambuddy_ws.cpp), so a pasted newline must not be
-        // able to inject extra headers.
+        // Strip CR/LF: the token is emitted verbatim as a request header
+        // (CF-Access-Client-Id / -Secret), so a pasted newline must not be able
+        // to inject extra headers.
         g_cfg_cf_id.replace("\r", "");     g_cfg_cf_id.replace("\n", "");
         g_cfg_cf_secret.replace("\r", ""); g_cfg_cf_secret.replace("\n", "");
     } else {
@@ -516,8 +522,6 @@ static void start_provisioning() {
     save_prefs();
 
     bambuddy::g_client.set_credentials(g_cfg_bambuddy_url, g_cfg_api_key,
-                                       g_cfg_cf_id, g_cfg_cf_secret);
-    bambuddy::g_ws.set_credentials    (g_cfg_bambuddy_url,
                                        g_cfg_cf_id, g_cfg_cf_secret);
     delay(300);
     ESP.restart();   // clean restart with the new config
@@ -620,10 +624,6 @@ static void net_task(void*) {
             continue;
         }
 
-        // Drive the WS event loop on every iteration so push frames land
-        // without waiting for the next poll tick.
-        bambuddy::g_ws.loop();
-
         // Run any control actions the UI queued (pause/stop/clear/speed/light/
         // dry) here — the blocking POST stays off the watchdog-guarded UI task.
         control_process();
@@ -650,13 +650,11 @@ static void net_task(void*) {
             bool ok = bambuddy::g_client.ping_health(&lat);
             ui::screens::header_set_online(ok, lat);
             // Health-cadence device diagnostics over serial (heap is the one to
-            // watch for leaks/fragmentation; ws=0 means we're on the REST
-            // safety net rather than live push).
-            log_i("diag: heap=%uK psram=%uK ws=%d rssi=%d online=%d lat=%ums",
+            // watch for leaks/fragmentation).
+            log_i("diag: heap=%uK psram=%uK rssi=%d online=%d lat=%ums",
                   (unsigned)(ESP.getFreeHeap()  / 1024),
                   (unsigned)(ESP.getFreePsram() / 1024),
-                  (int)bambuddy::g_ws.is_connected(), (int)WiFi.RSSI(),
-                  (int)ok, (unsigned)lat);
+                  (int)WiFi.RSSI(), (int)ok, (unsigned)lat);
             next_health_ms = now + bambuddy::POLL_HEALTH_MS;
         }
 
@@ -666,27 +664,17 @@ static void net_task(void*) {
         }
 
         if (now >= next_status_ms) {
+            // REST-only: poll every printer ourselves at the snappy cadence so
+            // the Printers screen stays responsive (the focused one first).
             int id = ui::g_ui.selected_printer_id();
-            bool ws = bambuddy::g_ws.is_connected();
-            if (ws) {
-                // WS is feeding `printer_status` for every printer in real
-                // time, so REST polling is purely a safety net — refresh
-                // only the focused printer at a slow cadence so a silently
-                // broken WS still surfaces stale data eventually.
-                if (id >= 0) bambuddy::g_client.fetch_printer_status(id);
-                next_status_ms = now + bambuddy::POLL_DASHBOARD_WS_MS;
-            } else {
-                // No WS push → poll every printer ourselves at the snappy
-                // cadence so the Printers screen stays responsive.
-                if (id >= 0) bambuddy::g_client.fetch_printer_status(id);
-                bambuddy::Printer ps[8]; uint8_t n = 0;
-                bambuddy::g_client.snapshot_printers(ps, n);
-                for (uint8_t i = 0; i < n; ++i) {
-                    if (ps[i].id != id)
-                        bambuddy::g_client.fetch_printer_status(ps[i].id);
-                }
-                next_status_ms = now + bambuddy::POLL_DASHBOARD_MS;
+            if (id >= 0) bambuddy::g_client.fetch_printer_status(id);
+            bambuddy::Printer ps[8]; uint8_t n = 0;
+            bambuddy::g_client.snapshot_printers(ps, n);
+            for (uint8_t i = 0; i < n; ++i) {
+                if (ps[i].id != id)
+                    bambuddy::g_client.fetch_printer_status(ps[i].id);
             }
+            next_status_ms = now + bambuddy::POLL_DASHBOARD_MS;
         }
 
         if (now >= next_stats_ms) {
@@ -781,6 +769,11 @@ static void ui_task(void*) {
         if (!ota_confirmed && millis() > ::ota::VERIFY_HEALTHY_MS) {
             ota_confirmed = true;
             ota_mark_confirmed();
+            // First-hardware bring-up: 8 KB overflowed this task on-device, so we
+            // run 16 KB now. The high-water mark is monotonic, so this one-shot log
+            // reports the worst-case headroom seen since boot (incl. first render).
+            log_i("UI task min free stack: %u bytes",
+                  (unsigned)uxTaskGetStackHighWaterMark(nullptr));
         }
 
         // Auto-dim — no more buttons, so the touch driver is the only thing
@@ -929,6 +922,15 @@ void setup() {
     WiFi.mode(WIFI_STA);
     WiFi.setHostname("bamboard");
 
+    // Allow 2.4 GHz channels 12/13. The default Wi-Fi region tops out at channel
+    // 11 (US), so an EU access point on auto-channel (12/13 — common in France)
+    // shows up in a scan but can't be joined. Base "FR" permits 1-13.
+    {
+        // { cc, start-channel, num-channels, max-tx-power(0.25 dBm), policy }
+        wifi_country_t ctry = { "FR", 1, 13, 84, WIFI_COUNTRY_POLICY_MANUAL };
+        esp_wifi_set_country(&ctry);
+    }
+
     if (force_portal || g_cfg_bambuddy_url.length() == 0 ||
         g_cfg_api_key.length() == 0) {
         start_provisioning();   // does not return (reboots after save)
@@ -975,7 +977,6 @@ void setup() {
 
     bambuddy::g_client.begin(g_cfg_bambuddy_url, g_cfg_api_key,
                              g_cfg_cf_id, g_cfg_cf_secret);
-    bambuddy::g_ws.begin    (g_cfg_bambuddy_url, g_cfg_cf_id, g_cfg_cf_secret);
 
     // Arm the task watchdog (10 s, panic+reboot on timeout) before the UI task
     // subscribes itself. Best-effort: if the Arduino runtime already initialised
@@ -993,12 +994,14 @@ void setup() {
     // Create the control-action queue before net_task starts draining it.
     s_ctrl_q = xQueueCreate(8, sizeof(CtrlCmd));
     xTaskCreatePinnedToCore(net_task, "net", 16384, nullptr, 1, nullptr, 0);
-    // 8 KB for the UI task: LVGL's lv_timer_handler() can run a deep call chain
-    // when several widgets invalidate at once, and each per-screen refresh copies
-    // a local Printer[MAX_PRINTERS] snapshot (~3 KB) onto this stack. 6 KB worked
-    // but left little headroom; a stack overflow here corrupts the heap silently
-    // (the task WDT only catches a hang). 8 KB buys margin as the UI grows.
-    xTaskCreatePinnedToCore(ui_task,  "ui",  8192,  nullptr, 2, nullptr, 1);
+    // 16 KB for the UI task: lv_timer_handler() runs a deep call chain when
+    // several widgets invalidate at once, and each per-screen refresh copies a
+    // local Printer[MAX_PRINTERS] snapshot (~3 KB) onto this stack. 8 KB looked
+    // fine in the host sim (effectively unbounded stack) but overflowed on real
+    // hardware during the first dashboard render — the LVGL + NV3041A flush path
+    // is deeper on-device. 16 KB matches the net task and clears it with margin
+    // (configCHECK_FOR_STACK_OVERFLOW panics the task if it's ever breached).
+    xTaskCreatePinnedToCore(ui_task,  "ui",  16384, nullptr, 2, nullptr, 1);
 }
 
 void loop() {

@@ -47,8 +47,7 @@ The defaults stay well under Bambuddy's 100 reads/minute limit:
 
 | Constant | Default | Effect |
 |----------|---------|--------|
-| `POLL_DASHBOARD_MS` | 2000 ms | Per-printer `GET /printers/{id}/status` cadence when the WebSocket is **down** — polls **every** printer, not just the focused one |
-| `POLL_DASHBOARD_WS_MS` | 30 s | Focused-printer status poll when the WebSocket **is** connected (slow safety net behind the live push) |
+| `POLL_DASHBOARD_MS` | 2000 ms | Per-printer `GET /printers/{id}/status` cadence — polls **every** printer, not just the focused one |
 | `POLL_LIST_MS` | 5000 ms | `GET /printers` — the identity list |
 | `POLL_STATS_MS` | 30 s | Stats + recent archives |
 | `POLL_QUEUE_MS` | 15 s | Print-queue refresh |

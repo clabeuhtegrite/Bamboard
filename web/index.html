@@ -150,7 +150,7 @@
           <div class="card hoverable reveal">
             <span class="ic"><svg aria-hidden="true"><use href="#i-lock"/></svg></span>
             <h3 data-i18n="feat.local.h">Local-first &amp; private</h3>
-            <p data-i18n="feat.local.p">Speaks REST + WebSocket to your own Bambuddy instance. Your printers stay off any third-party cloud — your data never leaves your network unless you choose HTTPS.</p>
+            <p data-i18n="feat.local.p">Speaks REST to your own Bambuddy instance. Your printers stay off any third-party cloud — your data never leaves your network unless you choose HTTPS.</p>
           </div>
           <div class="card hoverable reveal">
             <span class="ic"><svg aria-hidden="true"><use href="#i-coins"/></svg></span>
@@ -260,7 +260,7 @@
                 <span class="ic"><svg aria-hidden="true"><use href="#i-server"/></svg></span>
                 <div class="nl"><b>Bambuddy</b><span data-i18n="how.node.selfhosted">self-hosted</span></div>
               </div>
-              <div class="arch-edge"><span>REST&nbsp;·&nbsp;WS</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></div>
+              <div class="arch-edge"><span>REST</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></div>
               <div class="arch-node product">
                 <span class="ic"><svg aria-hidden="true"><use href="#i-monitor"/></svg></span>
                 <div class="nl"><b>Bamboard</b><span data-i18n="how.node.device">the device</span></div>
@@ -274,7 +274,7 @@
           <ul class="arch-list">
             <li class="reveal">
               <span class="ic"><svg aria-hidden="true"><use href="#i-wifi"/></svg></span>
-              <div><b data-i18n="how.rt.h">Real-time push.</b><p data-i18n-html="how.rt.p">Subscribes to Bambuddy's WebSocket for instant <code>printer_status</code> frames, with REST polling as a safety net — so an HMS alert shows up in one network hop, not a poll cycle.</p></div>
+              <div><b data-i18n="how.rt.h">Live status.</b><p data-i18n-html="how.rt.p">Polls Bambuddy's REST API every 2 s for each printer's <code>printer_status</code>, so temperatures, progress and HMS alerts land within a couple of seconds — API-key auth only, nothing to log into.</p></div>
             </li>
             <li class="reveal">
               <span class="ic"><svg aria-hidden="true"><use href="#i-shield"/></svg></span>

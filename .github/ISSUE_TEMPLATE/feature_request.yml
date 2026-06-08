@@ -23,4 +23,4 @@ body:
       options:
         - label: This fits a touch desk monitor talking only to a self-hosted Bambuddy (no third-party cloud).
           required: true
-        - label: It works within Bambuddy's existing REST/WebSocket API (or I've noted the API gap).
+        - label: It works within Bambuddy's existing REST API (or I've noted the API gap).

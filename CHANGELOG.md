@@ -5,6 +5,92 @@ All notable, behaviour-affecting changes land here. Format follows
 uses lightweight semantic-ish versioning (bumped on any user-visible
 change, not on every commit).
 
+## v0.29.7 — 2026-06
+
+Bamboard now talks to Bambuddy over its **REST API only**. The real-time
+WebSocket push is removed: Bambuddy authenticates `/ws` with a login session
+(cookie), not the API key, and Bamboard is deliberately API-key-only — there's
+nothing to log into. REST polling (every 2 s per printer) already drove the
+dashboard, so there's no functional loss — just one fewer moving part, a smaller
+build, and no second auth model to carry.
+
+### Removed
+
+- **The WebSocket client is gone** — `net/bambuddy_ws.*`, the
+  `links2004/WebSockets` dependency, the `WS_RECONNECT_*` and
+  `POLL_DASHBOARD_WS_MS` tunables, and the host sim's WebSocket shim. The net
+  task no longer pumps a WS event loop; it polls every printer's `/status` at
+  the snappy `POLL_DASHBOARD_MS` cadence unconditionally (previously the slow
+  cadence kicked in only while a WS was connected). The Settings "Server" line
+  drops its live-push badge and shows just the Bambuddy version + uptime — live
+  REST reachability is already on the header's online dot.
+
+## v0.29.6 — 2026-06
+
+First-hardware bring-up, continued. With the display and captive portal working
+(v0.29.4), Wi-Fi provisioning now succeeds — but the board rebooted a second or
+two after the dashboard first drew. Captured over USB-CDC serial: a stack
+overflow in the UI task.
+
+### Fixed
+
+- **The dashboard no longer reboots the board on first render.** The UI task ran
+  on an 8 KB stack, which held up in the host sim (effectively unbounded stack)
+  but overflowed on the real board: the on-device LVGL + NV3041A QSPI flush path
+  is deeper than the host's, and each screen refresh also copies a ~3 KB
+  `Printer[MAX_PRINTERS]` snapshot onto that stack. FreeRTOS'
+  `configCHECK_FOR_STACK_OVERFLOW` panicked the task and the device reset-looped
+  right after the first frame. The UI task stack is raised to **16 KB** (matching
+  the net task); a one-shot serial log now reports the task's worst-case stack
+  headroom so it can be right-sized later.
+
+### Removed
+
+- **The temporary on-screen Wi-Fi scan diagnostic is gone** (`BAMBOARD_WIFI_DIAG`,
+  added v0.29.5). It held a 45 s network scan on the panel at boot to diagnose a
+  "visible but won't join" network. Wi-Fi provisioning is confirmed working on the
+  real board, and USB-CDC serial turns out to be usable for diagnosis after all —
+  opening the port resets the board, but the full boot log then streams — so the
+  scan hold and its flag are removed.
+
+## v0.29.4 — 2026-06
+
+First-hardware bring-up. Three separate faults kept the real JC4827W543 dark;
+all are fixed here and the device now boots through to the Wi-Fi setup screen.
+
+### Fixed
+
+- **Display now lights up on the real board.** The HAL was built against an
+  RGB-parallel ST7262 panel (the 800×480 JC8048W550 sibling's interface), but
+  the JC4827W543's 4.3" 480×272 IPS panel is an **NV3041A driven over QSPI**. On
+  the actual hardware the RGB-bus init crashed during boot, leaving the device
+  in a reset loop with a black screen (USB enumerated then dropped, ~3 s on /
+  ~12 s off, repeating — confirmed by USB-presence tracing on the device). The
+  HAL is rewritten on Arduino_GFX (`Arduino_NV3041A` over `Arduino_ESP32QSPI`)
+  with the correct QSPI pin map (CS 45, SCK 47, D0–D3 21/48/40/39), and the
+  backlight moves to its real pin (GPIO 1, was 2).
+- **Touch wiring corrected.** The GT911 I²C pins were the RGB sibling's
+  (SDA 19 / SCL 20 — which are in fact the ESP32-S3's native USB lines); they're
+  now SDA 8 / SCL 4 / INT 3 / RST 38, read via TouchLib.
+- **The UI no longer crash-loops the board right after display init.** With the
+  panel finally up, the next fault surfaced: `ui::Manager::begin()` builds every
+  screen up front, which overflowed the 64 KB internal-DRAM LVGL heap (the host
+  sim uses a 256 KB pool, so it never showed there) — `lv_malloc` returned NULL
+  mid-build and the firmware reset-looped. The LVGL object heap now lives in
+  PSRAM (`LV_MEM_CUSTOM` → `ps_malloc`/`ps_realloc`); the loop-task stack is also
+  raised to 16 KB for the deep first-screen build.
+
+### Changed
+
+- **Display stack swapped LovyanGFX → Arduino_GFX + TouchLib.** LovyanGFX's
+  NV3041A/QSPI path needs a newer Arduino-ESP32 core than this project pins;
+  Arduino_GFX drives the panel on the current core and is the community-proven
+  path for this board. It's pinned to **v1.4.9** — the last release that still
+  supports Arduino-ESP32 core 2.x (v1.5+ unconditionally include core-3.x-only
+  headers). The LVGL draw buffer moves to internal DRAM (Arduino_GFX copies it
+  out over QSPI, so it needs no DMA/PSRAM region) — distinct from the LVGL object
+  heap above, which moves the other way, into PSRAM.
+
 ## v0.28.0 — 2026-06
 
 UI / i18n polish plus a concurrency, test and CI hardening pass from the

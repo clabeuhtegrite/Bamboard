@@ -3,9 +3,9 @@
  *
  * Trimmed-down version of the LVGL v8.3 default conf. Only what Bamboard
  * actually needs is enabled, to keep flash use sensible on the 4 MB
- * partitions and leave headroom in internal SRAM (the panel draw buffers
- * live in PSRAM — see hw/display.cpp — but LVGL's object tree, the
- * LV_MEM_SIZE pool below, stays in DRAM).
+ * partitions and leave headroom in internal SRAM (the panel draw buffer
+ * lives in internal DRAM — see hw/display.cpp — as does LVGL's object tree
+ * and the LV_MEM_SIZE pool below).
  */
 
 #ifndef LV_CONF_H
@@ -14,12 +14,21 @@
 #include <stdint.h>
 
 /* -------- Colour depth -------- */
-#define LV_COLOR_DEPTH 16        /* RGB565 — LovyanGFX drives the JC4827W543 panel in 16-bit */
-#define LV_COLOR_16_SWAP 0       /* RGB parallel bus, no byte swap needed */
+#define LV_COLOR_DEPTH 16        /* RGB565 — the NV3041A panel is driven in 16-bit */
+#define LV_COLOR_16_SWAP 0       /* matches Arduino_GFX draw16bitRGBBitmap (native order) */
 
-/* -------- Memory -------- */
-#define LV_MEM_CUSTOM 0
-#define LV_MEM_SIZE (64U * 1024U)   /* internal-DRAM pool (LV_MEM_CUSTOM 0 is not PSRAM); ample for this object tree */
+/* -------- Memory --------
+ * The LVGL object heap lives in PSRAM. ui::Manager::begin() builds every screen
+ * up front, which overflows a 64 KB internal-DRAM pool — the host sim uses a
+ * 256 KB pool, so this only crashed on real hardware. ps_malloc routes LVGL
+ * allocations to the 8 MB PSRAM; the panel draw buffer stays in internal RAM
+ * (see hw/display.cpp). LV_MEM_SIZE is unused while LV_MEM_CUSTOM is 1. */
+#define LV_MEM_CUSTOM 1
+#define LV_MEM_CUSTOM_INCLUDE "esp32-hal-psram.h"
+#define LV_MEM_CUSTOM_ALLOC   ps_malloc
+#define LV_MEM_CUSTOM_FREE    free
+#define LV_MEM_CUSTOM_REALLOC ps_realloc
+#define LV_MEM_SIZE (64U * 1024U)
 
 /* -------- HAL settings -------- */
 #define LV_DISP_DEF_REFR_PERIOD 16   /* ~60 fps cap */
