@@ -106,9 +106,8 @@ bool Display::begin() {
     digitalWrite(pins::GT911_RST, 1);
     delay(50);
     s_touch = new TouchLib(Wire, pins::GT911_SDA, pins::GT911_SCL, pins::GT911_ADDR);
-    if (!s_touch->init()) {
-        log_w("GT911 touch init failed (display continues)");
-    }
+    s_touch->init();   // return type varies across TouchLib builds, so ignore it;
+                       // touch failing to come up must not stop the display.
 
     // --- LVGL ---
     lv_init();
